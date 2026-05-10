@@ -154,7 +154,7 @@ function App() {
           <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-slate-900/20">
             <Zap className="text-white" size={20} />
           </div>
-          <span className="hidden lg:block font-black text-slate-900 tracking-tighter uppercase text-lg">Maina Mill</span>
+          <span className="hidden lg:block font-black text-slate-900 tracking-tighter uppercase text-lg">Sakhai Posho Mill ERP</span>
         </div>
 
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto custom-scrollbar">

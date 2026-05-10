@@ -40,7 +40,7 @@ export default function Login({ onLogin }: LoginProps) {
           <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl rotate-3 hover:rotate-0 transition-transform duration-500 border border-slate-800">
             <Factory className="text-slate-900" size={40} />
           </div>
-          <h1 className="text-4xl font-black text-white tracking-tighter uppercase mb-2">Posho Mill ERP</h1>
+          <h1 className="text-4xl font-black text-white tracking-tighter uppercase mb-2">Sakhai Posho Mill ERP</h1>
           <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px]">Secure Enterprise Access</p>
         </div>
 

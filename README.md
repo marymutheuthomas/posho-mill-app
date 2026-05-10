@@ -1,4 +1,4 @@
-# Posho Mill ERP: Enterprise Blueprint 🌽⚡
+# Sakhai Posho Mill ERP: Enterprise Blueprint 🌽⚡
 
 A high-density, **offline-first** Enterprise Resource Planning (ERP) and Point of Sale (POS) system engineered for high-traffic milling environments. This platform provides seamless financial auditing, inventory reconciliation, and operational control even in areas with unstable internet connectivity.
 

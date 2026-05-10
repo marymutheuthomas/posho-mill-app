@@ -60,7 +60,7 @@ export default function AuthScreen() {
             <div className="w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-blue-600/20 rotate-3 group-hover:rotate-0 transition-transform">
               <Shield className="text-white" size={36} />
             </div>
-            <h1 className="text-3xl font-black text-white tracking-tighter uppercase mb-2">Posho Mill ERP</h1>
+            <h1 className="text-3xl font-black text-white tracking-tighter uppercase mb-2">Sakhai Posho Mill ERP</h1>
             <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em]">Industrial Access Terminal</p>
           </div>
 

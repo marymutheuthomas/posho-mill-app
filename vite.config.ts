@@ -9,9 +9,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
-        name: 'Posho Mill POS',
-        short_name: 'Posho POS',
-        description: 'Enterprise Posho Mill Terminal',
+        name: 'Sakhai Posho Mill POS',
+        short_name: 'Sakhai POS',
+        description: 'Enterprise Sakhai Posho Mill Terminal',
         theme_color: '#0f172a',
         icons: [
           {
