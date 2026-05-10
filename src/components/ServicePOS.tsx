@@ -235,13 +235,25 @@ export default function ServicePOS() {
 
                 <div>
                   <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">Product</label>
-                  <select value={formData.productId} onChange={e => setFormData({...formData, productId: e.target.value})} className="mill-input w-full font-black py-3.5 px-4 rounded-xl uppercase text-xs">
+                  <select 
+                    value={formData.productId} 
+                    onChange={e => setFormData({...formData, productId: e.target.value})} 
+                    className="mill-input w-full font-black py-3.5 px-4 rounded-xl uppercase text-xs"
+                  >
                     <option value="">Select Item...</option>
-                    {products.map(p => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} ({formData.transactionType === 'Service' ? `KES ${p.milling_fee}/KG` : `KES ${p.selling_price}/KG`})
-                      </option>
-                    ))}
+                    {products
+                      .filter(p => {
+                        if (formData.transactionType === 'Product') {
+                          return (p.selling_price || 0) > 0;
+                        } else {
+                          return (p.milling_fee || 0) > 0;
+                        }
+                      })
+                      .map(p => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} ({formData.transactionType === 'Service' ? `KES ${p.milling_fee}/KG` : `KES ${p.selling_price}/KG`})
+                        </option>
+                      ))}
                   </select>
                 </div>
 

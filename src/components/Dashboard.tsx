@@ -19,7 +19,8 @@ export default function Dashboard({ onNavigate, role }: DashboardProps) {
     repaymentsToday: 0,
     totalInputKg: 0,
     totalPeriodInputKg: 0,
-    efficiency: 0
+    efficiency: 0,
+    productStockLevels: [] as any[]
   });
 
   const todayStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
@@ -38,7 +39,7 @@ export default function Dashboard({ onNavigate, role }: DashboardProps) {
         const { data: sessData, error: sessErr } = await supabase.from('milling_sessions').select('*').eq('is_closed', false).maybeSingle();
         if (sessErr) console.error("DIAG [milling_sessions]:", sessErr);
 
-        const { data: productsData, error: productsErr } = await supabase.from('products').select('*');
+        const { data: productsData, error: productsErr } = await supabase.from('products').select('*').order('name');
         if (productsErr) console.error("DIAG [products]:", productsErr);
 
         const { data: salesData, error: salesErr } = await supabase.from('sales_transactions').select('*').gte('created_at', todayUtc);
@@ -103,7 +104,8 @@ export default function Dashboard({ onNavigate, role }: DashboardProps) {
           repaymentsToday: totalRepayments || 0,
           totalInputKg: totalInput || 0,
           totalPeriodInputKg: totalPeriodInput || 0,
-          efficiency: efficiency || 0
+          efficiency: efficiency || 0,
+          productStockLevels: products.filter(p => (p.category || '').toLowerCase() !== 'service')
         });
       } catch (err: any) { 
         console.error('CRITICAL DASHBOARD ERROR:', err.message); 
@@ -181,6 +183,37 @@ export default function Dashboard({ onNavigate, role }: DashboardProps) {
           </div>
         </div>
       )}
+
+      {/* BENTO STOCK MONITOR */}
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+           <Box className="text-[#1E3A8A]" size={20} />
+           <h3 className="text-[11px] font-black text-[#1E3A8A] uppercase tracking-[0.2em]">Current Stock Levels</h3>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+           {stats.productStockLevels.map(p => {
+              const isLow = Number(p.current_stock) <= Number(p.minimum_level);
+              return (
+                <div 
+                  key={p.id} 
+                  className={`p-5 rounded-[1.5rem] bg-[#F8FAFC] border-2 transition-all ${isLow ? 'border-[#F59E0B] shadow-lg shadow-orange-100 animate-pulse' : 'border-slate-100 hover:border-slate-200'}`}
+                >
+                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 truncate">{p.name}</p>
+                   <div className="flex items-baseline gap-1">
+                      <span className={`text-3xl font-black tracking-tighter ${isLow ? 'text-[#F59E0B]' : 'text-[#1E3A8A]'}`}>
+                        {Number(p.current_stock).toLocaleString()}
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">KG</span>
+                   </div>
+                   <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
+                      <span className="text-[8px] font-black text-slate-400 uppercase">Min Level</span>
+                      <span className="text-[10px] font-black text-slate-900">{p.minimum_level} KG</span>
+                   </div>
+                </div>
+              );
+           })}
+        </div>
+      </div>
 
       {/* Secondary Stats Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { 
   User as UserIcon, Wallet, ArrowUpCircle, History, 
   CheckCircle, AlertTriangle, Search, UserPlus, 
-  Activity, Pencil, Trash2, X 
+  Activity, Pencil, Trash2, X, Phone
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -246,7 +246,18 @@ export default function DebtLedger() {
                   </div>
                   <div>
                     <h3 className="text-sm font-black text-mill-text uppercase">{d.customer_name}</h3>
-                    <p className="text-[10px] font-bold text-slate-400 tracking-widest">{d.customer_phone}</p>
+                    <div className="flex items-center gap-3 mt-1">
+                      <p className="text-[10px] font-bold text-slate-400 tracking-widest">{d.customer_phone}</p>
+                      {d.customer_phone && d.customer_phone !== 'Unregistered' && (
+                        <a 
+                          href={`tel:${d.customer_phone}`}
+                          className="w-8 h-8 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
+                          title="Call Customer"
+                        >
+                          <Phone size={14} fill="currentColor" className="opacity-80" />
+                        </a>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center gap-2 pt-2 border-t border-slate-50">
                     <History size={12} className="text-slate-300" />
@@ -290,7 +301,18 @@ export default function DebtLedger() {
               <tr key={d.id} className="hover:bg-slate-50/50 transition-colors group">
                 <td className="px-10 py-6">
                   <p className="text-sm font-black text-slate-900 uppercase">{d.customer_name}</p>
-                  <p className="text-[10px] text-slate-400 font-bold">{d.customer_phone}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <p className="text-[10px] text-slate-400 font-bold">{d.customer_phone}</p>
+                    {d.customer_phone && d.customer_phone !== 'Unregistered' && (
+                      <a 
+                        href={`tel:${d.customer_phone}`}
+                        className="text-emerald-600 hover:text-emerald-700 transition-colors"
+                        title="Call Customer"
+                      >
+                        <Phone size={12} fill="currentColor" />
+                      </a>
+                    )}
+                  </div>
                 </td>
                 <td className="px-10 py-6">
                   <p className="text-sm font-black text-slate-900">KES {d.original_debt?.toLocaleString()}</p>
