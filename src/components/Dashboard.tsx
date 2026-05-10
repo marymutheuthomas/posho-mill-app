@@ -1,174 +1,265 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Zap, Play, Loader2,TrendingUp, Package, Users, AlertTriangle, ArrowRightCircle, Clock } from 'lucide-react';
+import { 
+  TrendingUp, Box, Activity, AlertTriangle, 
+  Wallet, Zap, Calendar, BarChart3
+} from 'lucide-react';
 
-interface DashboardProps {
-  onNavigate: (tab: string) => void;
-}
+interface DashboardProps { onNavigate: (tab: string) => void; role: string | null; }
 
-export default function Dashboard({ onNavigate }: DashboardProps) {
+export default function Dashboard({ onNavigate, role }: DashboardProps) {
   const [activeSession, setActiveSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
-    stock: 0,
-    sales: 0,
-    customers: 0,
-    staleTransfers: 0
+  const [stats, setStats] = useState({ 
+    maizeStock: 0, 
+    millingRevenue: 0, 
+    cashInflow: 0, 
+    lowStockCount: 0,
+    debtIssued: 0,
+    repaymentsToday: 0,
+    totalInputKg: 0,
+    totalPeriodInputKg: 0,
+    efficiency: 0
   });
+
+  const todayStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
 
   useEffect(() => {
     async function fetchDashboardData() {
       try {
-        const { data: sess } = await supabase
-          .from('milling_sessions')
-          .select('*')
-          .eq('status', 'Started')
-          .maybeSingle();
+        // Enforce exact UTC offset for Nairobi midnight
+        const d = new Date();
+        const nairobiStr = d.toLocaleString('en-US', { timeZone: 'Africa/Nairobi' });
+        const nairobiTime = new Date(nairobiStr);
+        nairobiTime.setHours(0, 0, 0, 0);
+        // Convert Nairobi midnight back to its exact UTC equivalent string
+        const todayUtc = new Date(nairobiTime.getTime() - (3 * 60 * 60 * 1000)).toISOString();
         
-        setActiveSession(sess);
+        const { data: sessData, error: sessErr } = await supabase.from('milling_sessions').select('*').eq('is_closed', false).maybeSingle();
+        if (sessErr) console.error("DIAG [milling_sessions]:", sessErr);
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        const { data: productsData, error: productsErr } = await supabase.from('products').select('*');
+        if (productsErr) console.error("DIAG [products]:", productsErr);
 
-        const { data: pData } = await supabase.from('products').select('current_stock');
-        const totalStock = pData?.reduce((acc, curr) => acc + (curr.current_stock || 0), 0) || 0;
+        const { data: salesData, error: salesErr } = await supabase.from('sales_transactions').select('*').gte('created_at', todayUtc);
+        if (salesErr) console.error("DIAG [sales_transactions]:", salesErr);
 
-        const { data: sData } = await supabase
-          .from('service_transactions')
-          .select('fee_charged')
-          .gte('created_at', today.toISOString());
+        await supabase.from('daily_audits').select('*').gte('created_at', todayUtc);
+
+        const { data: repaymentsData, error: repaymentsErr } = await supabase.from('repayments').select('*').gte('created_at', todayUtc);
+        if (repaymentsErr) console.error("DIAG [repayments]:", repaymentsErr);
+
+        const { data: logsData, error: logsErr } = await supabase.from('production_logs').select('*').gte('created_at', todayUtc);
+        if (logsErr) console.error("DIAG [production_logs]:", logsErr);
+
+        const { data: allLogsData, error: allLogsErr } = await supabase.from('production_logs').select('input_kg');
+        if (allLogsErr) console.error("DIAG [all_production_logs]:", allLogsErr);
+
+        const products = productsData || [];
+        const txs = salesData || [];
+        const repayments = repaymentsData || [];
+        const logs = logsData || [];
+        const allLogs = allLogsData || [];
+
+        const maize = products.find(p => p.product_code === '101');
+        const lowStock = products.filter(p => Number(p.minimum_level) > 0 && Number(p.current_stock) < Number(p.minimum_level)).length;
+
+        let totalMillingRevenue = 0;
+        let serviceRevenue = 0;
+        let totalDebtIssued = 0;
+        let cashFromSales = 0;
+
+        txs.forEach(tx => {
+          const p = products.find(prod => prod.id === tx.product_id);
+          const pCategory = (p?.category || '').toLowerCase();
+          const txCategory = (tx.transaction_type || '').toLowerCase();
+          const isService = pCategory === 'service' || pCategory === 'milling' || txCategory === 'service' || txCategory === 'milling';
           
-        const dailySales = sData?.reduce((acc, curr) => acc + (curr.fee_charged || 0), 0) || 0;
-
-        // 3. Stale Transfers (Older than 24h)
-        const twentyFourHoursAgo = new Date();
-        twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
-
-        const { data: staleData } = await supabase
-          .from('stock_transfers')
-          .select('id')
-          .eq('status', 'Pending')
-          .lt('created_at', twentyFourHoursAgo.toISOString());
-
-        setStats({
-          stock: totalStock,
-          sales: dailySales,
-          customers: 0,
-          staleTransfers: staleData?.length || 0
+          const rate = isService ? Number(p?.milling_fee || 0) : Number(p?.selling_price || 0);
+          const weight = Number(tx.weight_kg) || Number(tx.quantity) || 0;
+          const lineTotal = weight * rate;
+          
+          if (!isNaN(lineTotal)) {
+            totalMillingRevenue += lineTotal;
+            cashFromSales += lineTotal;
+            if (isService) {
+              serviceRevenue += lineTotal;
+            }
+          }
         });
 
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
+        const totalRepayments = repayments.reduce((acc: number, curr: any) => acc + (Number(curr.amount) || 0), 0);
+        const totalInput = logs.reduce((acc: number, curr: any) => acc + (Number(curr.input_kg) || 0), 0);
+        const totalPeriodInput = allLogs.reduce((acc: number, curr: any) => acc + (Number(curr.input_kg) || 0), 0);
+        const efficiency = totalInput > 0 ? serviceRevenue / totalInput : 0;
+
+        setActiveSession(sessData);
+        setStats({ 
+          maizeStock: Number(maize?.current_stock) || 0, 
+          millingRevenue: totalMillingRevenue || 0, 
+          cashInflow: (cashFromSales + totalRepayments) || 0,
+          lowStockCount: lowStock || 0,
+          debtIssued: totalDebtIssued || 0,
+          repaymentsToday: totalRepayments || 0,
+          totalInputKg: totalInput || 0,
+          totalPeriodInputKg: totalPeriodInput || 0,
+          efficiency: efficiency || 0
+        });
+      } catch (err: any) { 
+        console.error('CRITICAL DASHBOARD ERROR:', err.message); 
+      } finally { setLoading(false); }
     }
     fetchDashboardData();
   }, []);
 
-  if (loading) return (
-    <div className="flex justify-center p-20">
-      <Loader2 className="animate-spin text-[#06B6D4]" size={48} />
-    </div>
-  );
+  if (loading) return <div className="p-20 text-center font-black uppercase text-slate-400 italic tracking-widest">Compiling Analytics...</div>;
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-700">
-      {/* Stale Transfer Alert (Admin High-Performance Monitor) */}
-      {stats.staleTransfers > 0 && (
-         <div className="bg-[#312e81] p-8 rounded-[2.5rem] shadow-2xl border-4 border-[#9333ea]/20 animate-pulse relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-[#9333ea]/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
-               <div className="flex items-center gap-6">
-                  <div className="bg-[#9333ea] p-4 rounded-3xl shadow-lg shadow-[#9333ea]/40">
-                    <Clock className="text-white" size={32} />
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-black text-white uppercase tracking-tighter mb-1">Stale Transfer Alert</h3>
-                    <p className="text-[#a5b4fc] font-bold text-sm">
-                      Inventory Lockdown Risk: {stats.staleTransfers} shipment(s) have been stuck in transit for >24 hours.
-                    </p>
-                  </div>
-               </div>
-               <button 
-                 onClick={() => onNavigate('Stock Transfers')}
-                 className="bg-white/10 hover:bg-white/20 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-3 backdrop-blur-md transition-all border border-white/10"
-               >
-                 Review Lockups <ArrowRightCircle size={18} />
-               </button>
+    <div className="space-y-10">
+      <div className="flex items-center justify-end mb-4">
+        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+          <Calendar size={12} className="text-slate-900" /> Period: <span className="text-slate-900">{todayStr}</span>
+        </p>
+      </div>
+
+      {/* Primary Financial Hub - ADMIN ONLY */}
+      {role === 'Admin' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+          {/* Net Earnings Card */}
+          <div className="mill-card p-4 md:p-6 lg:p-8 bg-white border-slate-200 shadow-xl relative overflow-hidden group lg:col-span-2 border-t-4 border-t-slate-900 min-h-[160px] md:min-h-[180px]">
+            <div className="relative z-10 space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="text-slate-900" size={18} />
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Total Period Revenue</p>
+                </div>
+                <div className="text-[9px] font-bold bg-slate-100 text-slate-900 px-3 py-1 rounded-full uppercase">High Contrast View</div>
+              </div>
+              <h2 className="text-4xl md:text-6xl font-black tracking-tighter text-slate-950">
+                KES {stats.millingRevenue ? stats.millingRevenue.toLocaleString() : '0.00'}
+              </h2>
+              <div className="flex gap-4 md:gap-6 pt-4 border-t border-slate-100">
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Liquid Cash</p>
+                  <p className="text-base md:text-lg font-black text-slate-900">
+                    KES {(stats.millingRevenue - stats.debtIssued) ? (stats.millingRevenue - stats.debtIssued).toLocaleString() : '0.00'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Debt Issued</p>
+                  <p className="text-base md:text-lg font-black text-red-600">
+                    KES {stats.debtIssued ? stats.debtIssued.toLocaleString() : '0.00'}
+                  </p>
+                </div>
+              </div>
             </div>
-         </div>
+          </div>
+
+          {/* Efficiency Meter */}
+          <div className="mill-card p-6 md:p-10 bg-white border-slate-200 shadow-xl flex flex-col justify-between min-h-[180px] md:min-h-[220px]">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Zap className="text-slate-900" size={18} />
+                <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Efficiency Rate</p>
+              </div>
+              <h2 className="text-3xl md:text-4xl font-black tracking-tighter text-slate-950">
+                {stats.efficiency ? stats.efficiency.toFixed(2) : '0.00'} <span className="text-sm text-slate-400">Ksh/Kg</span>
+              </h2>
+              <p className="text-[9px] font-bold text-slate-600 uppercase leading-tight">Revenue generated per KG of maize input</p>
+            </div>
+            <div className="pt-6 border-t border-slate-100 mt-6">
+               <p className="text-[10px] font-black text-slate-500 uppercase mb-1">Milled Today</p>
+               <h3 className="text-4xl font-black text-slate-950">
+                 {stats.totalInputKg ? stats.totalInputKg.toLocaleString() : '0'} KG
+               </h3>
+               {stats.totalInputKg === 0 && stats.totalPeriodInputKg > 0 && (
+                 <p className="text-[10px] font-bold text-slate-400 uppercase mt-2 border-t border-slate-50 pt-2">
+                   Total Period: <span className="text-slate-600">{stats.totalPeriodInputKg.toLocaleString()} KG</span>
+                 </p>
+               )}
+            </div>
+          </div>
+        </div>
       )}
 
-      {/* Top Banner / Session Quick Start */}
-      <div className={`p-10 rounded-[2.5rem] shadow-2xl relative overflow-hidden transition-all duration-500 ${activeSession ? 'bg-emerald-600' : 'bg-[#4F46E5]'}`}>
-        <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl"></div>
-        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8 text-white">
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
-               <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-md">
-                 < Zap size={32} className={activeSession ? 'text-yellow-300 animate-pulse' : 'text-[#06B6D4]'} />
-               </div>
-               <h2 className="text-4xl font-black uppercase tracking-tighter">
-                {activeSession ? 'System Active' : 'Mill Idle'}
-               </h2>
+      {/* Secondary Stats Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {role === 'Admin' ? (
+          <div className="mill-card p-4 md:p-6 bg-white shadow-lg border-slate-100 min-h-[120px] flex flex-col justify-center">
+            <div className="flex items-center gap-3 mb-4">
+              <Wallet className="text-slate-900" size={18} />
+              <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Cash Inflow</p>
             </div>
-            <p className="text-white/70 font-bold max-w-md">
-              {activeSession 
-                ? `Session started at ${new Date(activeSession.created_at).toLocaleTimeString()}. Tracking power at rate 25 KES/kWh.`
-                : 'No active milling session. Initialize the mill motor to start recording production and service sales.'}
-            </p>
+            <h3 className="text-3xl font-black text-slate-950 font-mono">
+              KES {stats.cashInflow ? stats.cashInflow.toLocaleString() : '0.00'}
+            </h3>
+            <p className="text-[8px] font-bold text-slate-600 uppercase mt-2">Sales + Repayments</p>
           </div>
-          
-          {!activeSession ? (
-            <button 
-              onClick={() => onNavigate('Production Hub')}
-              className="bg-[#06B6D4] text-white px-10 py-6 rounded-2xl font-black text-xl uppercase tracking-widest shadow-[0_15px_30px_rgba(6,182,212,0.3)] hover:scale-105 transition-all flex items-center gap-4"
-            >
-              <Play size={24} /> Initialize Mill
-            </button>
-          ) : (
-             <div className="bg-white/10 px-8 py-5 rounded-2xl border border-white/20 backdrop-blur-sm">
-                <p className="text-[10px] font-black uppercase tracking-widest text-white/50 mb-1">Active Meter Reading</p>
-                <p className="text-3xl font-mono font-black">{activeSession.start_reading} <span className="text-xs uppercase opacity-40">kWh</span></p>
-             </div>
-          )}
+        ) : (
+          <div className="mill-card p-4 md:p-6 bg-white shadow-lg border-slate-100 min-h-[120px] flex flex-col justify-center">
+            <div className="flex items-center gap-3 mb-4">
+              <BarChart3 className="text-slate-900" size={18} />
+              <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Transactions Today</p>
+            </div>
+            <p className="text-xl md:text-2xl font-black text-slate-900 font-mono">
+              {stats.millingRevenue > 0 ? 'ACTIVE' : 'STARTING'}
+            </p>
+            <p className="text-[8px] font-bold text-slate-600 uppercase mt-2">Daily throughput monitoring</p>
+          </div>
+        )}
+
+        <div className="mill-card p-6 md:p-8 bg-white shadow-lg border-slate-100 min-h-[140px] flex flex-col justify-center">
+          <div className="flex items-center gap-3 mb-4">
+            <Box className="text-slate-900" size={18} />
+            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Bulk Maize</p>
+          </div>
+          <p className="text-xl md:text-2xl font-black text-slate-900 font-mono">
+            {stats.maizeStock ? stats.maizeStock.toLocaleString() : '0'} KG
+          </p>
+          <p className="text-[8px] font-bold text-slate-600 uppercase mt-2">Current 101 Inventory</p>
+        </div>
+
+        <div className={`mill-card p-6 md:p-8 shadow-lg transition-all min-h-[140px] flex flex-col justify-center ${stats.lowStockCount > 0 ? 'bg-orange-50 border-orange-200' : 'bg-white border-slate-100'}`}>
+          <div className="flex items-center gap-3 mb-4">
+            <AlertTriangle className={stats.lowStockCount > 0 ? 'text-orange-600' : 'text-slate-900'} size={18} />
+            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Stock Alerts</p>
+          </div>
+          <p className={`text-xl md:text-2xl font-black ${stats.lowStockCount > 0 ? 'text-orange-700' : 'text-slate-900'}`}>
+            {stats.lowStockCount ? stats.lowStockCount.toLocaleString() : '0'} Items
+          </p>
+          <p className="text-[8px] font-bold text-slate-600 uppercase mt-2">Below Min. Level</p>
+        </div>
+
+        <div className={`mill-card p-6 md:p-8 shadow-lg transition-all min-h-[140px] flex flex-col justify-center ${activeSession ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-100'}`}>
+          <div className="flex items-center gap-3 mb-4">
+            <Activity className={activeSession ? 'text-emerald-600 animate-pulse' : 'text-slate-900'} size={18} />
+            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Mill Status</p>
+          </div>
+          <p className={`text-xl md:text-2xl font-black ${activeSession ? 'text-emerald-700' : 'text-slate-900'}`}>
+            {activeSession ? 'Running' : 'Standby'}
+          </p>
+          <p className="text-[8px] font-bold text-slate-600 uppercase mt-2">
+            {activeSession?.session_type || 'No Active Session'}
+          </p>
         </div>
       </div>
 
-      {/* Quick Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-         <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-4">
-            <div className="bg-[#4F46E5]/10 w-12 h-12 rounded-xl flex items-center justify-center text-[#4F46E5]">
-              <Package size={24} />
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-2">Total Finished Stock</p>
-              <h4 className="text-3xl font-black text-[#0F172A]">{stats.stock.toLocaleString()} <span className="text-sm opacity-40">KG</span></h4>
-            </div>
-         </div>
-         <button 
-           onClick={() => onNavigate('Insights & Audit')}
-           className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-4 text-left hover:border-emerald-200 transition-all group"
-         >
-            <div className="bg-emerald-50 w-12 h-12 rounded-xl flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all">
-              <TrendingUp size={24} />
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-2">Today's Revenue</p>
-              <h4 className="text-3xl font-black text-[#0F172A]">KES {stats.sales.toLocaleString()}</h4>
-              <p className="text-[10px] text-emerald-600 font-bold uppercase mt-2 opacity-0 group-hover:opacity-100 transition-all">View Audit Hub →</p>
-            </div>
-         </button>
-         <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-4">
-            <div className="bg-sky-50 w-12 h-12 rounded-xl flex items-center justify-center text-sky-600">
-              <Users size={24} />
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-2">Client Base</p>
-              <h4 className="text-3xl font-black text-[#0F172A]">Active System</h4>
-            </div>
-         </div>
+      {/* Performance Shortcuts */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+        <button onClick={() => onNavigate('Session Control')} className="mill-card p-10 bg-white border-slate-200 hover:border-slate-900 group transition-all text-left flex items-center justify-between shadow-lg">
+           <div className="space-y-2">
+             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Control Center</p>
+             <h3 className="text-2xl font-black text-slate-900 uppercase group-hover:text-slate-900 transition-colors">Start/Stop Milling</h3>
+           </div>
+           <Activity size={32} className="text-slate-100 group-hover:text-slate-900/20 transition-all" />
+        </button>
+        <button onClick={() => onNavigate('Insights & Audit')} className="mill-card p-10 bg-white border-slate-200 hover:border-slate-900 group transition-all text-left flex items-center justify-between shadow-lg">
+           <div className="space-y-2">
+             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Analytics</p>
+             <h3 className="text-2xl font-black text-slate-900 uppercase group-hover:text-slate-900 transition-colors">Yield Performance</h3>
+           </div>
+           <BarChart3 size={32} className="text-slate-100 group-hover:text-slate-900/20 transition-all" />
+        </button>
       </div>
     </div>
   );

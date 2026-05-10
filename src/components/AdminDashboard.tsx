@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { ShieldAlert, BarChart3, TrendingUp, AlertTriangle, CheckCircle, Zap, Landmark, Plus, Calendar, RefreshCw, Wallet, ArrowUpRight, ArrowDownRight, Package, Printer } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Landmark, Plus, Calendar, RefreshCw, Package, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
@@ -10,7 +10,8 @@ export default function AdminDashboard() {
   
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'Daily' | 'Growth'>('Daily');
-  const [busy, setBusy] = useState(false);
+  const [_isBusy, setIsBusy] = useState(false);
+
   
   const [expenseForm, setExpenseForm] = useState({
     category: 'Wages', amount: '', date: new Date().toISOString().split('T')[0], description: ''
@@ -39,7 +40,7 @@ export default function AdminDashboard() {
 
   const handleAddExpense = async (e: React.FormEvent) => {
     e.preventDefault();
-    setBusy(true);
+    setIsBusy(true);
     try {
       await supabase.from('expenses').insert([{
         category: expenseForm.category,
@@ -51,7 +52,7 @@ export default function AdminDashboard() {
       setExpenseForm({ category: 'Wages', amount: '', date: new Date().toISOString().split('T')[0], description: '' });
       fetchUnifiedData();
     } catch (err: any) { alert(err.message); }
-    finally { setBusy(false); }
+    finally { setIsBusy(false); }
   };
 
   if (loading) return <div className="p-20 text-center bg-[#F9FAFB] min-h-screen text-[#5C4033] font-black tracking-widest animate-pulse">SYNCHRONIZING MASTER LEDGER...</div>;

@@ -1,89 +1,164 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { ShoppingCart, User, Hash, CheckCircle, AlertCircle, Loader2, Zap, Tag, Receipt, XCircle, PowerOff, Wallet, Phone, Coins } from 'lucide-react';
+import { 
+  CheckCircle, AlertTriangle, 
+  Calendar, ChevronRight, Clock, User, RotateCcw,
+  Search, ChevronDown
+} from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { db } from '../lib/db';
 
-const POWER_RATE_PER_KWH = 25;
-
-interface Product {
-  id: string;
-  name: string;
-  milling_fee: number;
-  selling_price: number;
-  current_stock: number;
+interface Customer { 
+  id: string; 
+  customer_name: string; 
+  customer_phone?: string; 
+  remaining_balance?: number;
+  total_debt?: number;
+  total_paid?: number;
 }
 
-interface MillingSession {
-  id: string;
-  start_reading: number;
+interface Product { 
+  id: string; 
+  name: string; 
+  current_stock: number; 
+  product_code: string; 
+  selling_price?: number; 
+  milling_fee?: number; 
 }
-
-type TransactionType = 'Service' | 'Product';
-type PaymentMethod = 'Cash' | 'Mpesa' | 'Debt';
+interface TransactionLog { 
+  id: string; 
+  created_at: string; 
+  total_price: number; 
+  payment_method: string; 
+  weight_kg: number;
+  product_id: string;
+  transaction_type?: string;
+  customer_name?: string;
+  products?: { name: string }; 
+}
 
 export default function ServicePOS() {
-  const [loading, setLoading] = useState(false);
-  const [fetchingProducts, setFetchingProducts] = useState(true);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [activeSession, setActiveSession] = useState<MillingSession | null>(null);
+  const queryClient = useQueryClient();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showReceipt, setShowReceipt] = useState(false);
-  const [isClosingMeter, setIsClosingMeter] = useState(false);
-  const [endReading, setEndReading] = useState('');
-  
+
+  // Form State
   const [formData, setFormData] = useState({
-    customerName: '',
-    phoneNumber: '',
+    customerId: '',
     productId: '',
     weightKg: '',
     feeCharged: '0.00',
-    transactionType: 'Service' as TransactionType,
-    paymentMethod: 'Cash' as PaymentMethod,
+    transactionType: 'Service' as 'Service' | 'Product',
+    paymentMethod: 'Cash' as 'Cash' | 'M-Pesa' | 'Debt'
+  });
+
+  // 1. Data Fetching Queries (Cache-First)
+  const { data: products = [], isLoading: loadingProducts } = useQuery({
+    queryKey: ['products'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('products').select('*').order('name');
+      if (error) throw error;
+      return data as Product[];
+    },
+    staleTime: 1000 * 60 * 30, // 30 mins
+  });
+
+  const { data: customers = [] } = useQuery({
+    queryKey: ['customers'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('customer_debt_summary').select('*').order('customer_name');
+      if (error) throw error;
+      return data as Customer[];
+    },
+    staleTime: 1000 * 60 * 10, // 10 mins
+  });
+
+  const { data: activeSession } = useQuery({
+    queryKey: ['active-session'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('milling_sessions').select('*').eq('is_closed', false).order('created_at', { ascending: false }).limit(1).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: salesHistory = [], isLoading: loadingHistory } = useQuery({
+    queryKey: ['sales_history'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('sales_transactions')
+        .select('id, created_at, weight_kg, total_price, payment_method, customer_name, product_id, transaction_type')
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data as TransactionLog[];
+    },
+  });
+
+  // 2. Optimized Mutations (Optimistic UI + Offline DB)
+  const checkoutMutation = useMutation({
+    mutationFn: async (txData: any) => {
+      if (!navigator.onLine) {
+        await db.pendingTransactions.add({ type: 'sale', payload: txData, timestamp: Date.now(), retryCount: 0 });
+        return { offline: true };
+      }
+      
+      const { error } = await supabase.from('sales_transactions').insert([txData]);
+      if (error) throw error;
+
+      // Update Stock
+      const p = products.find(x => x.id === txData.product_id);
+      if (p) {
+        await supabase.from('products').update({ current_stock: (p.current_stock || 0) - txData.weight_kg }).eq('id', p.id);
+      }
+      return { offline: false };
+    },
+    onMutate: async (txData) => {
+      await queryClient.cancelQueries({ queryKey: ['sales_history'] });
+      const previousHistory = queryClient.getQueryData(['sales_history']);
+
+      // Optimistically update the history list
+      queryClient.setQueryData(['sales_history'], (old: any) => [
+        {
+          id: crypto.randomUUID(),
+          created_at: new Date().toISOString(),
+          ...txData,
+          products: { name: products.find(p => p.id === txData.product_id)?.name || 'Item' }
+        },
+        ...(old || [])
+      ].slice(0, 50));
+
+      return { previousHistory };
+    },
+    onSuccess: (res) => {
+      if (res.offline) {
+        setSuccess('OFFLINE MODE: Sale recorded locally. It will sync when internet returns.');
+      } else {
+        setSuccess('Transaction successful and synced to cloud.');
+      }
+      setFormData({ customerId: '', productId: '', weightKg: '', feeCharged: '0.00', transactionType: 'Service', paymentMethod: 'Cash' });
+      setShowReceipt(false);
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+    },
+    onError: (_err: any, txData, context: any) => {
+      queryClient.setQueryData(['sales_history'], context.previousHistory);
+      // Fallback to local DB on any error
+      db.pendingTransactions.add({ type: 'sale', payload: txData, timestamp: Date.now(), retryCount: 0 });
+      setSuccess('CONNECTION LOST: Transaction saved to offline queue.');
+      setFormData({ customerId: '', productId: '', weightKg: '', feeCharged: '0.00', transactionType: 'Service', paymentMethod: 'Cash' });
+      setShowReceipt(false);
+    }
   });
 
   useEffect(() => {
-    async function init() {
-      try {
-        const { data: pData, error: pErr } = await supabase
-          .from('products')
-          .select('id, name, milling_fee, selling_price, current_stock')
-          .in('category', ['Finished'])
-          .order('name');
-        
-        if (pErr) throw pErr;
-        setProducts(pData || []);
-
-        const { data: sData, error: sErr } = await supabase
-          .from('milling_sessions')
-          .select('id, start_reading')
-          .eq('status', 'Started')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        
-        if (sErr) throw sErr;
-        setActiveSession(sData);
-      } catch (err: any) {
-        setError('Init Error: ' + err.message);
-      } finally {
-        setFetchingProducts(false);
-      }
-    }
-    init();
-  }, [success]);
-
-  // Auto-calculation logic
-  useEffect(() => {
-    const selectedProduct = products.find(p => p.id === formData.productId);
-    const weight = parseFloat(formData.weightKg);
-    
-    if (selectedProduct && !isNaN(weight)) {
-      const rate = formData.transactionType === 'Service' 
-        ? selectedProduct.milling_fee 
-        : selectedProduct.selling_price;
-      
-      const calculatedFee = weight * rate;
-      setFormData(prev => ({ ...prev, feeCharged: calculatedFee.toFixed(2) }));
+    const p = products.find(x => x.id === formData.productId);
+    const w = parseFloat(formData.weightKg) || 0;
+    if (p && w > 0) {
+      const rate = formData.transactionType === 'Service' ? (p.milling_fee || 0) : (p.selling_price || 0);
+      setFormData(prev => ({ ...prev, feeCharged: (w * rate).toFixed(2) }));
     } else {
       setFormData(prev => ({ ...prev, feeCharged: '0.00' }));
     }
@@ -91,364 +166,390 @@ export default function ServicePOS() {
 
   const handleInitialSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-
-    if (!activeSession) {
-      setError('Mill Motor Not Initialized: Start a Service Session to record sales.');
-      return;
-    }
-    
-    const selectedProduct = products.find(p => p.id === formData.productId);
-    const weight = parseFloat(formData.weightKg);
-
-    if (formData.transactionType === 'Product' && selectedProduct) {
-      if (weight > selectedProduct.current_stock) {
-        setError(`Insufficient Stock! Only ${selectedProduct.current_stock}kg available.`);
-        return;
-      }
-    }
-
-    if (formData.paymentMethod === 'Debt' && !formData.customerName) {
-      setError('Debt Sales Require a Customer Name and Phone Number.');
-      return;
-    }
-
+    setError(''); setSuccess('');
     setShowReceipt(true);
   };
 
-  const commitTransaction = async () => {
-    if (!activeSession) return;
-    setLoading(true);
-    setError('');
-    
-    try {
-      const selectedProduct = products.find(p => p.id === formData.productId);
-      if (!selectedProduct) throw new Error("Product not selected");
+  const handleFinalCheckout = async () => {
+    const p = products.find(x => x.id === formData.productId);
+    const c = customers.find(x => x.id === formData.customerId);
 
-      // Prepare Transaction Object
-      const newTransaction = {
-        customer_name: formData.paymentMethod === 'Debt' ? formData.customerName : (formData.customerName || 'Walk-in'),
-        phone_number: formData.phoneNumber,
-        service_type: selectedProduct.name,
-        transaction_type: formData.transactionType,
-        payment_method: formData.paymentMethod,
-        session_id: activeSession.id,
-        product_id: selectedProduct.id,
-        weight_kg: parseFloat(formData.weightKg),
-        fee_charged: parseFloat(formData.feeCharged),
-        created_at: new Date().toISOString()
-      };
+    if (!p) { setError('PRODUCT ERROR: Item not found.'); return; }
+    const weight = parseFloat(formData.weightKg) || 0;
+    if (weight <= 0) { setError('QUANTITY ERROR: Weight must be greater than 0.'); return; }
 
-      // Push to Speed Layer (Local Queue)
-      const queueRaw = localStorage.getItem('mill_sync_queue');
-      const queue = queueRaw ? JSON.parse(queueRaw) : [];
-      queue.push({ table: 'service_transactions', data: newTransaction });
-      localStorage.setItem('mill_sync_queue', JSON.stringify(queue));
-
-      // Update Local Stock Persistence (Instant Feedback)
-      if (formData.transactionType === 'Product') {
-        setProducts(prev => prev.map(p => 
-          p.id === selectedProduct.id 
-            ? { ...p, current_stock: p.current_stock - parseFloat(formData.weightKg) }
-            : p
-        ));
-      }
-
-      // Instant UI Success
-      setSuccess(`✅ ${formData.transactionType} sale saved locally! System will sync in background.`);
-      setShowReceipt(false);
-      
-      // Reset Form
-      setFormData({ 
-        customerName: '', 
-        phoneNumber: '',
-        productId: '', 
-        weightKg: '', 
-        feeCharged: '0.00', 
-        transactionType: 'Service',
-        paymentMethod: 'Cash'
-      });
-
-    } catch (err: any) {
-      setError(err.message);
-      setShowReceipt(false);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const closeMeter = async () => {
-    if (!activeSession) return;
-    const end = parseFloat(endReading);
-    if (isNaN(end) || end < activeSession.start_reading) {
-      setError(`End reading must be >= ${activeSession.start_reading}`);
+    if (formData.transactionType === 'Product' && weight > (p.current_stock || 0)) {
+      setError(`STOCK ALERT: Only ${p.current_stock} units left.`);
       return;
     }
 
-    const powerCost = (end - activeSession.start_reading) * POWER_RATE_PER_KWH;
-
-    setLoading(true);
-    try {
-      const { error: updErr } = await supabase
-        .from('milling_sessions')
-        .update({ 
-          status: 'Completed', 
-          end_reading: end, 
-          power_cost: powerCost 
-        })
-        .eq('id', activeSession.id);
-      
-      if (updErr) throw updErr;
-      setActiveSession(null);
-      setIsClosingMeter(false);
-      setSuccess('Meter closed and power cost audited!');
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+    if (formData.paymentMethod === 'Debt' && !formData.customerId) {
+      setError('DEBT SECURITY: You MUST select a customer.');
+      return;
     }
+
+    const txData = {
+      product_id: formData.productId,
+      weight_kg: weight,
+      total_price: parseFloat(formData.feeCharged),
+      payment_method: formData.paymentMethod,
+      transaction_type: formData.transactionType,
+      session_id: activeSession?.id,
+      customer_name: c?.customer_name || 'Walk-in Customer'
+    };
+
+    if (!txData.session_id) {
+      setError('SESSION ERROR: No active milling session found.');
+      return;
+    }
+
+    checkoutMutation.mutate(txData);
   };
 
-  if (fetchingProducts) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 bg-white rounded-3xl shadow-sm border border-slate-100">
-        <Loader2 size={48} className="text-[#06B6D4] animate-spin mb-4" />
-        <p className="text-[#0F172A] font-bold tracking-tight">Syncing Hybrid POS Rates...</p>
-      </div>
-    );
-  }
-
-  const selectedProduct = products.find(p => p.id === formData.productId);
-  const unitsConsumed = endReading ? (parseFloat(endReading) - (activeSession?.start_reading || 0)) : 0;
+  if ((loadingProducts || loadingHistory) && salesHistory.length === 0) return <div className="p-20 text-center font-black text-slate-400 uppercase tracking-widest italic animate-pulse">Initializing Terminal...</div>;
 
   return (
-    <div className="max-w-4xl mx-auto animate-in fade-in duration-700 relative pb-20">
-      {/* Receipt Modal */}
-      {showReceipt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/90 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden border border-white/20 animate-in zoom-in-95 duration-300">
-            <div className="bg-[#4F46E5] p-10 text-center relative">
-              <div className="absolute top-0 left-0 w-full h-2 bg-[repeating-linear-gradient(90deg,transparent,transparent_10px,#06B6D4_10px,#06B6D4_20px)]"></div>
-              <Receipt size={64} className="text-white mx-auto mb-4" />
-              <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Sale Summary</h3>
-            </div>
-            <div className="p-10 space-y-6">
-              <div className="flex justify-between items-center border-b border-slate-50 pb-4">
-                <span className="text-slate-400 font-bold uppercase text-xs tracking-widest">Type</span>
-                <span className={`px-4 py-1 rounded-full font-black text-sm uppercase ${formData.transactionType === 'Service' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
-                  {formData.transactionType}
-                </span>
+    <div className="max-w-7xl mx-auto space-y-8 pb-48 md:pb-20 min-h-[100dvh]">
+      {error && <div className="bg-red-600 text-white p-4 rounded-2xl font-black flex items-center gap-3 text-sm mb-6"><AlertTriangle size={20}/>{error}</div>}
+      {success && <div className="bg-emerald-500 text-white p-4 rounded-2xl font-black flex items-center gap-3 text-sm mb-6"><CheckCircle size={20}/>{success}</div>}
+
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6 md:gap-10">
+        <div className="md:col-span-3">
+          <div className="mill-card p-6 md:p-8 bg-white border-slate-100 shadow-2xl">
+            <form onSubmit={handleInitialSubmit} className="space-y-4">
+               <div>
+                 <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-3">Mode</label>
+                  <div className="flex gap-2">
+                    {['Service', 'Product'].map(type => (
+                      <button 
+                        key={type}
+                        type="button" 
+                        onClick={() => setFormData({...formData, transactionType: type as any})} 
+                        className={`flex-1 py-3.5 px-4 rounded-xl font-black text-xs uppercase border transition-all ${formData.transactionType === type ? 'bg-slate-900 text-white border-slate-900 shadow-md' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100'}`}
+                      >
+                        {type === 'Service' ? 'Milling Fee' : 'Retail Sale'}
+                      </button>
+                    ))}
+                  </div>
+               </div>
+
+                <div>
+                  <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">Product</label>
+                  <select value={formData.productId} onChange={e => setFormData({...formData, productId: e.target.value})} className="mill-input w-full font-black py-3.5 px-4 rounded-xl uppercase text-xs">
+                    <option value="">Select Item...</option>
+                    {products.map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({formData.transactionType === 'Service' ? `KES ${p.milling_fee}/KG` : `KES ${p.selling_price}/KG`})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">Weight (KG)</label>
+                  <div className="relative">
+                    <input type="number" step="0.01" value={formData.weightKg} onChange={e => setFormData({...formData, weightKg: e.target.value})} className="mill-input w-full text-xs font-black py-3.5 px-4 rounded-xl pr-14 bg-slate-50/50" placeholder="0.00" />
+                    <span className="absolute right-5 top-1/2 -translate-y-1/2 font-black text-slate-300 text-xs">KG</span>
+                  </div>
+                </div>
+
+
+
+                <div className="relative">
+                  <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">Customer Selection</label>
+                  <div className={`relative rounded-xl transition-all ${formData.paymentMethod === 'Debt' && !formData.customerId ? 'ring-2 ring-red-500 ring-offset-2' : ''}`}>
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                      <Search size={14} />
+                    </div>
+                    <input 
+                      type="text"
+                      placeholder="Search Customer..."
+                      value={searchTerm || (customers.find(c => c.id === formData.customerId)?.customer_name || '')}
+                      onFocus={() => setIsDropdownOpen(true)}
+                      onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        setIsDropdownOpen(true);
+                      }}
+                      className="mill-input w-full font-black py-3.5 pl-11 pr-10 rounded-xl uppercase text-xs"
+                    />
+                    <button 
+                      type="button"
+                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+                    >
+                      <ChevronDown size={14} />
+                    </button>
+
+                    {isDropdownOpen && (
+                      <div className="absolute z-50 w-full mt-2 bg-white border border-slate-100 rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                        <div className="max-h-[250px] overflow-y-auto divide-y divide-slate-50">
+                          {customers.filter(c => c.customer_name.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 ? (
+                            <div className="p-4 text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">No customers found in debt_book</div>
+                          ) : (
+                            customers.filter(c => c.customer_name.toLowerCase().includes(searchTerm.toLowerCase())).map(c => {
+                              const balance = c.remaining_balance ?? 0;
+                              return (
+                                <button
+                                  key={c.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setFormData({...formData, customerId: c.id});
+                                    setSearchTerm(c.customer_name);
+                                    setIsDropdownOpen(false);
+                                  }}
+                                  className={`w-full text-left px-5 py-4 transition-all flex items-center justify-between group ${formData.customerId === c.id ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+                                >
+                                  <div>
+                                    <p className="text-[11px] font-black uppercase tracking-tight">
+                                      {c.customer_name} — <span className={balance > 0 ? 'text-red-500' : 'text-emerald-500'}>Balance: {balance.toLocaleString()} KES</span>
+                                    </p>
+                                    <p className={`text-[8px] font-bold uppercase tracking-widest ${formData.customerId === c.id ? 'text-slate-500' : 'text-slate-400'}`}>
+                                      {c.customer_phone || 'Account Verified'}
+                                    </p>
+                                  </div>
+                                  <ChevronRight size={14} className={formData.customerId === c.id ? 'text-emerald-400' : 'text-slate-200'} />
+                                </button>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mill-card p-4 bg-white border-slate-200 shadow-lg border-t-4 border-t-slate-900">
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Charge</p>
+                  <h3 className="text-2xl font-black text-slate-900 tracking-tighter font-mono">KES {formData.feeCharged}</h3>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-3">Settlement</label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {['Cash', 'M-Pesa', 'Debt'].map(m => (
+                      <button key={m} type="button" onClick={() => setFormData({...formData, paymentMethod: m as any})} className={`py-3.5 px-4 rounded-xl font-black text-xs uppercase border transition-all ${formData.paymentMethod === m ? 'bg-emerald-600 text-white border-emerald-600 shadow-md' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>{m}</button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex flex-col space-y-3 pt-4 sm:flex-row sm:space-y-0 sm:space-x-2">
+                  <button 
+                    type="submit" 
+                    disabled={!activeSession || (formData.paymentMethod === 'Debt' && !formData.customerId)} 
+                    className={`w-full sm:flex-1 py-3.5 text-xs font-black rounded-xl flex items-center justify-center gap-3 shadow-xl transition-all active:scale-95 ${(!activeSession || (formData.paymentMethod === 'Debt' && !formData.customerId)) ? 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none' : 'bg-slate-900 text-white hover:bg-slate-800'}`}
+                  >
+                     <ChevronRight size={18} /> CHECKOUT & SYNC
+                  </button>
+                </div>
+             </form>
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN — receipt sidebar on desktop */}
+        <div className="md:col-span-2 hidden md:block space-y-6">
+          {showReceipt ? (
+            <div className="mill-card p-10 bg-slate-900 text-white border-none space-y-8 shadow-2xl">
+              <div className="border-b border-slate-800 pb-6 text-center">
+                <div className="w-14 h-14 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Clock className="text-emerald-400" size={28} />
+                </div>
+                <h3 className="text-xl font-black uppercase tracking-tighter">Final Review</h3>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Ready for Ledger Sync</p>
               </div>
-              <div className="flex justify-between items-center border-b border-slate-50 pb-4">
-                <span className="text-slate-400 font-bold uppercase text-xs tracking-widest">Payment</span>
-                <span className="font-black text-[#0F172A] uppercase text-sm">{formData.paymentMethod}</span>
-              </div>
-              <div className="flex justify-between items-start border-b border-slate-50 pb-4">
-                <span className="text-slate-400 font-bold uppercase text-xs tracking-widest">Item</span>
-                <span className="font-black text-[#0F172A] text-right">{selectedProduct?.name}</span>
-              </div>
-              <div className="flex justify-between items-center border-b border-slate-50 pb-4">
-                <span className="text-slate-400 font-bold uppercase text-xs tracking-widest">Quantity</span>
-                <span className="font-black text-[#0F172A]">{formData.weightKg} KG</span>
-              </div>
-              <div className="bg-[#F8FAFC] p-6 rounded-2xl border-2 border-slate-100">
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-500 font-black uppercase text-sm tracking-tighter">Total Amount</span>
-                  <span className="text-3xl font-black text-[#0F172A]">KES {formData.feeCharged}</span>
+              <div className="space-y-4 font-mono text-sm">
+                <div className="flex justify-between border-b border-slate-800 pb-2">
+                  <span className="text-slate-500">MODE</span>
+                  <span className="font-black text-emerald-400">{formData.transactionType}</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-800 pb-2">
+                  <span className="text-slate-500">MASS</span>
+                  <span className="font-black text-white">{formData.weightKg} KG</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-800 pb-2">
+                  <span className="text-slate-500">PAYMENT</span>
+                  <span className="font-black text-amber-400">{formData.paymentMethod}</span>
+                </div>
+                <div className="flex justify-between pt-4 items-baseline">
+                  <span className="text-lg text-slate-500 font-sans font-black">TOTAL</span>
+                  <span className="text-4xl font-black text-emerald-400 tracking-tighter">KES {parseFloat(formData.feeCharged).toLocaleString()}</span>
                 </div>
               </div>
-              <div className="flex gap-4 pt-4">
-                <button onClick={() => setShowReceipt(false)} className="flex-1 px-6 py-4 rounded-xl border-2 border-slate-100 font-bold text-slate-400 hover:bg-slate-50 flex items-center justify-center gap-2"><XCircle size={18} /> Cancel</button>
-                <button onClick={commitTransaction} disabled={loading} className="flex-[2] px-6 py-4 rounded-xl bg-[#4F46E5] text-white font-black shadow-xl hover:bg-[#3730A3] flex items-center justify-center gap-2 disabled:opacity-50">
-                  {loading ? <Loader2 size={18} className="animate-spin" /> : <><CheckCircle size={18} /> Confirm & Save</>}
+              <div className="grid grid-cols-2 gap-4 pt-4">
+                <button onClick={() => setShowReceipt(false)} className="py-5 rounded-2xl bg-slate-800 text-slate-400 font-black text-sm uppercase hover:bg-slate-700 transition-all">Back</button>
+                <button onClick={handleFinalCheckout} disabled={checkoutMutation.isPending || (formData.paymentMethod === 'Debt' && !formData.customerId)}
+                  className={`py-5 rounded-2xl font-black text-sm uppercase shadow-xl transition-all ${(formData.paymentMethod === 'Debt' && !formData.customerId) ? 'bg-slate-700 text-slate-500 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-500'}`}>
+                  {checkoutMutation.isPending ? 'PROCESSING...' : 'CONFIRM SALE'}
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Meter Closing Modal */}
-      {isClosingMeter && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/90 backdrop-blur-md animate-in fade-in duration-300">
-           <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl p-10 border border-slate-100">
-              <div className="flex justify-between items-center mb-8">
-                 <h3 className="text-2xl font-black text-[#0F172A] uppercase tracking-tighter">Power Audit & Close</h3>
-                 <button onClick={() => setIsClosingMeter(false)} className="text-slate-300 hover:text-slate-600"><XCircle size={32} /></button>
+          ) : (
+            <div className="mill-card p-6 bg-white border-slate-200 flex flex-col space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-50 pb-4">
+                <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                  <User size={16} className="text-emerald-600" /> Registry
+                </h3>
+                <span className="text-[10px] font-black bg-slate-100 px-2 py-1 rounded-md text-slate-500">{customers.length} Accounts</span>
               </div>
-              <div className="space-y-8">
-                 <div className="space-y-3">
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Ending Reading (kWh)</label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      placeholder={`Current meter (Min: ${activeSession?.start_reading})`}
-                      className="w-full bg-[#F8FAFC] border-2 border-slate-100 rounded-2xl px-6 py-6 text-3xl font-black focus:border-[#4F46E5] outline-none"
-                      value={endReading}
-                      onChange={(e) => setEndReading(e.target.value)}
-                    />
-                 </div>
-                 <div className="bg-slate-50 p-8 rounded-[2rem] border-2 border-dashed border-slate-100 grid grid-cols-2 gap-6">
-                    <div>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Units Consumed</p>
-                      <p className="text-2xl font-black text-[#0F172A]">{unitsConsumed.toFixed(2)} kWh</p>
+              
+              <div className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar space-y-2">
+                {customers.length === 0 ? (
+                  <p className="py-10 text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">No customers found</p>
+                ) : (
+                  customers.map(c => (
+                    <div key={c.id} className="p-3 rounded-xl border border-slate-50 hover:bg-slate-50 transition-all group">
+                      <div className="flex justify-between items-start mb-1">
+                        <p className="text-[11px] font-black text-slate-900 uppercase truncate">{c.customer_name}</p>
+                        <p className="text-[10px] font-black text-emerald-600 font-mono italic">KES {(c.remaining_balance || 0).toLocaleString()}</p>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{c.customer_phone || 'No Phone'}</p>
+                        <button 
+                          onClick={() => setFormData({...formData, customerId: c.id})}
+                          className="text-[8px] font-black text-slate-400 uppercase tracking-tighter hover:text-emerald-600 transition-colors opacity-0 group-hover:opacity-100"
+                        >
+                          Select →
+                        </button>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Power Cost (KES)</p>
-                      <p className="text-2xl font-black text-red-600">KES {(unitsConsumed * 25).toLocaleString()}</p>
-                    </div>
-                 </div>
-                 <button onClick={closeMeter} disabled={loading} className="w-full bg-red-600 text-white font-black py-7 rounded-2xl shadow-xl flex items-center justify-center gap-4 text-xl uppercase tracking-widest hover:bg-red-700 disabled:opacity-50">
-                    {loading ? <Loader2 className="animate-spin" /> : <><PowerOff size={28} /> Confirm Close</>}
-                 </button>
+                  ))
+                )}
               </div>
-           </div>
-        </div>
-      )}
-
-      {/* Main Form */}
-      <div className="bg-[#4F46E5] p-10 rounded-[2.5rem] shadow-2xl flex flex-col md:flex-row items-center justify-between border border-white/5 mb-10 overflow-hidden relative gap-6">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-[#06B6D4]/10 rounded-full -mr-32 -mt-32 blur-3xl"></div>
-        <div className="flex items-center gap-6 relative z-10">
-          <div className="bg-[#06B6D4] p-4 rounded-[1.5rem] shadow-lg">
-            < Zap size={32} className="text-white" />
-          </div>
-          <div>
-            <h2 className="text-3xl font-black text-white tracking-tight leading-none mb-3">Hybrid POS</h2>
-            <div className="flex gap-2">
-               <button 
-                 onClick={() => setFormData(prev => ({...prev, transactionType: 'Service'}))}
-                 className={`px-4 py-1.5 rounded-full font-black text-[10px] uppercase tracking-[0.15em] transition-all ${formData.transactionType === 'Service' ? 'bg-white text-[#4F46E5] shadow-lg scale-105' : 'bg-white/10 text-white/40 hover:text-white'}`}
-               >
-                 Service Sale
-               </button>
-               <button 
-                 onClick={() => setFormData(prev => ({...prev, transactionType: 'Product'}))}
-                 className={`px-4 py-1.5 rounded-full font-black text-[10px] uppercase tracking-[0.15em] transition-all ${formData.transactionType === 'Product' ? 'bg-white text-[#4F46E5] shadow-lg scale-105' : 'bg-white/10 text-white/40 hover:text-white'}`}
-               >
-                 Product Sale
-               </button>
             </div>
-          </div>
+          )}
         </div>
-        
-        {activeSession ? (
-          <button 
-            onClick={() => setIsClosingMeter(true)}
-            className="relative z-10 bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-3 shadow-xl transition-all hover:scale-105"
-          >
-            <PowerOff size={18} /> Stop Mill & Audit
-          </button>
-        ) : (
-          <div className="bg-red-900/40 px-6 py-4 rounded-2xl border border-red-500/30 text-red-200 text-[10px] font-black uppercase tracking-widest relative z-10 animate-pulse">
-            Mill Motor Not Initialized
-          </div>
-        )}
       </div>
 
-      {error && (
-        <div className="bg-red-50 border-l-8 border-red-500 p-6 rounded-2xl flex items-center gap-4 mb-8">
-          <AlertCircle className="text-red-500" size={28} />
-          <p className="text-red-700 font-bold">{error}</p>
+      {/* FLOATING RECEIPT MODAL — mobile only */}
+      {showReceipt && (
+        <div className="fixed inset-0 z-50 md:hidden flex items-end">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowReceipt(false)} />
+          <div className="relative w-full bg-slate-900 rounded-t-3xl p-8 space-y-6 shadow-2xl">
+            <div className="w-10 h-1 bg-slate-700 rounded-full mx-auto mb-2" />
+            <div className="text-center">
+              <h3 className="text-xl font-black text-white uppercase tracking-tighter">Final Review</h3>
+              <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-1">Confirm before syncing</p>
+            </div>
+            <div className="space-y-3 font-mono text-sm">
+              <div className="flex justify-between border-b border-slate-800 pb-2">
+                <span className="text-slate-500">MODE</span>
+                <span className="font-black text-emerald-400">{formData.transactionType}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-800 pb-2">
+                <span className="text-slate-500">MASS</span>
+                <span className="font-black text-white">{formData.weightKg} KG</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-800 pb-2">
+                <span className="text-slate-500">PAYMENT</span>
+                <span className="font-black text-amber-400">{formData.paymentMethod}</span>
+              </div>
+              <div className="flex justify-between pt-2 items-baseline">
+                <span className="text-base text-slate-400 font-sans font-black">TOTAL</span>
+                <span className="text-4xl font-black text-emerald-400 tracking-tighter">KES {parseFloat(formData.feeCharged).toLocaleString()}</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <button onClick={() => setShowReceipt(false)} className="py-5 rounded-2xl bg-slate-800 text-slate-400 font-black text-sm uppercase">Cancel</button>
+              <button onClick={handleFinalCheckout} disabled={checkoutMutation.isPending || (formData.paymentMethod === 'Debt' && !formData.customerId)}
+                className={`py-5 rounded-2xl font-black text-sm uppercase shadow-xl ${checkoutMutation.isPending ? 'bg-slate-700' : 'bg-emerald-600'}`}>
+                {checkoutMutation.isPending ? 'PROCESSING...' : 'CONFIRM SALE'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
-      {success && (
-        <div className="bg-green-50 border-l-8 border-green-500 p-6 rounded-2xl flex items-center gap-4 mb-8">
-          <CheckCircle className="text-green-500" size={28} />
-          <p className="text-green-700 font-bold">{success}</p>
-        </div>
-      )}
-
-      <form onSubmit={handleInitialSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 space-y-6">
-          <div className="flex items-center gap-3 border-b border-slate-50 pb-4">
-            <div className="w-2 h-8 bg-[#4F46E5] rounded-full"></div>
-            <h3 className="font-black text-slate-400 uppercase tracking-widest text-sm text-opacity-60">Sale Registry</h3>
-          </div>
-
-          <div className="space-y-4">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Payment Method</label>
-            <div className="grid grid-cols-3 gap-3">
-              {(['Cash', 'Mpesa', 'Debt'] as PaymentMethod[]).map(method => (
-                <button
-                  key={method}
-                  type="button"
-                  onClick={() => setFormData({...formData, paymentMethod: method})}
-                  className={`py-4 rounded-2xl font-black text-xs uppercase transition-all flex flex-col items-center gap-2 border-2 ${formData.paymentMethod === method ? 'bg-[#4F46E5] border-[#4F46E5] text-white shadow-lg scale-105' : 'bg-[#F8FAFC] border-slate-50 text-slate-400 hover:border-[#4F46E5]/40'}`}
-                >
-                  {method === 'Cash' && <Coins size={18} />}
-                  {method === 'Mpesa' && <Wallet size={18} />}
-                  {method === 'Debt' && <User size={18} />}
-                  {method}
-                </button>
-              ))}
+      {/* SALES HISTORY — cards on mobile, table on desktop */}
+      <div className="mill-card p-0 overflow-hidden bg-white border-slate-200 shadow-2xl">
+        <div className="p-6 md:p-10 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div className="flex items-center gap-3 md:gap-4">
+            <div className="w-10 h-10 md:w-12 md:h-12 bg-white rounded-xl md:rounded-2xl shadow-sm flex items-center justify-center text-slate-900 border border-slate-100">
+              <Calendar size={20} />
+            </div>
+            <div>
+              <h3 className="text-lg md:text-2xl font-black text-slate-900 uppercase tracking-tighter">Sales History</h3>
+              <p className="hidden md:block text-[11px] font-black text-slate-500 uppercase tracking-widest">Registry Audit · Historical Data</p>
             </div>
           </div>
+          <button onClick={() => queryClient.invalidateQueries({ queryKey: ['sales_history'] })} className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-slate-900 transition-all shadow-sm">
+            <RotateCcw size={18} />
+          </button>
+        </div>
 
-          {(formData.paymentMethod === 'Debt' || formData.transactionType === 'Product') && (
-            <div className="space-y-4 pt-2 animate-in slide-in-from-top-4">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Customer Name {formData.paymentMethod === 'Debt' && '*'}</label>
-                <div className="relative">
-                   <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                   <input type="text" required={formData.paymentMethod === 'Debt'} className="w-full bg-[#F8FAFC] border-2 border-slate-50 rounded-2xl pl-12 pr-6 py-4 font-bold focus:border-[#4F46E5] outline-none" placeholder="Individual" value={formData.customerName} onChange={(e) => setFormData({...formData, customerName: e.target.value})} />
+        {/* Mobile: data cards */}
+        <div className="md:hidden divide-y divide-slate-100">
+          {salesHistory.length === 0 && (
+            <p className="p-12 text-center text-slate-400 font-black uppercase tracking-widest text-xs italic">No recent transactions</p>
+          )}
+          {salesHistory.map(log => {
+            const prod = products.find(p => p.id === log.product_id);
+            const isService = prod && (prod.milling_fee || 0) > 0 && !(prod.selling_price || 0);
+            return (
+              <div key={log.id} className="p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-black text-slate-900 uppercase">{log.customer_name}</p>
+                    <p className="text-[10px] text-slate-400 font-bold">{new Date(log.created_at).toLocaleString()}</p>
+                  </div>
+                  <span className="text-lg font-black text-slate-900 font-mono">KES {log.total_price?.toLocaleString()}</span>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${isService ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{isService ? 'Service' : 'Retail'}</span>
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-slate-100 text-slate-600">{log.weight_kg} KG</span>
+                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${log.payment_method === 'Debt' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>{log.payment_method}</span>
                 </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Phone Number {formData.paymentMethod === 'Debt' && '*'}</label>
-                <div className="relative">
-                   <Phone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                   <input type="tel" required={formData.paymentMethod === 'Debt'} className="w-full bg-[#F8FAFC] border-2 border-slate-100 rounded-2xl pl-12 pr-6 py-4 font-bold focus:border-[#4F46E5] outline-none" placeholder="0712345678" value={formData.phoneNumber} onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})} />
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{formData.transactionType === 'Service' ? 'Service Type' : 'Select Product'}</label>
-            <div className="relative">
-              <Tag size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-              <select required className="w-full bg-[#F8FAFC] border-2 border-slate-50 rounded-2xl pl-12 pr-6 py-4 font-bold focus:border-[#4F46E5] outline-none transition-all" value={formData.productId} onChange={(e) => setFormData({...formData, productId: e.target.value})}>
-                <option value="">Choose item...</option>
-                {products.map(p => <option key={p.id} value={p.id}>{p.name} {formData.transactionType === 'Product' ? `(Stock: ${p.current_stock}kg)` : `(Fee: KES ${p.milling_fee})`}</option>)}
-              </select>
-            </div>
-          </div>
+            );
+          })}
         </div>
 
-        <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 space-y-6">
-          <div className="flex items-center gap-3 border-b border-slate-50 pb-4">
-            <div className="w-2 h-8 bg-[#06B6D4] rounded-full"></div>
-            <h3 className="font-black text-slate-400 uppercase tracking-widest text-sm text-opacity-60">Financial Calculation</h3>
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{formData.transactionType === 'Service' ? 'Service Weight (KG)' : 'Product Weight (KG)'}</label>
-            <div className="relative">
-              <Hash size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-              <input type="number" step="0.1" required className="w-full bg-[#F8FAFC] border-2 border-slate-50 rounded-2xl pl-12 pr-6 py-4 font-bold focus:border-[#4F46E5] outline-none" placeholder="0.0" value={formData.weightKg} onChange={(e) => setFormData({...formData, weightKg: e.target.value})} />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Total Fee (KES)</label>
-            <div className="relative">
-              <ShoppingCart size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-              <input type="text" readOnly className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl pl-12 pr-6 py-4 font-black text-[#0F172A] text-2xl" value={formData.feeCharged} />
-            </div>
-          </div>
-
-          {!activeSession && (
-             <div className="p-4 bg-red-50 rounded-2xl border-2 border-red-100 flex items-center gap-3">
-                <AlertCircle size={20} className="text-red-500" />
-                <p className="text-[10px] font-black text-red-700 uppercase leading-none">Initialization Required: Start a Service Session first.</p>
-             </div>
-          )}
+        {/* Desktop: full table */}
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50/50">
+                <th className="px-10 py-6 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Date</th>
+                <th className="px-10 py-6 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Customer</th>
+                <th className="px-10 py-6 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100 text-center">Type</th>
+                <th className="px-10 py-6 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Weight</th>
+                <th className="px-10 py-6 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Total</th>
+                <th className="px-10 py-6 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Payment</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {salesHistory.map(log => {
+                const prod = products.find(p => p.id === log.product_id);
+                const isService = prod && (prod.milling_fee || 0) > 0 && !(prod.selling_price || 0);
+                return (
+                  <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-10 py-5">
+                      <p className="text-[12px] font-black text-slate-900">{new Date(log.created_at).toLocaleDateString()}</p>
+                      <p className="text-[9px] font-bold text-slate-500 uppercase">{new Date(log.created_at).toLocaleTimeString()}</p>
+                    </td>
+                    <td className="px-10 py-5 font-black text-[13px] text-slate-900 uppercase">{log.customer_name}</td>
+                    <td className="px-10 py-5 text-center">
+                      <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase ${isService ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{isService ? 'Service' : 'Retail'}</span>
+                    </td>
+                    <td className="px-10 py-5">
+                      <p className="text-[12px] font-black text-slate-900">{prod?.name || log.product_id?.slice(0,8)}</p>
+                      <p className="text-[10px] font-bold text-slate-500 uppercase">{log.weight_kg} KG</p>
+                    </td>
+                    <td className="px-10 py-5 font-black text-slate-900">KES {log.total_price?.toLocaleString()}</td>
+                    <td className="px-10 py-5">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${log.payment_method === 'Debt' ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}`} />
+                        <span className={`text-[10px] font-black uppercase ${log.payment_method === 'Debt' ? 'text-red-700' : 'text-emerald-700'}`}>{log.payment_method}</span>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {salesHistory.length === 0 && (
+                <tr><td colSpan={6} className="px-10 py-24 text-center text-slate-400 font-black uppercase tracking-widest italic opacity-50">No recent transactions found</td></tr>
+              )}
+            </tbody>
+          </table>
         </div>
-
-        <button type="submit" disabled={!activeSession} className="md:col-span-2 w-full bg-[#4F46E5] hover:bg-[#3730A3] text-white font-black py-7 rounded-[2.5rem] shadow-2xl transition-all hover:-translate-y-1 flex items-center justify-center gap-4 text-xl uppercase tracking-widest mt-4 disabled:opacity-30 disabled:grayscale disabled:hover:translate-y-0">
-          <Receipt size={32} className="text-white" /> Review Receipt & Checkout
-        </button>
-      </form>
+      </div>
     </div>
   );
 }
