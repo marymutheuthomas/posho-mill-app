@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { supabase, supabaseUrl, supabaseKey } from '../lib/supabase';
 import { 
-  UserPlus, Shield, User as UserIcon, Trash2, 
-  ShieldCheck, AlertTriangle, Key, Mail, ChevronRight,
+  UserPlus, User as UserIcon, Trash2, 
+  ShieldCheck, AlertTriangle, ChevronRight,
   Pencil, Save, X, Eye, EyeOff
 } from 'lucide-react';
 
@@ -155,6 +155,7 @@ export default function UserManagement() {
   };
 
   if (isAdmin === false) return <div className="p-20 text-center font-black text-red-500 uppercase">Access Denied</div>;
+  if (loading) return <div className="p-20 text-center font-black text-slate-300 uppercase tracking-widest animate-pulse">Syncing Registry...</div>;
 
   return (
     <div className="max-w-7xl mx-auto space-y-12 pb-32">
