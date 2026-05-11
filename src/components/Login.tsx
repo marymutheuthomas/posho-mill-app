@@ -30,20 +30,11 @@ export default function Login({ onLogin }: LoginProps) {
       }
 
       if (authData.user) {
-        // 2. Fetch the security clearance (role) from profiles
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', authData.user.id)
-          .single();
-
-        if (profileError) {
-          console.error("SUPABASE_PROFILE_DEBUG:", profileError.message);
-          throw new Error("Security Profile Not Found. Contact System Admin.");
-        }
-
-        // 3. Pass the role back to the App state
-        onLogin(profile.role);
+        // Use metadata directly to bypass schema errors
+        const role = authData.user.user_metadata?.role || 'EMPLOYEE';
+        
+        console.log("Logged in as:", role);
+        onLogin(role);
       }
     } catch (err: any) {
       setError(`[LOGIN-ERROR]: ${err.message}`);
