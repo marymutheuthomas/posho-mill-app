@@ -2,13 +2,21 @@ import { supabase } from './supabase';
 
 /**
  * Checks if a stock take was performed on the previous calendar day.
- * Returns true if a stock take exists, false otherwise.
+ * Returns true if a stock take exists, OR if the system is brand new (no history).
  */
 export async function checkPreviousStockTake(): Promise<{ isDone: boolean; lastDate: string | null }> {
   try {
+    // 1. Check if ANY stock take has EVER been done.
+    // If the system is brand new, we don't want to block the first day.
+    const { count, error: countError } = await supabase
+      .from('stock_logs')
+      .select('*', { count: 'exact', head: true });
+
+    if (countError) throw countError;
+    if (count === 0) return { isDone: true, lastDate: null }; // Bypass for brand new systems
+
+    // 2. Check for yesterday's stock take
     const now = new Date();
-    
-    // Get the start and end of "Yesterday" in local time
     const yesterdayStart = new Date(now);
     yesterdayStart.setDate(yesterdayStart.getDate() - 1);
     yesterdayStart.setHours(0, 0, 0, 0);
@@ -17,7 +25,6 @@ export async function checkPreviousStockTake(): Promise<{ isDone: boolean; lastD
     yesterdayEnd.setDate(yesterdayEnd.getDate() - 1);
     yesterdayEnd.setHours(23, 59, 59, 999);
 
-    // Check for any stock take logs in that window
     const { data, error } = await supabase
       .from('stock_logs')
       .select('created_at')
@@ -26,18 +33,10 @@ export async function checkPreviousStockTake(): Promise<{ isDone: boolean; lastD
       .limit(1);
 
     if (error) throw error;
+    return { isDone: data.length > 0, lastDate: data[0]?.created_at || null };
 
-    if (data && data.length > 0) {
-      return { isDone: true, lastDate: data[0].created_at };
-    }
-
-    // Fallback: If no stock take yesterday, check if there was any activity at all yesterday.
-    // If there was no production/sales yesterday, we might want to skip the block.
-    // But per user request: "if stock take has not yet been done for the previous day"
-    
-    return { isDone: false, lastDate: null };
   } catch (err) {
     console.error("Audit Check Failure:", err);
-    return { isDone: true, lastDate: null }; // Fail open to prevent complete lockout on network error
+    return { isDone: true, lastDate: null }; // Fail open for safety
   }
 }
