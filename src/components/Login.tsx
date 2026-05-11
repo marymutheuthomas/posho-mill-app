@@ -142,6 +142,38 @@ export default function Login({ onLogin }: LoginProps) {
               <p className="text-[9px] font-bold text-slate-600 uppercase">Standard Ops</p>
             </div>
           </div>
+
+          {/* EMERGENCY BOOTSTRAP BUTTON */}
+          <button 
+            type="button"
+            onClick={async () => {
+              setLoading(true);
+              try {
+                const { data, error } = await supabase.auth.signUp({
+                  email: 'admin@mill.com',
+                  password: 'admin123',
+                  options: { data: { username: 'admin', role: 'ADMIN' } }
+                });
+                if (error) throw error;
+                if (data.user) {
+                  await supabase.from('profiles').upsert({
+                    id: data.user.id,
+                    username: 'admin',
+                    role: 'ADMIN',
+                    display_password: 'admin123'
+                  });
+                  alert("SUCCESS: Admin @admin@mill.com created. You can now log in!");
+                }
+              } catch (err: any) {
+                alert("Bootstrap Error: " + err.message);
+              } finally {
+                setLoading(false);
+              }
+            }}
+            className="w-full mt-6 py-2 border border-dashed border-white/10 rounded-xl text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] hover:bg-white/5 hover:text-white transition-all"
+          >
+            [ System Recovery: Provision Master Admin ]
+          </button>
         </div>
 
         <p className="text-center mt-8 text-slate-600 font-bold text-[10px] uppercase tracking-widest">
