@@ -3,8 +3,9 @@ import { supabase } from '../lib/supabase';
 import { 
   CheckCircle, AlertTriangle, 
   Calendar, ChevronRight, Clock, User, RotateCcw,
-  Search, ChevronDown
+  Search, ChevronDown, Lock
 } from 'lucide-react';
+import { checkPreviousStockTake } from '../lib/auditUtils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { db } from '../lib/db';
 
@@ -44,6 +45,7 @@ export default function ServicePOS() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showReceipt, setShowReceipt] = useState(false);
+  const [auditBlock, setAuditBlock] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -163,6 +165,14 @@ export default function ServicePOS() {
       setFormData(prev => ({ ...prev, feeCharged: '0.00' }));
     }
   }, [formData.productId, formData.weightKg, formData.transactionType, products]);
+  
+  useEffect(() => {
+    const runAuditCheck = async () => {
+      const audit = await checkPreviousStockTake();
+      setAuditBlock(!audit.isDone);
+    };
+    runAuditCheck();
+  }, []);
 
   const handleInitialSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -205,6 +215,26 @@ export default function ServicePOS() {
 
     checkoutMutation.mutate(txData);
   };
+
+  if (auditBlock) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] space-y-8 max-w-2xl mx-auto text-center px-6">
+        <div className="w-24 h-24 bg-orange-50 rounded-[2rem] flex items-center justify-center shadow-xl shadow-orange-100">
+           <Lock size={48} className="text-orange-500" />
+        </div>
+        <div className="space-y-4">
+          <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter">Stock Take Missing</h2>
+          <p className="text-sm font-bold text-slate-500 uppercase leading-relaxed">
+            Point of Sale terminal is **Locked**. Our security audit shows that the **Previous Day's Stock Take** was not recorded. 
+            Please reconcile the inventory in the "Stock Take" module to resume sales.
+          </p>
+        </div>
+        <button onClick={() => window.location.reload()} className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl">
+          Refresh System
+        </button>
+      </div>
+    );
+  }
 
   if ((loadingProducts || loadingHistory) && salesHistory.length === 0) return <div className="p-20 text-center font-black text-slate-400 uppercase tracking-widest italic animate-pulse">Initializing Terminal...</div>;
 

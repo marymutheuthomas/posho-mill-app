@@ -16,11 +16,12 @@ import SessionControl from './components/SessionControl';
 import DebtLedger from './components/DebtLedger';
 import StockTake from './components/StockTake';
 import Settings from './components/Settings';
+import UserManagement from './components/UserManagement';
 
 import Login from './components/Login';
 
 function App() {
-  const [user, setUser] = useState<{ role: 'Admin' | 'Employee' } | null>(null);
+  const [user, setUser] = useState<{ role: 'ADMIN' | 'EMPLOYEE' } | null>(null);
   const [activeTab, setActiveTab] = useState('Dashboard');
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [activeSessionType, setActiveSessionType] = useState<'Internal' | 'External' | null>(null);
@@ -71,7 +72,8 @@ function App() {
     { name: 'Debt Ledger', icon: BookOpen, adminOnly: true },
     { name: 'Purchases', icon: ShoppingCart, adminOnly: true },
     { name: 'Settings', icon: SettingsIcon, adminOnly: true },
-  ].filter(item => !item.adminOnly || user?.role === 'Admin');
+    { name: 'User Management', icon: ShieldCheck, adminOnly: true },
+  ].filter(item => !item.adminOnly || user?.role === 'ADMIN');
 
   if (!user) {
     return <Login onLogin={(role) => setUser({ role })} />;
@@ -254,10 +256,11 @@ function App() {
           {activeTab === 'Purchases'        && <Purchases />}
           {activeTab === 'Stock Take'       && <StockTake role={user.role} />}
           {activeTab === 'Settings'         && <Settings />}
+          {activeTab === 'User Management'  && <UserManagement />}
         </div>
 
         {/* MOBILE BOTTOM NAVIGATION */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white/95 backdrop-blur-lg border-t border-slate-200 flex justify-around items-center z-50 px-6 shadow-[0_-8px_30px_rgba(0,0,0,0.08)]">
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 h-20 bg-white/95 backdrop-blur-lg border-t border-slate-200 flex justify-around items-center z-50 px-6 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] pb-safe">
            {[
              { name: 'Dashboard', icon: LayoutDashboard },
              { name: 'Point of Sale', icon: ShoppingBag, label: 'POS' },

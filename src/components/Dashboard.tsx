@@ -124,10 +124,10 @@ export default function Dashboard({ onNavigate, role }: DashboardProps) {
         </p>
       </div>
 
-      {/* Primary Financial Hub - ADMIN ONLY */}
-      {role === 'Admin' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-          {/* Net Earnings Card */}
+      {/* Primary Financial Hub */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+        {/* Net Earnings Card - ADMIN ONLY */}
+        {role === 'ADMIN' ? (
           <div className="mill-card p-4 md:p-6 lg:p-8 bg-white border-slate-200 shadow-xl relative overflow-hidden group lg:col-span-2 border-t-4 border-t-slate-900 min-h-[160px] md:min-h-[180px]">
             <div className="relative z-10 space-y-6">
               <div className="flex items-center justify-between">
@@ -156,33 +156,45 @@ export default function Dashboard({ onNavigate, role }: DashboardProps) {
               </div>
             </div>
           </div>
-
-          {/* Efficiency Meter */}
-          <div className="mill-card p-6 md:p-10 bg-white border-slate-200 shadow-xl flex flex-col justify-between min-h-[180px] md:min-h-[220px]">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Zap className="text-slate-900" size={18} />
-                <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Efficiency Rate</p>
+        ) : (
+          <div className="mill-card p-4 md:p-6 lg:p-8 bg-slate-900 text-white shadow-xl relative overflow-hidden group lg:col-span-2 min-h-[160px] md:min-h-[180px] flex items-center">
+            <div className="relative z-10 space-y-4 w-full">
+              <div className="flex items-center gap-2 text-slate-400">
+                <Activity size={20} className="animate-pulse" />
+                <p className="text-[10px] font-black uppercase tracking-widest">System Status: Active</p>
               </div>
-              <h2 className="text-3xl md:text-4xl font-black tracking-tighter text-slate-950">
-                {stats.efficiency ? stats.efficiency.toFixed(2) : '0.00'} <span className="text-sm text-slate-400">Ksh/Kg</span>
-              </h2>
-              <p className="text-[9px] font-bold text-slate-600 uppercase leading-tight">Revenue generated per KG of maize input</p>
-            </div>
-            <div className="pt-6 border-t border-slate-100 mt-6">
-               <p className="text-[10px] font-black text-slate-500 uppercase mb-1">Milled Today</p>
-               <h3 className="text-4xl font-black text-slate-950">
-                 {stats.totalInputKg ? stats.totalInputKg.toLocaleString() : '0'} KG
-               </h3>
-               {stats.totalInputKg === 0 && stats.totalPeriodInputKg > 0 && (
-                 <p className="text-[10px] font-bold text-slate-400 uppercase mt-2 border-t border-slate-50 pt-2">
-                   Total Period: <span className="text-slate-600">{stats.totalPeriodInputKg.toLocaleString()} KG</span>
-                 </p>
-               )}
+              <h2 className="text-3xl md:text-5xl font-black tracking-tighter">Operational Terminal</h2>
+              <p className="text-sm font-bold text-slate-400 uppercase tracking-tight">Real-time throughput and inventory monitoring active for {role}.</p>
             </div>
           </div>
+        )}
+
+        {/* Efficiency Meter (Burn Rate) - VISIBLE TO ALL */}
+        <div className="mill-card p-6 md:p-10 bg-white border-slate-200 shadow-xl flex flex-col justify-between min-h-[180px] md:min-h-[220px]">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Zap className="text-slate-900" size={18} />
+              <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Efficiency Rate (Burn)</p>
+            </div>
+            <h2 className="text-3xl md:text-4xl font-black tracking-tighter text-slate-950">
+              {stats.efficiency ? stats.efficiency.toFixed(2) : '0.00'} <span className="text-sm text-slate-400">Ksh/Kg</span>
+            </h2>
+            <p className="text-[9px] font-bold text-slate-600 uppercase leading-tight">Revenue generated per KG of maize input</p>
+          </div>
+          <div className="pt-6 border-t border-slate-100 mt-6">
+             <p className="text-[10px] font-black text-slate-500 uppercase mb-1">Milled Today</p>
+             <h3 className="text-4xl font-black text-slate-950">
+               {stats.totalInputKg ? stats.totalInputKg.toLocaleString() : '0'} KG
+             </h3>
+             {stats.totalInputKg === 0 && stats.totalPeriodInputKg > 0 && (
+               <p className="text-[10px] font-bold text-slate-400 uppercase mt-2 border-t border-slate-50 pt-2">
+                 Total Period: <span className="text-slate-600">{stats.totalPeriodInputKg.toLocaleString()} KG</span>
+               </p>
+             )}
+          </div>
         </div>
-      )}
+      </div>
+
 
       {/* BENTO STOCK MONITOR */}
       <div className="space-y-6">
@@ -217,7 +229,7 @@ export default function Dashboard({ onNavigate, role }: DashboardProps) {
 
       {/* Secondary Stats Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {role === 'Admin' ? (
+        {role === 'ADMIN' ? (
           <div className="mill-card p-4 md:p-6 bg-white shadow-lg border-slate-100 min-h-[120px] flex flex-col justify-center">
             <div className="flex items-center gap-3 mb-4">
               <Wallet className="text-slate-900" size={18} />

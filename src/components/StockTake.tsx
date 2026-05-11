@@ -7,7 +7,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface StockTakeProps {
-  role: 'Admin' | 'Employee' | null;
+  role: 'ADMIN' | 'EMPLOYEE' | null;
 }
 
 interface Product { 
@@ -40,7 +40,7 @@ export default function StockTake({ role }: StockTakeProps) {
   const [deleteModal, setDeleteModal] = useState<{ open: boolean; record: StockLog | null }>({ open: false, record: null });
   const [editForm, setEditForm] = useState({ physical: 0 });
 
-  const isAdmin = role === 'Admin';
+  const isAdmin = role === 'ADMIN';
 
   // 1. Data Fetching
   const { data: products = [], isLoading: loadingProducts } = useQuery({
@@ -229,41 +229,69 @@ export default function StockTake({ role }: StockTakeProps) {
                   <Eye size={12} className="text-amber-500" /> Blind Entry Protocol Active
                </div>
             </div>
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50/50">
-                  <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Product / Grade</th>
-                  <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 text-center">Category</th>
-                  <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Measured Physical Count (KG)</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredProducts.map(p => (
-                  <tr key={p.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-10 py-8">
-                      <p className="text-[10px] font-black text-slate-400 uppercase mb-1">{p.product_code}</p>
-                      <p className="text-base font-black text-slate-900 uppercase tracking-tighter">{p.name}</p>
-                    </td>
-                    <td className="px-10 py-8 text-center">
-                       <span className="px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-[9px] font-black uppercase tracking-widest">{p.category}</span>
-                    </td>
-                    <td className="px-10 py-8">
-                      <div className="relative group max-w-[240px] mx-auto md:ml-0">
-                        <input 
-                          type="number" 
-                          step="0.01"
-                          value={counts[p.id] || ''}
-                          onChange={(e) => handleCountChange(p.id, e.target.value)}
-                          placeholder="0.00"
-                          className="mill-input w-full text-2xl font-black bg-slate-50 border-slate-200 focus:bg-white focus:border-slate-900 transition-all py-5"
-                        />
-                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[11px] font-black text-slate-300">KG</span>
-                      </div>
-                    </td>
+            {/* Desktop Table View (Hidden on Mobile) */}
+            <div className="hidden md:block overflow-x-auto whitespace-nowrap">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/50">
+                    <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Product / Grade</th>
+                    <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 text-center">Category</th>
+                    <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Measured Physical Count (KG)</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredProducts.map(p => (
+                    <tr key={p.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-10 py-8">
+                        <p className="text-[10px] font-black text-slate-400 uppercase mb-1">{p.product_code}</p>
+                        <p className="text-base font-black text-slate-900 uppercase tracking-tighter">{p.name}</p>
+                      </td>
+                      <td className="px-10 py-8 text-center">
+                         <span className="px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-[9px] font-black uppercase tracking-widest">{p.category}</span>
+                      </td>
+                      <td className="px-10 py-8">
+                        <div className="relative group max-w-[240px] mx-auto md:ml-0">
+                          <input 
+                            type="number" 
+                            step="0.01"
+                            value={counts[p.id] || ''}
+                            onChange={(e) => handleCountChange(p.id, e.target.value)}
+                            placeholder="0.00"
+                            className="mill-input w-full text-2xl font-black bg-slate-50 border-slate-200 focus:bg-white focus:border-slate-900 transition-all py-5 text-center"
+                          />
+                          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[11px] font-black text-slate-300">KG</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card View (Visible only on Mobile) */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {filteredProducts.map(p => (
+                <div key={p.id} className="p-4 space-y-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase">{p.product_code}</p>
+                      <p className="text-base font-black text-slate-900 uppercase tracking-tight">{p.name}</p>
+                    </div>
+                  </div>
+                  <div className="relative group w-full">
+                    <input 
+                      type="number" 
+                      step="0.01"
+                      value={counts[p.id] || ''}
+                      onChange={(e) => handleCountChange(p.id, e.target.value)}
+                      placeholder="0.00"
+                      className="mill-input w-full text-2xl font-black bg-slate-50 border-slate-200 focus:bg-white focus:border-slate-900 transition-all py-6 text-center"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[12px] font-black text-slate-300 uppercase">KG</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="mt-4 p-3 border rounded-xl bg-slate-50 flex flex-col md:flex-row items-center justify-between gap-4">
@@ -281,10 +309,10 @@ export default function StockTake({ role }: StockTakeProps) {
             <button 
               onClick={submitStockTake}
               disabled={auditMutation.isPending}
-              className="w-full md:w-auto h-10 px-8 text-xs font-black bg-emerald-600 text-white rounded-lg flex items-center justify-center gap-3 shadow-md hover:bg-emerald-500 transition-all disabled:opacity-50"
+              className="w-full md:w-auto h-12 md:h-10 px-8 text-sm md:text-xs font-black bg-emerald-600 text-white rounded-lg flex items-center justify-center gap-3 shadow-md hover:bg-emerald-500 transition-all disabled:opacity-50 shrink-0"
             >
-              <CheckCircle size={16} />
-              {auditMutation.isPending ? 'SYNCING...' : 'FINALIZE AUDIT'}
+              <CheckCircle size={20} className="shrink-0" />
+              <span>{auditMutation.isPending ? 'SYNCING...' : 'FINALIZE AUDIT'}</span>
             </button>
           </div>
         </>
@@ -299,7 +327,7 @@ export default function StockTake({ role }: StockTakeProps) {
                  </div>
               </div>
            </div>
-           <div className="overflow-x-auto">
+           <div className="overflow-x-auto whitespace-nowrap">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200">

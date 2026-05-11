@@ -6,7 +6,7 @@ export default function AuthTerminal() {
   const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'Admin' | 'Employee'>('Admin');
+  const [role, setRole] = useState<'ADMIN' | 'EMPLOYEE'>('ADMIN');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -102,8 +102,8 @@ export default function AuthTerminal() {
                 <div className="space-y-2 animate-in slide-in-from-top-2">
                   <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Clearance Level</label>
                   <div className="grid grid-cols-2 gap-3">
-                    <button type="button" onClick={() => setRole('Employee')} className={`py-3 rounded-xl text-[9px] font-black uppercase transition-all border-2 ${role === 'Employee' ? 'bg-[#0f172a] text-white border-[#0f172a]' : 'bg-white text-slate-400 border-slate-100'}`}>Operator</button>
-                    <button type="button" onClick={() => setRole('Admin')} className={`py-3 rounded-xl text-[9px] font-black uppercase transition-all border-2 ${role === 'Admin' ? 'bg-[#0f172a] text-white border-[#0f172a]' : 'bg-white text-slate-400 border-slate-100'}`}>Manager</button>
+                    <button type="button" onClick={() => setRole('EMPLOYEE')} className={`py-3 rounded-xl text-[9px] font-black uppercase transition-all border-2 ${role === 'EMPLOYEE' ? 'bg-[#0f172a] text-white border-[#0f172a]' : 'bg-white text-slate-400 border-slate-100'}`}>Operator</button>
+                    <button type="button" onClick={() => setRole('ADMIN')} className={`py-3 rounded-xl text-[9px] font-black uppercase transition-all border-2 ${role === 'ADMIN' ? 'bg-[#0f172a] text-white border-[#0f172a]' : 'bg-white text-slate-400 border-slate-100'}`}>Manager</button>
                   </div>
                 </div>
               )}

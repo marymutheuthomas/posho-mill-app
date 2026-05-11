@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { withRetry } from '../lib/network';
-import { Scale, AlertTriangle, CheckCircle, Save, Activity, Calendar, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { checkPreviousStockTake } from '../lib/auditUtils';
+import { Scale, AlertTriangle, CheckCircle, Save, Activity, Calendar, ArrowUpRight, ArrowDownRight, Lock } from 'lucide-react';
 
 const PRODUCT_CODES = {
   INPUT: '101',
@@ -32,6 +33,7 @@ export default function ProductionEntry() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [auditBlock, setAuditBlock] = useState(false);
 
   // Form State
   const [inputKg, setInputKg] = useState('');
@@ -74,6 +76,14 @@ export default function ProductionEntry() {
       setLogs(formattedLogs || []);
     } catch (err: any) { setError(`Sync Error: ${err.message}`); }
     finally { setLoadingState('idle'); }
+
+    // Audit Check: Enforce Stock Take rule
+    const audit = await checkPreviousStockTake();
+    if (!audit.isDone) {
+      setAuditBlock(true);
+    } else {
+      setAuditBlock(false);
+    }
   };
 
   useEffect(() => { initData(); }, [successMsg]);
@@ -144,6 +154,31 @@ export default function ProductionEntry() {
     } catch (err: any) { setError(`DATABASE ERROR: ${err.message}`); }
     finally { setIsSyncing(false); setLoadingState('idle'); }
   };
+
+  if (auditBlock) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] space-y-8 max-w-2xl mx-auto text-center px-6">
+        <div className="w-24 h-24 bg-orange-50 rounded-[2rem] flex items-center justify-center shadow-xl shadow-orange-100">
+           <Lock size={48} className="text-orange-500" />
+        </div>
+        <div className="space-y-4">
+          <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter">Stock Take Required</h2>
+          <p className="text-sm font-bold text-slate-500 uppercase leading-relaxed">
+            Production is restricted. Our records indicate that the **Previous Day's Stock Take** has not been completed. 
+            Please perform a stock take to reconcile inventory before starting today's production.
+          </p>
+        </div>
+        <div className="flex gap-4">
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl hover:scale-105 transition-all"
+          >
+            Refresh Status
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (loadingState === 'fetching' && logs.length === 0) return <div className="p-20 text-center font-black text-slate-300 uppercase tracking-widest">Synchronizing...</div>;
 
