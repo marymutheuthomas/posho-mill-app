@@ -118,6 +118,32 @@ export default function Dashboard({ onNavigate, role }: DashboardProps) {
 
   return (
     <div className="space-y-10">
+      {/* Welcome Banner */}
+      <div className="bg-[#1E3A8A] rounded-[2.5rem] p-8 md:p-12 text-white relative overflow-hidden shadow-2xl shadow-blue-900/20 border border-white/10">
+        <div className="absolute top-0 right-0 w-[40%] h-full bg-gradient-to-l from-white/5 to-transparent" />
+        <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-white/5 rounded-full blur-3xl" />
+        
+        <div className="relative z-10 space-y-6">
+          <div className="flex items-center gap-3">
+             <div className="px-3 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/20">
+                <p className="text-[10px] font-black uppercase tracking-widest">System Online</p>
+             </div>
+             <p className="text-[10px] font-black uppercase tracking-widest text-[#F59E0B]">Nairobi Node · {todayStr}</p>
+          </div>
+          
+          <div className="space-y-2">
+            <h1 className="text-4xl md:text-6xl font-light tracking-tighter uppercase">
+              Welcome Back, <span className="font-black text-[#F59E0B]">{role === 'ADMIN' ? 'Commander' : 'Operator'}</span>
+            </h1>
+            <p className="text-base md:text-xl text-blue-200 font-medium tracking-tight">
+              {role === 'ADMIN' 
+                ? 'Master terminal is ready for executive oversight.' 
+                : 'Operational hub is synced and ready for production.'}
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div className="flex items-center justify-end mb-4">
         <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
           <Calendar size={12} className="text-slate-900" /> Period: <span className="text-slate-900">{todayStr}</span>

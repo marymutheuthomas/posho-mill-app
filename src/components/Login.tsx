@@ -142,56 +142,6 @@ export default function Login({ onLogin }: LoginProps) {
               <p className="text-[9px] font-bold text-slate-600 uppercase">Standard Ops</p>
             </div>
           </div>
-
-          {/* EMERGENCY BOOTSTRAP BUTTON */}
-          <button 
-            type="button"
-            onClick={async () => {
-              setLoading(true);
-              try {
-                // 1. Provision ADMIN
-                const adminRes = await supabase.auth.signUp({
-                  email: 'admin@mill.com',
-                  password: 'admin123',
-                  options: { data: { username: 'admin_boss', role: 'ADMIN' } }
-                });
-                
-                if (adminRes.data.user) {
-                  await supabase.from('profiles').upsert({
-                    id: adminRes.data.user.id,
-                    username: 'admin_boss',
-                    role: 'ADMIN',
-                    display_password: 'admin123'
-                  });
-                }
-
-                // 2. Provision EMPLOYEE
-                const staffRes = await supabase.auth.signUp({
-                  email: 'staff@mill.com',
-                  password: 'staff123',
-                  options: { data: { username: 'staff_user', role: 'EMPLOYEE' } }
-                });
-
-                if (staffRes.data.user) {
-                  await supabase.from('profiles').upsert({
-                    id: staffRes.data.user.id,
-                    username: 'staff_user',
-                    role: 'EMPLOYEE',
-                    display_password: 'staff123'
-                  });
-                }
-
-                alert("DIAGNOSTICS COMPLETE: Admin (admin123) and Staff (staff123) provisioned successfully!");
-              } catch (err: any) {
-                alert("Bootstrap Error: " + err.message);
-              } finally {
-                setLoading(false);
-              }
-            }}
-            className="w-full mt-6 py-2 border border-dashed border-white/10 rounded-xl text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] hover:bg-white/5 hover:text-white transition-all"
-          >
-            [ Run System Diagnostics & Provision Test Accounts ]
-          </button>
         </div>
 
         <p className="text-center mt-8 text-slate-600 font-bold text-[10px] uppercase tracking-widest">
