@@ -109,9 +109,13 @@ export default function SessionControl({ onNavigate }: SessionControlProps) {
   const handleStartSession = async () => {
     if (isDayLocked) return;
     setError(null);
-    const v = parseFloat(startMeterInput);
+    
+    // Determine the correct start reading (use fallback if 0)
+    const effectiveStart = lastEndMeter === 0 ? 791.19 : lastEndMeter;
+    const v = parseFloat(startMeterInput) || effectiveStart;
+
     if (isNaN(v)) { setError('Invalid start reading.'); return; }
-    if (v < lastEndMeter) { setError('Start meter cannot be less than previous end.'); return; }
+    if (v < lastEndMeter && lastEndMeter !== 0) { setError('Start meter cannot be less than previous end.'); return; }
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -299,9 +303,14 @@ export default function SessionControl({ onNavigate }: SessionControlProps) {
                 <div className="space-y-2">
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Starting At</label>
                   <div className="flex items-center justify-between mill-input bg-slate-50 border-slate-200 cursor-not-allowed py-4">
-                    <span className="text-3xl font-black text-slate-900/40">{startMeterInput || '0'} <span className="text-sm">kWh</span></span>
+                    <span className="text-3xl font-black text-slate-900/40">
+                      {(lastEndMeter === 0 ? 791.19 : lastEndMeter)} <span className="text-sm italic">kWh</span>
+                    </span>
                     <Zap size={20} className="text-slate-300 mr-2" />
                   </div>
+                  {lastEndMeter === 0 && (
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">System Initialized to Base Meter: 791.19</p>
+                  )}
                 </div>
               </div>
 
