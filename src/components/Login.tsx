@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Lock, Mail, Shield, User, ChevronRight, AlertCircle, Factory } from 'lucide-react';
+import { db } from '../lib/db';
 
 interface LoginProps {
   onLogin: (role: 'ADMIN' | 'EMPLOYEE') => void;
@@ -18,6 +19,18 @@ export default function Login({ onLogin }: LoginProps) {
     setLoading(true);
 
     try {
+      // 0. Check Offline Mode
+      if (!navigator.onLine) {
+        const cachedUser = await db.profiles.filter(p => p.email === email && p.display_password === password).first();
+        if (cachedUser) {
+          console.log("OFFLINE LOGIN SUCCESSFUL:", cachedUser.role);
+          onLogin(cachedUser.role);
+          return;
+        } else {
+          throw new Error("OFFLINE MODE: No cached credentials found for this identity.");
+        }
+      }
+
       // 1. Authenticate with Supabase
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
@@ -37,7 +50,7 @@ export default function Login({ onLogin }: LoginProps) {
         onLogin(role);
       }
     } catch (err: any) {
-      setError(`[LOGIN-ERROR]: ${err.message}`);
+      setError(`[AUTH-FAILURE]: ${err.message}`);
     } finally {
       setLoading(false);
     }

@@ -3,7 +3,8 @@ import { supabase } from '../lib/supabase';
 import { 
   CheckCircle, AlertTriangle, 
   Calendar, ChevronRight, Clock, User, RotateCcw,
-  Search, ChevronDown, Lock
+  Search, ChevronDown, Lock,
+  Pencil, Trash2, X
 } from 'lucide-react';
 import { checkPreviousStockTake } from '../lib/auditUtils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -57,6 +58,14 @@ export default function ServicePOS() {
     paymentMethod: 'Cash' as 'Cash' | 'M-Pesa' | 'Debt'
   });
 
+  const [editingSale, setEditingSale] = useState<TransactionLog | null>(null);
+  const [deletingSale, setDeletingSale] = useState<TransactionLog | null>(null);
+  const [editForm, setEditForm] = useState({
+    weightKg: '',
+    totalPrice: '',
+    paymentMethod: 'Cash' as 'Cash' | 'M-Pesa' | 'Debt'
+  });
+
   // 1. Data Fetching Queries (Cache-First)
   const { data: products = [], isLoading: loadingProducts } = useQuery({
     queryKey: ['products'],
@@ -85,6 +94,7 @@ export default function ServicePOS() {
       if (error) throw error;
       return data;
     },
+    refetchInterval: 3000, // Re-sync every 3 seconds
   });
 
   const { data: salesHistory = [], isLoading: loadingHistory } = useQuery({
@@ -155,6 +165,54 @@ export default function ServicePOS() {
     }
   });
 
+  const deleteSaleMutation = useMutation({
+    mutationFn: async (sale: TransactionLog) => {
+      // 1. Delete the transaction
+      const { error } = await supabase.from('sales_transactions').delete().eq('id', sale.id);
+      if (error) throw error;
+
+      // 2. Revert Stock
+      const p = products.find(x => x.id === sale.product_id);
+      if (p) {
+        const { error: stockErr } = await supabase.from('products').update({ current_stock: (p.current_stock || 0) + sale.weight_kg }).eq('id', p.id);
+        if (stockErr) console.error("Stock revert failed:", stockErr);
+      }
+    },
+    onSuccess: () => {
+      setSuccess('Transaction deleted and stock reverted.');
+      queryClient.invalidateQueries({ queryKey: ['sales_history'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      setDeletingSale(null);
+    },
+    onError: (err: any) => setError(err.message)
+  });
+
+  const editSaleMutation = useMutation({
+    mutationFn: async ({ id, oldWeight, newWeight, productId, ...rest }: any) => {
+      // 1. Update the transaction
+      const { error } = await supabase.from('sales_transactions').update({ weight_kg: newWeight, ...rest }).eq('id', id);
+      if (error) throw error;
+
+      // 2. Adjust Stock
+      const p = products.find(x => x.id === productId);
+      if (p) {
+        const delta = newWeight - oldWeight;
+        const { error: stockErr } = await supabase.from('products').update({ current_stock: (p.current_stock || 0) - delta }).eq('id', p.id);
+        if (stockErr) console.error("Stock adjustment failed:", stockErr);
+      }
+    },
+    onSuccess: () => {
+      setSuccess('Transaction updated.');
+      queryClient.invalidateQueries({ queryKey: ['sales_history'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      setEditingSale(null);
+    },
+    onError: (err: any) => setError(err.message)
+  });
+
+
   useEffect(() => {
     const p = products.find(x => x.id === formData.productId);
     const w = parseFloat(formData.weightKg) || 0;
@@ -216,6 +274,34 @@ export default function ServicePOS() {
     checkoutMutation.mutate(txData);
   };
 
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingSale) return;
+    
+    const newWeight = parseFloat(editForm.weightKg);
+    const newPrice = parseFloat(editForm.totalPrice);
+    
+    if (isNaN(newWeight) || newWeight <= 0) { setError('Invalid weight'); return; }
+
+    editSaleMutation.mutate({
+      id: editingSale.id,
+      oldWeight: editingSale.weight_kg,
+      newWeight,
+      productId: editingSale.product_id,
+      total_price: newPrice,
+      payment_method: editForm.paymentMethod
+    });
+  };
+
+  const startEdit = (sale: TransactionLog) => {
+    setEditingSale(sale);
+    setEditForm({
+      weightKg: sale.weight_kg.toString(),
+      totalPrice: sale.total_price.toString(),
+      paymentMethod: sale.payment_method as any
+    });
+  };
+
   if (auditBlock) {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] space-y-8 max-w-2xl mx-auto text-center px-6">
@@ -242,6 +328,20 @@ export default function ServicePOS() {
     <div className="max-w-7xl mx-auto space-y-8 pb-48 md:pb-20 min-h-[100dvh]">
       {error && <div className="bg-red-600 text-white p-4 rounded-2xl font-black flex items-center gap-3 text-sm mb-6"><AlertTriangle size={20}/>{error}</div>}
       {success && <div className="bg-emerald-500 text-white p-4 rounded-2xl font-black flex items-center gap-3 text-sm mb-6"><CheckCircle size={20}/>{success}</div>}
+      
+      {!activeSession && !auditBlock && (
+        <div className="bg-amber-50 border-2 border-amber-200 p-6 rounded-[2rem] flex flex-col md:flex-row items-center justify-between gap-6 mb-8 animate-pulse">
+          <div className="flex items-center gap-4">
+             <div className="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center text-amber-600">
+                <Clock size={24} />
+             </div>
+             <div>
+                <h4 className="text-sm font-black text-amber-900 uppercase tracking-tight text-center md:text-left">No Active Session</h4>
+                <p className="text-[10px] font-bold text-amber-700 uppercase tracking-widest text-center md:text-left">You must START A SESSION in "Session Control" before selling.</p>
+             </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-5 gap-6 md:gap-10">
         <div className="md:col-span-3">
@@ -387,10 +487,16 @@ export default function ServicePOS() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN — receipt sidebar on desktop */}
-        <div className="md:col-span-2 hidden md:block space-y-6">
+        {/* RIGHT COLUMN — receipt sidebar on desktop, modal on mobile */}
+        <div 
+          className={`md:col-span-2 ${showReceipt ? 'fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 md:relative md:inset-auto md:z-0 md:bg-transparent md:backdrop-blur-none md:p-0 md:block' : 'hidden md:block'} space-y-6`}
+          onClick={() => showReceipt && window.innerWidth < 768 && setShowReceipt(false)}
+        >
           {showReceipt ? (
-            <div className="mill-card p-10 bg-slate-900 text-white border-none space-y-8 shadow-2xl">
+            <div 
+              className="mill-card p-6 md:p-10 bg-slate-900 text-white border-none space-y-6 md:space-y-8 shadow-2xl w-full max-w-lg md:max-w-none animate-in zoom-in-95 duration-200"
+              onClick={e => e.stopPropagation()}
+            >
               <div className="border-b border-slate-800 pb-6 text-center">
                 <div className="w-14 h-14 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-3">
                   <Clock className="text-emerald-400" size={28} />
@@ -398,6 +504,10 @@ export default function ServicePOS() {
                 <h3 className="text-xl font-black uppercase tracking-tighter">Final Review</h3>
                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Ready for Ledger Sync</p>
               </div>
+
+              {error && <div className="bg-red-500/20 text-red-200 p-3 rounded-xl font-bold text-[10px] uppercase flex items-center gap-2 border border-red-500/30 animate-pulse"><AlertTriangle size={14}/>{error}</div>}
+              {success && <div className="bg-emerald-500/20 text-emerald-200 p-3 rounded-xl font-bold text-[10px] uppercase flex items-center gap-2 border border-emerald-500/30"><CheckCircle size={14}/>{success}</div>}
+
               <div className="space-y-4 font-mono text-sm">
                 <div className="flex justify-between border-b border-slate-800 pb-2">
                   <span className="text-slate-500">MODE</span>
@@ -417,9 +527,12 @@ export default function ServicePOS() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4 pt-4">
-                <button onClick={() => setShowReceipt(false)} className="py-5 rounded-2xl bg-slate-800 text-slate-400 font-black text-sm uppercase hover:bg-slate-700 transition-all">Back</button>
-                <button onClick={handleFinalCheckout} disabled={checkoutMutation.isPending || (formData.paymentMethod === 'Debt' && !formData.customerId)}
-                  className={`py-5 rounded-2xl font-black text-sm uppercase shadow-xl transition-all ${(formData.paymentMethod === 'Debt' && !formData.customerId) ? 'bg-slate-700 text-slate-500 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-500'}`}>
+                <button onClick={() => setShowReceipt(false)} className="py-5 rounded-2xl bg-slate-800 text-slate-400 font-black text-sm uppercase hover:bg-slate-700 active:scale-95 transition-all">Back</button>
+                <button 
+                  onClick={handleFinalCheckout} 
+                  disabled={checkoutMutation.isPending || (formData.paymentMethod === 'Debt' && !formData.customerId)}
+                  className={`py-5 rounded-2xl font-black text-sm uppercase shadow-xl active:scale-95 transition-all ${(formData.paymentMethod === 'Debt' && !formData.customerId) ? 'bg-slate-700 text-slate-500 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-500'}`}
+                >
                   {checkoutMutation.isPending ? 'PROCESSING...' : 'CONFIRM SALE'}
                 </button>
               </div>
@@ -461,45 +574,6 @@ export default function ServicePOS() {
         </div>
       </div>
 
-      {/* FLOATING RECEIPT MODAL — mobile only */}
-      {showReceipt && (
-        <div className="fixed inset-0 z-50 md:hidden flex items-end">
-          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowReceipt(false)} />
-          <div className="relative w-full bg-slate-900 rounded-t-3xl p-8 space-y-6 shadow-2xl">
-            <div className="w-10 h-1 bg-slate-700 rounded-full mx-auto mb-2" />
-            <div className="text-center">
-              <h3 className="text-xl font-black text-white uppercase tracking-tighter">Final Review</h3>
-              <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-1">Confirm before syncing</p>
-            </div>
-            <div className="space-y-3 font-mono text-sm">
-              <div className="flex justify-between border-b border-slate-800 pb-2">
-                <span className="text-slate-500">MODE</span>
-                <span className="font-black text-emerald-400">{formData.transactionType}</span>
-              </div>
-              <div className="flex justify-between border-b border-slate-800 pb-2">
-                <span className="text-slate-500">MASS</span>
-                <span className="font-black text-white">{formData.weightKg} KG</span>
-              </div>
-              <div className="flex justify-between border-b border-slate-800 pb-2">
-                <span className="text-slate-500">PAYMENT</span>
-                <span className="font-black text-amber-400">{formData.paymentMethod}</span>
-              </div>
-              <div className="flex justify-between pt-2 items-baseline">
-                <span className="text-base text-slate-400 font-sans font-black">TOTAL</span>
-                <span className="text-4xl font-black text-emerald-400 tracking-tighter">KES {parseFloat(formData.feeCharged).toLocaleString()}</span>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <button onClick={() => setShowReceipt(false)} className="py-5 rounded-2xl bg-slate-800 text-slate-400 font-black text-sm uppercase">Cancel</button>
-              <button onClick={handleFinalCheckout} disabled={checkoutMutation.isPending || (formData.paymentMethod === 'Debt' && !formData.customerId)}
-                className={`py-5 rounded-2xl font-black text-sm uppercase shadow-xl ${checkoutMutation.isPending ? 'bg-slate-700' : 'bg-emerald-600'}`}>
-                {checkoutMutation.isPending ? 'PROCESSING...' : 'CONFIRM SALE'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* SALES HISTORY — cards on mobile, table on desktop */}
       <div className="mill-card p-0 overflow-hidden bg-white border-slate-200 shadow-2xl">
         <div className="p-6 md:p-10 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
@@ -539,6 +613,14 @@ export default function ServicePOS() {
                   <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-slate-100 text-slate-600">{log.weight_kg} KG</span>
                   <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${log.payment_method === 'Debt' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>{log.payment_method}</span>
                 </div>
+                <div className="flex items-center gap-2 pt-2 border-t border-slate-50">
+                  <button onClick={() => startEdit(log)} className="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg text-[9px] font-black uppercase flex items-center justify-center gap-1">
+                    <Pencil size={12} /> Edit
+                  </button>
+                  <button onClick={() => setDeletingSale(log)} className="flex-1 py-2 bg-red-50 text-red-600 rounded-lg text-[9px] font-black uppercase flex items-center justify-center gap-1">
+                    <Trash2 size={12} /> Delete
+                  </button>
+                </div>
               </div>
             );
           })}
@@ -555,6 +637,7 @@ export default function ServicePOS() {
                 <th className="px-10 py-6 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Weight</th>
                 <th className="px-10 py-6 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Total</th>
                 <th className="px-10 py-6 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Payment</th>
+                <th className="px-10 py-6 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -582,16 +665,84 @@ export default function ServicePOS() {
                         <span className={`text-[10px] font-black uppercase ${log.payment_method === 'Debt' ? 'text-red-700' : 'text-emerald-700'}`}>{log.payment_method}</span>
                       </div>
                     </td>
+                    <td className="px-10 py-5 text-right">
+                       <div className="flex items-center justify-end gap-2">
+                          <button onClick={() => startEdit(log)} className="p-2 bg-slate-100 text-slate-400 hover:text-slate-900 rounded-lg transition-all" title="Edit Sale">
+                             <Pencil size={14} />
+                          </button>
+                          <button onClick={() => setDeletingSale(log)} className="p-2 bg-red-50 text-red-400 hover:text-red-600 rounded-lg transition-all" title="Delete Sale">
+                             <Trash2 size={14} />
+                          </button>
+                       </div>
+                    </td>
                   </tr>
                 );
               })}
               {salesHistory.length === 0 && (
-                <tr><td colSpan={6} className="px-10 py-24 text-center text-slate-400 font-black uppercase tracking-widest italic opacity-50">No recent transactions found</td></tr>
+                <tr><td colSpan={7} className="px-10 py-24 text-center text-slate-400 font-black uppercase tracking-widest italic opacity-50">No recent transactions found</td></tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
+      {/* EDIT SALE MODAL */}
+      {editingSale && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-8 bg-slate-900 text-white flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-black uppercase tracking-tighter">Edit Sale</h3>
+                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">Registry Correction</p>
+              </div>
+              <button onClick={() => setEditingSale(null)} className="p-2 hover:bg-white/10 rounded-full transition-all"><X size={20}/></button>
+            </div>
+            <form onSubmit={handleEditSubmit} className="p-8 space-y-6">
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Weight (KG)</label>
+                <input required type="number" step="0.01" value={editForm.weightKg} onChange={e => setEditForm({...editForm, weightKg: e.target.value})} className="mill-input w-full font-bold" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Total Price (KES)</label>
+                <input required type="number" step="0.01" value={editForm.totalPrice} onChange={e => setEditForm({...editForm, totalPrice: e.target.value})} className="mill-input w-full font-bold" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Payment Method</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {['Cash', 'M-Pesa', 'Debt'].map(m => (
+                    <button key={m} type="button" onClick={() => setEditForm({...editForm, paymentMethod: m as any})} className={`py-3 rounded-xl font-black text-[10px] uppercase border transition-all ${editForm.paymentMethod === m ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>{m}</button>
+                  ))}
+                </div>
+              </div>
+              <button type="submit" disabled={editSaleMutation.isPending} className="mill-btn-primary w-full py-4 uppercase font-black tracking-widest shadow-xl">
+                {editSaleMutation.isPending ? 'UPDATING...' : '✓ SAVE CHANGES'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE SALE MODAL */}
+      {deletingSale && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-8 bg-red-600 text-white text-center">
+              <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 size={32} />
+              </div>
+              <h3 className="text-xl font-black uppercase tracking-tighter">Void Transaction</h3>
+              <p className="text-xs text-red-100 font-bold uppercase mt-1 leading-relaxed">
+                This will delete the sale and <span className="font-black text-white underline">RESTORE STOCK</span>. Proceed?
+              </p>
+            </div>
+            <div className="p-6 grid grid-cols-2 gap-4">
+              <button onClick={() => setDeletingSale(null)} className="py-4 rounded-xl bg-slate-100 text-slate-600 font-black text-xs uppercase hover:bg-slate-200 transition-all">Cancel</button>
+              <button onClick={() => deleteSaleMutation.mutate(deletingSale)} disabled={deleteSaleMutation.isPending} className="py-4 rounded-xl bg-red-600 text-white font-black text-xs uppercase hover:bg-red-700 transition-all shadow-lg shadow-red-200">
+                {deleteSaleMutation.isPending ? 'DELETING...' : 'YES, VOID'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -4,8 +4,10 @@ import { supabase, supabaseUrl, supabaseKey } from '../lib/supabase';
 import { 
   UserPlus, User as UserIcon, Trash2, 
   ShieldCheck, AlertTriangle, ChevronRight,
-  Pencil, Save, X, Eye, EyeOff
+  Pencil, Save, X, Eye, EyeOff, RotateCcw
 } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { db } from '../lib/db';
 
 const authClient = createClient(supabaseUrl, supabaseKey, {
   auth: { persistSession: false }
@@ -14,14 +16,14 @@ const authClient = createClient(supabaseUrl, supabaseKey, {
 interface Profile {
   id: string;
   username: string;
+  email?: string;
   role: 'ADMIN' | 'EMPLOYEE';
   display_password?: string;
   created_at: string;
 }
 
 export default function UserManagement() {
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
@@ -31,7 +33,6 @@ export default function UserManagement() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<'ADMIN' | 'EMPLOYEE'>('EMPLOYEE');
-  const [isProcessing, setIsProcessing] = useState(false);
 
   // Edit State
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -40,7 +41,6 @@ export default function UserManagement() {
 
   useEffect(() => {
     checkAdmin();
-    fetchProfiles();
   }, []);
 
   async function checkAdmin() {
@@ -56,33 +56,43 @@ export default function UserManagement() {
     setIsAdmin(profile?.role === 'ADMIN');
   }
 
-  async function fetchProfiles() {
-    setLoading(true);
-    try {
+  // 1. Data Fetching with Sync
+  const { data: profiles = [], isLoading: loading } = useQuery({
+    queryKey: ['profiles'],
+    queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      setProfiles(data || []);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
+      
+      // Sync to Dexie for offline login support
+      if (data) {
+        await db.profiles.clear();
+        await db.profiles.bulkAdd(data.map(p => ({
+          ...p,
+          email: p.email || '' // Ensure email is handled if column exists
+        })));
+      }
+      
+      return data as Profile[];
+    },
+    staleTime: 1000 * 60 * 30, // 30 mins
+  });
 
-  const handleCreateUser = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(''); setSuccess('');
-    setIsProcessing(true);
+  // 2. Mutations
+  const createUserMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      if (!navigator.onLine) {
+        await db.pendingTransactions.add({ type: 'user_creation', payload, timestamp: Date.now(), retryCount: 0 });
+        return { offline: true };
+      }
 
-    try {
       const { data: authData, error: authError } = await authClient.auth.signUp({
-        email,
-        password,
-        options: { data: { username, role } }
+        email: payload.email,
+        password: payload.password,
+        options: { data: { username: payload.username, role: payload.role } }
       });
 
       if (authError) throw authError;
@@ -90,22 +100,68 @@ export default function UserManagement() {
       if (authData.user) {
         const { error: profError } = await supabase.from('profiles').insert([{
           id: authData.user.id,
-          username: username,
-          role: role,
-          display_password: password // Store for admin visibility
+          username: payload.username,
+          email: payload.email,
+          role: payload.role,
+          display_password: payload.password
         }]);
         
         if (profError) throw profError;
-
-        setSuccess(`Account created for ${username}. Password saved to registry.`);
-        setUsername(''); setPassword(''); setEmail('');
-        fetchProfiles();
       }
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setIsProcessing(false);
-    }
+      return { offline: false };
+    },
+    onSuccess: (res) => {
+      if (res.offline) {
+        setSuccess("OFFLINE: User creation queued for sync.");
+      } else {
+        setSuccess(`Account provisioned successfully.`);
+      }
+      setUsername(''); setPassword(''); setEmail('');
+      queryClient.invalidateQueries({ queryKey: ['profiles'] });
+    },
+    onError: (err: any) => setError(err.message)
+  });
+
+  const updateUserMutation = useMutation({
+    mutationFn: async ({ id, payload }: any) => {
+      if (!navigator.onLine) {
+        await db.pendingTransactions.add({ type: 'user_update', payload: { id, ...payload }, timestamp: Date.now(), retryCount: 0 });
+        return { offline: true };
+      }
+
+      const { error } = await supabase.from('profiles').update(payload).eq('id', id);
+      if (error) throw error;
+      return { offline: false };
+    },
+    onSuccess: () => {
+      setSuccess("Profile updated.");
+      setEditingId(null);
+      queryClient.invalidateQueries({ queryKey: ['profiles'] });
+    },
+    onError: (err: any) => setError(err.message)
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (id: string) => {
+      if (!navigator.onLine) {
+        await db.pendingTransactions.add({ type: 'user_delete', payload: { id }, timestamp: Date.now(), retryCount: 0 });
+        return { offline: true };
+      }
+      const { error } = await supabase.from('profiles').delete().eq('id', id);
+      if (error) throw error;
+      return { offline: false };
+    },
+    onSuccess: () => {
+      setSuccess("User access revoked.");
+      queryClient.invalidateQueries({ queryKey: ['profiles'] });
+    },
+    onError: (err: any) => setError(err.message)
+  });
+
+  const handleCreateUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(''); setSuccess('');
+    createUserMutation.mutate({ email, username, password, role });
   };
 
   const startEdit = (profile: Profile) => {
@@ -113,41 +169,21 @@ export default function UserManagement() {
     setEditForm(profile);
   };
 
-  const handleUpdate = async () => {
+  const handleUpdate = () => {
     if (!editingId) return;
-    setIsProcessing(true);
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          username: editForm.username,
-          role: editForm.role,
-          display_password: editForm.display_password
-        })
-        .eq('id', editingId);
-
-      if (error) throw error;
-      
-      setSuccess("Profile updated successfully.");
-      setEditingId(null);
-      fetchProfiles();
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setIsProcessing(false);
-    }
+    updateUserMutation.mutate({ 
+      id: editingId, 
+      payload: { 
+        username: editForm.username, 
+        role: editForm.role, 
+        display_password: editForm.display_password 
+      } 
+    });
   };
 
-  const handleDelete = async (id: string, name: string) => {
+  const handleDelete = (id: string, name: string) => {
     if (!confirm(`REVOKE ACCESS: Are you sure you want to remove ${name}?`)) return;
-    try {
-      const { error } = await supabase.from('profiles').delete().eq('id', id);
-      if (error) throw error;
-      setSuccess(`Access revoked for ${name}.`);
-      fetchProfiles();
-    } catch (err: any) {
-      setError(err.message);
-    }
+    deleteUserMutation.mutate(id);
   };
 
   const togglePasswordVisibility = (id: string) => {
@@ -206,8 +242,8 @@ export default function UserManagement() {
                   <option value="ADMIN">ADMIN</option>
                 </select>
               </div>
-              <button type="submit" disabled={isProcessing} className="w-full h-14 bg-[#1E3A8A] text-white rounded-2xl font-black uppercase tracking-widest shadow-lg hover:bg-blue-900 transition-all flex items-center justify-center gap-2">
-                {isProcessing ? 'CREATING...' : 'PROVISION ACCOUNT'}
+              <button type="submit" disabled={createUserMutation.isPending} className="w-full h-14 bg-[#1E3A8A] text-white rounded-2xl font-black uppercase tracking-widest shadow-lg hover:bg-blue-900 transition-all flex items-center justify-center gap-2">
+                {createUserMutation.isPending ? 'CREATING...' : 'PROVISION ACCOUNT'}
                 <ChevronRight size={18} />
               </button>
             </form>
@@ -221,7 +257,12 @@ export default function UserManagement() {
                <h2 className="text-xl font-black text-[#1E3A8A] uppercase tracking-tight flex items-center gap-3">
                  <UserIcon size={20} /> Staff Registry
                </h2>
-               <div className="text-[10px] font-black text-slate-400 uppercase bg-white px-4 py-2 rounded-full border border-slate-100">{profiles.length} Active Users</div>
+               <div className="flex items-center gap-4">
+                 <button onClick={() => queryClient.invalidateQueries({ queryKey: ['profiles'] })} className="p-2 text-slate-400 hover:text-slate-900 transition-all">
+                    <RotateCcw size={18} />
+                 </button>
+                 <div className="text-[10px] font-black text-slate-400 uppercase bg-white px-4 py-2 rounded-full border border-slate-100">{profiles.length} Active Users</div>
+               </div>
             </div>
             
             <div className="overflow-x-auto">

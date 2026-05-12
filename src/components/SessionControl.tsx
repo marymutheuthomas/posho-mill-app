@@ -110,14 +110,30 @@ export default function SessionControl({ onNavigate }: SessionControlProps) {
     if (isDayLocked) return;
     setError(null);
     
-    // Determine the correct start reading (use fallback if 0)
-    const effectiveStart = lastEndMeter === 0 ? 791.19 : lastEndMeter;
-    const v = parseFloat(startMeterInput) || effectiveStart;
-
-    if (isNaN(v)) { setError('Invalid start reading.'); return; }
-    if (v < lastEndMeter && lastEndMeter !== 0) { setError('Start meter cannot be less than previous end.'); return; }
     try {
       setLoading(true);
+      
+      // 1. RE-VERIFY: Ensure NO other session is open in the DB
+      const { data: existing, error: checkErr } = await supabase
+        .from('milling_sessions')
+        .select('id, session_type')
+        .eq('is_closed', false)
+        .limit(1);
+
+      if (checkErr) throw checkErr;
+      if (existing && existing.length > 0) {
+        setError(`CONFLICT: A ${existing[0].session_type} session is already active. You must close it first.`);
+        fetchSessionStatus(); // Refresh UI to show the active session
+        return;
+      }
+
+      // Determine the correct start reading (use fallback if 0)
+      const effectiveStart = lastEndMeter === 0 ? 791.19 : lastEndMeter;
+      const v = parseFloat(startMeterInput) || effectiveStart;
+
+      if (isNaN(v)) { setError('Invalid start reading.'); return; }
+      if (v < lastEndMeter && lastEndMeter !== 0) { setError('Start meter cannot be less than previous end.'); return; }
+
       const { data, error } = await supabase
         .from('milling_sessions')
         .insert([{ session_type: activeTab, start_meter: v, is_closed: false }])
