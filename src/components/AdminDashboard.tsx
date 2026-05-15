@@ -1,61 +1,81 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { AlertTriangle, CheckCircle, Landmark, Plus, Calendar, RefreshCw, Package, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { 
+  AlertTriangle, CheckCircle, Landmark, Plus, Calendar, RefreshCw, 
+  Package, ArrowUpRight, ArrowDownRight 
+} from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useDataMutation } from '../hooks/useDataMutation';
 
 export default function AdminDashboard() {
-  const [loading, setLoading] = useState(true);
-  const [plSummary, setPlSummary] = useState<any[]>([]);
-  const [reconData, setReconData] = useState<any[]>([]);
-  const [finances, setFinances] = useState<any>(null);
-  
+  const queryClient = useQueryClient();
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'Daily' | 'Growth'>('Daily');
-  const [_isBusy, setIsBusy] = useState(false);
+  const [success, setSuccess] = useState('');
 
   
   const [expenseForm, setExpenseForm] = useState({
     category: 'Wages', amount: '', date: new Date().toISOString().split('T')[0], description: ''
   });
 
-  useEffect(() => {
-    fetchUnifiedData();
-  }, []);
+  const { data: finances } = useQuery({
+    queryKey: ['financial-analysis'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('financial_analysis_view').select('*').single();
+      if (error) throw error;
+      return data;
+    }
+  });
 
-  async function fetchUnifiedData() {
-    setLoading(true);
-    try {
-      // Fetching only the 3 True Master Views
-      const [{ data: fin }, { data: pl }, { data: rd }] = await Promise.all([
-        supabase.from('financial_analysis_view').select('*').single(),
-        supabase.from('monthly_pl_summary').select('*').order('summary_month', { ascending: false }),
-        supabase.from('financial_reconciliation_audit').select('*').order('audit_date', { ascending: false })
-      ]);
+  const { data: plSummary = [] } = useQuery({
+    queryKey: ['pl-summary'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('monthly_pl_summary').select('*').order('summary_month', { ascending: false });
+      if (error) throw error;
+      return data;
+    }
+  });
 
-      setFinances(fin);
-      setPlSummary(pl || []);
-      setReconData(rd || []);
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
-  }
+  const { data: reconData = [], isLoading: loadingRecon } = useQuery({
+    queryKey: ['recon-audit'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('financial_reconciliation_audit').select('*').order('audit_date', { ascending: false });
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const expenseMutation = useDataMutation({
+    type: 'expense',
+    queryKey: ['pl-summary'],
+    mutationFn: async (payload) => {
+      const { data, error } = await supabase.from('expenses').insert([payload]).select();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (res) => {
+      if (res.offline) {
+        setSuccess('OFFLINE MODE: Expense queued.');
+      } else {
+        setSuccess('Expense recorded and synced.');
+      }
+      setIsExpenseModalOpen(false);
+      setExpenseForm({ category: 'Wages', amount: '', date: new Date().toISOString().split('T')[0], description: '' });
+      queryClient.invalidateQueries({ queryKey: ['pl-summary'] });
+    }
+  });
 
   const handleAddExpense = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsBusy(true);
-    try {
-      await supabase.from('expenses').insert([{
-        category: expenseForm.category,
-        amount: parseFloat(expenseForm.amount),
-        expense_date: expenseForm.date,
-        description: expenseForm.description
-      }]);
-      setIsExpenseModalOpen(false);
-      setExpenseForm({ category: 'Wages', amount: '', date: new Date().toISOString().split('T')[0], description: '' });
-      fetchUnifiedData();
-    } catch (err: any) { alert(err.message); }
-    finally { setIsBusy(false); }
+    expenseMutation.mutate({
+      category: expenseForm.category,
+      amount: parseFloat(expenseForm.amount),
+      expense_date: expenseForm.date,
+      description: expenseForm.description
+    });
   };
 
-  if (loading) return <div className="p-20 text-center bg-[#F9FAFB] min-h-screen text-[#5C4033] font-black tracking-widest animate-pulse">SYNCHRONIZING MASTER LEDGER...</div>;
+  if (loadingRecon && reconData.length === 0) return <div className="p-20 text-center bg-[#F9FAFB] min-h-screen text-[#5C4033] font-black tracking-widest animate-pulse">SYNCHRONIZING MASTER LEDGER...</div>;
 
   const currentMonth = plSummary[0] || { gross_revenue: 0, total_expenses: 0, net_profit: 0 };
   const profitsHealthy = currentMonth.net_profit >= 0;
@@ -63,6 +83,12 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-full bg-[#F9FAFB] -m-12 p-12 text-sm text-[#5C4033]">
       <div className="max-w-7xl mx-auto space-y-8">
+        
+        {success && (
+          <div className="bg-emerald-600 text-white p-6 rounded-2xl font-black flex items-center gap-4 shadow-xl animate-in slide-in-from-top duration-300">
+            <CheckCircle size={24}/>{success}
+          </div>
+        )}
         
         {/* TOP BAR: FINANCIAL VITALITY */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -99,7 +125,16 @@ export default function AdminDashboard() {
                  <button onClick={() => setViewMode('Daily')} className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'Daily' ? 'bg-[#5C4033] text-white shadow-xl' : 'text-gray-400'}`}>Daily Theft Audit</button>
                  <button onClick={() => setViewMode('Growth')} className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'Growth' ? 'bg-[#5C4033] text-white shadow-xl' : 'text-gray-400'}`}>Monthly Strategic P&L</button>
               </div>
-              <button onClick={fetchUnifiedData} className="text-[#E0B0FF] hover:text-[#5C4033] transition-colors"><RefreshCw size={24}/></button>
+              <button 
+                onClick={() => {
+                  queryClient.invalidateQueries({ queryKey: ['financial-analysis'] });
+                  queryClient.invalidateQueries({ queryKey: ['pl-summary'] });
+                  queryClient.invalidateQueries({ queryKey: ['recon-audit'] });
+                }} 
+                className="text-[#E0B0FF] hover:text-[#5C4033] transition-colors"
+              >
+                <RefreshCw size={24}/>
+              </button>
            </div>
 
            <div className="overflow-x-auto">

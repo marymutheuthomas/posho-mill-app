@@ -1,17 +1,15 @@
 import { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
-import { supabase, supabaseUrl, supabaseKey } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 import { 
-  UserPlus, User as UserIcon, Trash2, 
-  ShieldCheck, AlertTriangle, ChevronRight,
-  Pencil, Save, X, Eye, EyeOff, RotateCcw
+  UserPlus, Trash2, 
+  ShieldCheck, AlertTriangle, 
+  Pencil, Save, X, Eye, EyeOff, RotateCcw, CheckCircle
 } from 'lucide-react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
+import { useDataMutation } from '../hooks/useDataMutation';
 import { db } from '../lib/db';
 
-const authClient = createClient(supabaseUrl, supabaseKey, {
-  auth: { persistSession: false }
-});
+
 
 interface Profile {
   id: string;
@@ -23,7 +21,6 @@ interface Profile {
 }
 
 export default function UserManagement() {
-  const queryClient = useQueryClient();
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
@@ -56,291 +53,219 @@ export default function UserManagement() {
     setIsAdmin(profile?.role === 'ADMIN');
   }
 
-  // 1. Data Fetching with Sync
+  // 1. Data Fetching
   const { data: profiles = [], isLoading: loading } = useQuery({
     queryKey: ['profiles'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
+      const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
       if (error) throw error;
       
-      // Sync to Dexie for offline login support
+      // Sync to Dexie for offline login
       if (data) {
         await db.profiles.clear();
-        await db.profiles.bulkAdd(data.map(p => ({
-          ...p,
-          email: p.email || '' // Ensure email is handled if column exists
-        })));
+        await db.profiles.bulkAdd(data.map(p => ({ ...p, email: p.email || '' })));
       }
-      
       return data as Profile[];
     },
-    staleTime: 1000 * 60 * 30, // 30 mins
+    staleTime: 1000 * 60 * 30,
   });
 
   // 2. Mutations
-  const createUserMutation = useMutation({
+  const createUserMutation = useDataMutation({
+    type: 'user_creation',
+    queryKey: ['profiles'],
     mutationFn: async (payload: any) => {
-      if (!navigator.onLine) {
-        await db.pendingTransactions.add({ type: 'user_creation', payload, timestamp: Date.now(), retryCount: 0 });
-        return { offline: true };
-      }
-
-      const { data: authData, error: authError } = await authClient.auth.signUp({
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: payload.email,
         password: payload.password,
         options: { data: { username: payload.username, role: payload.role } }
       });
-
       if (authError) throw authError;
 
       if (authData.user) {
-        const { error: profError } = await supabase.from('profiles').insert([{
-          id: authData.user.id,
-          username: payload.username,
-          email: payload.email,
+        const { error: profileError } = await supabase.from('profiles').update({ 
+          username: payload.username, 
           role: payload.role,
-          display_password: payload.password
-        }]);
-        
-        if (profError) throw profError;
+          display_password: payload.password 
+        }).eq('id', authData.user.id);
+        if (profileError) throw profileError;
       }
-      return { offline: false };
+      return authData;
     },
     onSuccess: (res) => {
       if (res.offline) {
-        setSuccess("OFFLINE: User creation queued for sync.");
+        setSuccess('OFFLINE MODE: User creation queued.');
       } else {
-        setSuccess(`Account provisioned successfully.`);
+        setSuccess('User registered and synced.');
       }
-      setUsername(''); setPassword(''); setEmail('');
-      queryClient.invalidateQueries({ queryKey: ['profiles'] });
-    },
-    onError: (err: any) => setError(err.message)
+      setEmail(''); setUsername(''); setPassword(''); setRole('EMPLOYEE');
+    }
   });
 
-  const updateUserMutation = useMutation({
-    mutationFn: async ({ id, payload }: any) => {
-      if (!navigator.onLine) {
-        await db.pendingTransactions.add({ type: 'user_update', payload: { id, ...payload }, timestamp: Date.now(), retryCount: 0 });
-        return { offline: true };
-      }
-
-      const { error } = await supabase.from('profiles').update(payload).eq('id', id);
+  const updateProfileMutation = useDataMutation({
+    type: 'user_update',
+    queryKey: ['profiles'],
+    mutationFn: async (payload) => {
+      const { id, ...updates } = payload;
+      const { error } = await supabase.from('profiles').update(updates).eq('id', id);
       if (error) throw error;
-      return { offline: false };
     },
-    onSuccess: () => {
-      setSuccess("Profile updated.");
+    onSuccess: (res) => {
+      if (res.offline) setSuccess('OFFLINE MODE: Update queued.');
+      else setSuccess('Profile updated successfully.');
       setEditingId(null);
-      queryClient.invalidateQueries({ queryKey: ['profiles'] });
-    },
-    onError: (err: any) => setError(err.message)
+    }
   });
 
-  const deleteUserMutation = useMutation({
-    mutationFn: async (id: string) => {
-      if (!navigator.onLine) {
-        await db.pendingTransactions.add({ type: 'user_delete', payload: { id }, timestamp: Date.now(), retryCount: 0 });
-        return { offline: true };
-      }
+  const deleteProfileMutation = useDataMutation({
+    type: 'user_delete',
+    queryKey: ['profiles'],
+    mutationFn: async (id) => {
       const { error } = await supabase.from('profiles').delete().eq('id', id);
       if (error) throw error;
-      return { offline: false };
     },
-    onSuccess: () => {
-      setSuccess("User access revoked.");
-      queryClient.invalidateQueries({ queryKey: ['profiles'] });
-    },
-    onError: (err: any) => setError(err.message)
+    onSuccess: (res) => {
+      if (res.offline) setSuccess('OFFLINE MODE: Deletion queued.');
+      else setSuccess('User deleted.');
+    }
   });
 
-  const handleCreateUser = (e: React.FormEvent) => {
+  const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(''); setSuccess('');
     createUserMutation.mutate({ email, username, password, role });
   };
 
-  const startEdit = (profile: Profile) => {
-    setEditingId(profile.id);
-    setEditForm(profile);
+  const startEdit = (p: Profile) => {
+    setEditingId(p.id);
+    setEditForm({ username: p.username, role: p.role });
   };
 
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
     if (!editingId) return;
-    updateUserMutation.mutate({ 
-      id: editingId, 
-      payload: { 
-        username: editForm.username, 
-        role: editForm.role, 
-        display_password: editForm.display_password 
-      } 
-    });
+    updateProfileMutation.mutate({ id: editingId, ...editForm });
   };
 
-  const handleDelete = (id: string, name: string) => {
-    if (!confirm(`REVOKE ACCESS: Are you sure you want to remove ${name}?`)) return;
-    deleteUserMutation.mutate(id);
-  };
-
-  const togglePasswordVisibility = (id: string) => {
-    setShowPasswords(prev => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  if (isAdmin === false) return <div className="p-20 text-center font-black text-red-500 uppercase">Access Denied</div>;
-  if (loading) return <div className="p-20 text-center font-black text-slate-300 uppercase tracking-widest animate-pulse">Syncing Registry...</div>;
+  if (isAdmin === false) return <div className="p-20 text-center font-black text-red-500 uppercase tracking-widest">Access Denied: Admin Privileges Required</div>;
+  if (loading || isAdmin === null) return <div className="p-20 text-center font-black text-slate-300 uppercase tracking-widest animate-pulse">Synchronizing Auth Registry...</div>;
 
   return (
-    <div className="max-w-7xl mx-auto space-y-12 pb-32">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-slate-200 pb-10">
-        <div>
-          <h1 className="text-4xl font-light text-[#1E3A8A] uppercase tracking-tighter">User Registry</h1>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-2">Manage Access, Roles & Credentials</p>
-        </div>
-        <div className="flex items-center gap-3 bg-white border border-slate-200 px-6 py-3 rounded-2xl shadow-sm">
-           <ShieldCheck size={18} className="text-[#F59E0B]" />
-           <span className="text-[11px] font-black uppercase tracking-widest text-[#1E3A8A]">Master Control Enabled</span>
+    <div className="max-w-6xl mx-auto space-y-12">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 bg-slate-900 rounded-2xl flex items-center justify-center shadow-xl">
+            <ShieldCheck className="text-white" size={28} />
+          </div>
+          <div>
+            <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">User Management</h1>
+            <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Admin Registry & Access Control</p>
+          </div>
         </div>
       </div>
 
-      {error && <div className="bg-red-50 text-red-700 p-6 rounded-2xl font-black flex items-center gap-4 animate-in fade-in"><AlertTriangle size={20}/>{error}</div>}
-      {success && <div className="bg-emerald-50 text-emerald-700 p-6 rounded-2xl font-black flex items-center gap-4 animate-in fade-in"><ShieldCheck size={20}/>{success}</div>}
+      {(error || createUserMutation.error) && (
+        <div className="bg-red-600 text-white p-6 rounded-2xl font-black flex items-center gap-4 shadow-xl">
+          <AlertTriangle size={24} />
+          {error || (createUserMutation.error as any)?.message}
+        </div>
+      )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
-        {/* Create Form */}
-        <div className="lg:col-span-4">
-          <div className="bg-white border border-slate-100 rounded-[2.5rem] p-8 shadow-xl shadow-slate-200/50 space-y-8">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-[#1E3A8A] rounded-xl flex items-center justify-center text-white shadow-lg">
-                <UserPlus size={20} />
-              </div>
-              <h2 className="text-lg font-black text-[#1E3A8A] uppercase tracking-tight">Provision Staff</h2>
-            </div>
+      {success && (
+        <div className="bg-emerald-50 border-2 border-emerald-200 text-emerald-900 p-6 rounded-2xl font-black flex items-center gap-4 shadow-xl">
+          <CheckCircle size={24} />
+          {success}
+        </div>
+      )}
 
-            <form onSubmit={handleCreateUser} className="space-y-5">
-              <div>
-                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block ml-1">Email</label>
-                <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="mill-input w-full bg-[#F8FAFC] border-slate-100 h-12 text-sm" placeholder="staff@mill.com" />
-              </div>
-              <div>
-                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block ml-1">Username</label>
-                <input type="text" required value={username} onChange={e => setUsername(e.target.value)} className="mill-input w-full bg-[#F8FAFC] border-slate-100 h-12 text-sm" placeholder="e.g. faith_01" />
-              </div>
-              <div>
-                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block ml-1">Password</label>
-                <input type="text" required value={password} onChange={e => setPassword(e.target.value)} className="mill-input w-full bg-[#F8FAFC] border-slate-100 h-12 text-sm" placeholder="Temporary password" />
-              </div>
-              <div>
-                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block ml-1">Role</label>
-                <select value={role} onChange={e => setRole(e.target.value as any)} className="mill-input w-full bg-[#F8FAFC] border-slate-100 h-12 text-sm">
-                  <option value="EMPLOYEE">EMPLOYEE</option>
-                  <option value="ADMIN">ADMIN</option>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+        <div className="lg:col-span-1">
+          <div className="mill-card p-8 bg-white border-slate-100 shadow-xl sticky top-8">
+            <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-8 flex items-center gap-2">
+              <UserPlus size={16} /> Provision New Account
+            </h2>
+            <form onSubmit={handleCreateUser} className="space-y-6">
+              <div className="space-y-4">
+                <input type="text" required placeholder="Full Name / Username" className="mill-input w-full font-black text-sm" value={username} onChange={e => setUsername(e.target.value)} />
+                <input type="email" required placeholder="Corporate Email" className="mill-input w-full font-black text-sm" value={email} onChange={e => setEmail(e.target.value)} />
+                <input type="password" required placeholder="Temporary Password" className="mill-input w-full font-black text-sm" value={password} onChange={e => setPassword(e.target.value)} />
+                <select className="mill-input w-full font-black text-sm" value={role} onChange={e => setRole(e.target.value as any)}>
+                  <option value="EMPLOYEE">Mill Employee</option>
+                  <option value="ADMIN">System Administrator</option>
                 </select>
               </div>
-              <button type="submit" disabled={createUserMutation.isPending} className="w-full h-14 bg-[#1E3A8A] text-white rounded-2xl font-black uppercase tracking-widest shadow-lg hover:bg-blue-900 transition-all flex items-center justify-center gap-2">
-                {createUserMutation.isPending ? 'CREATING...' : 'PROVISION ACCOUNT'}
-                <ChevronRight size={18} />
+              <button disabled={createUserMutation.isPending} className="mill-btn-primary w-full py-4 text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2">
+                {createUserMutation.isPending ? <RotateCcw className="animate-spin" size={16} /> : <UserPlus size={16} />}
+                {createUserMutation.isPending ? 'PROVISIONING...' : 'Create Account'}
               </button>
             </form>
           </div>
         </div>
 
-        {/* User Table */}
-        <div className="lg:col-span-8">
-          <div className="bg-white border border-slate-100 rounded-[2.5rem] shadow-xl overflow-hidden">
-            <div className="p-8 border-b border-slate-50 bg-[#F8FAFC]/50 flex items-center justify-between">
-               <h2 className="text-xl font-black text-[#1E3A8A] uppercase tracking-tight flex items-center gap-3">
-                 <UserIcon size={20} /> Staff Registry
-               </h2>
-               <div className="flex items-center gap-4">
-                 <button onClick={() => queryClient.invalidateQueries({ queryKey: ['profiles'] })} className="p-2 text-slate-400 hover:text-slate-900 transition-all">
-                    <RotateCcw size={18} />
-                 </button>
-                 <div className="text-[10px] font-black text-slate-400 uppercase bg-white px-4 py-2 rounded-full border border-slate-100">{profiles.length} Active Users</div>
-               </div>
+        <div className="lg:col-span-2">
+          <div className="mill-card bg-white border-slate-100 shadow-xl overflow-hidden">
+            <div className="p-8 border-b border-slate-50 flex justify-between items-center">
+              <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest">Active Staff Registry</h2>
+              <span className="bg-slate-100 px-3 py-1 rounded-full text-[10px] font-black text-slate-500 uppercase">{profiles.length} Accounts</span>
             </div>
-            
             <div className="overflow-x-auto">
               <table className="w-full text-left">
-                <thead>
-                  <tr className="bg-[#F8FAFC]/30">
-                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50">Identity</th>
-                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50">Role</th>
-                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50">Password</th>
-                    <th className="px-8 py-5 border-b border-slate-50"></th>
+                <thead className="bg-slate-50 border-b border-slate-100">
+                  <tr>
+                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Staff Identity</th>
+                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Access Role</th>
+                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Credentials</th>
+                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {profiles.map(p => (
-                    <tr key={p.id} className="hover:bg-[#F8FAFC] transition-colors">
+                    <tr key={p.id} className="group hover:bg-slate-50/50 transition-colors">
                       <td className="px-8 py-6">
                         {editingId === p.id ? (
-                          <input 
-                            type="text" 
-                            value={editForm.username} 
-                            onChange={e => setEditForm({...editForm, username: e.target.value})}
-                            className="bg-white border border-slate-200 rounded-lg px-3 py-1 text-sm font-bold w-full"
-                          />
+                          <input type="text" className="mill-input py-2 text-xs font-black" value={editForm.username} onChange={e => setEditForm({ ...editForm, username: e.target.value })} />
                         ) : (
                           <div>
-                            <p className="text-sm font-black text-[#1E3A8A] uppercase">{p.username}</p>
-                            <p className="text-[9px] font-bold text-slate-400">ID: {p.id.substring(0,8)}</p>
+                            <p className="text-sm font-black text-slate-900">{p.username}</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">{p.email || 'No email set'}</p>
                           </div>
                         )}
                       </td>
                       <td className="px-8 py-6">
                         {editingId === p.id ? (
-                          <select 
-                            value={editForm.role} 
-                            onChange={e => setEditForm({...editForm, role: e.target.value as any})}
-                            className="bg-white border border-slate-200 rounded-lg px-3 py-1 text-xs font-bold w-full"
-                          >
+                          <select className="mill-input py-2 text-xs font-black" value={editForm.role} onChange={e => setEditForm({ ...editForm, role: e.target.value as any })}>
                             <option value="EMPLOYEE">EMPLOYEE</option>
                             <option value="ADMIN">ADMIN</option>
                           </select>
                         ) : (
-                          <span className={`px-4 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${p.role === 'ADMIN' ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-slate-50 text-slate-600 border-slate-100'}`}>
+                          <span className={`inline-block px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${p.role === 'ADMIN' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'}`}>
                             {p.role}
                           </span>
                         )}
                       </td>
                       <td className="px-8 py-6">
                         <div className="flex items-center gap-3">
-                          {editingId === p.id ? (
-                            <input 
-                              type="text" 
-                              value={editForm.display_password} 
-                              onChange={e => setEditForm({...editForm, display_password: e.target.value})}
-                              className="bg-white border border-slate-200 rounded-lg px-3 py-1 text-sm font-mono w-full"
-                            />
-                          ) : (
-                            <>
-                              <span className="text-xs font-mono font-bold text-slate-600 bg-slate-50 px-3 py-1 rounded-md border border-slate-100">
-                                {showPasswords[p.id] ? p.display_password || '********' : '••••••••'}
-                              </span>
-                              <button onClick={() => togglePasswordVisibility(p.id)} className="text-slate-300 hover:text-slate-900 transition-colors">
-                                {showPasswords[p.id] ? <EyeOff size={14} /> : <Eye size={14} />}
-                              </button>
-                            </>
-                          )}
+                          <span className="text-xs font-mono font-bold text-slate-400">
+                            {showPasswords[p.id] ? (p.display_password || '********') : '••••••••'}
+                          </span>
+                          <button 
+                            onClick={() => setShowPasswords(prev => ({ ...prev, [p.id]: !prev[p.id] }))}
+                            className="text-slate-300 hover:text-slate-900 transition-colors"
+                          >
+                            {showPasswords[p.id] ? <EyeOff size={14} /> : <Eye size={14} />}
+                          </button>
                         </div>
                       </td>
                       <td className="px-8 py-6 text-right">
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           {editingId === p.id ? (
                             <>
-                              <button onClick={handleUpdate} className="p-2 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-all"><Save size={18}/></button>
-                              <button onClick={() => setEditingId(null)} className="p-2 text-slate-400 hover:bg-slate-50 rounded-lg transition-all"><X size={18}/></button>
+                              <button onClick={handleUpdate} className="p-2 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-colors"><Save size={16} /></button>
+                              <button onClick={() => setEditingId(null)} className="p-2 text-slate-400 hover:bg-slate-50 rounded-lg transition-colors"><X size={16} /></button>
                             </>
                           ) : (
                             <>
-                              <button onClick={() => startEdit(p)} className="p-2 text-slate-300 hover:text-[#F59E0B] rounded-lg transition-all"><Pencil size={18}/></button>
-                              <button onClick={() => handleDelete(p.id, p.username)} className="p-2 text-slate-200 hover:text-red-500 rounded-lg transition-all"><Trash2 size={18}/></button>
+                              <button onClick={() => startEdit(p)} className="p-2 text-slate-400 hover:bg-slate-50 rounded-lg transition-colors"><Pencil size={16} /></button>
+                              <button onClick={() => deleteProfileMutation.mutate(p.id)} className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16} /></button>
                             </>
                           )}
                         </div>

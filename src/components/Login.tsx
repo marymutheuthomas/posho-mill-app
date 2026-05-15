@@ -4,7 +4,7 @@ import { Lock, Mail, Shield, User, ChevronRight, AlertCircle, Factory } from 'lu
 import { db } from '../lib/db';
 
 interface LoginProps {
-  onLogin: (role: 'ADMIN' | 'EMPLOYEE') => void;
+  onLogin: (role: 'ADMIN' | 'EMPLOYEE', id?: string) => void;
 }
 
 export default function Login({ onLogin }: LoginProps) {
@@ -24,7 +24,7 @@ export default function Login({ onLogin }: LoginProps) {
         const cachedUser = await db.profiles.filter(p => p.email === email && p.display_password === password).first();
         if (cachedUser) {
           console.log("OFFLINE LOGIN SUCCESSFUL:", cachedUser.role);
-          onLogin(cachedUser.role);
+          onLogin(cachedUser.role, cachedUser.id);
           return;
         } else {
           throw new Error("OFFLINE MODE: No cached credentials found for this identity.");
@@ -43,11 +43,28 @@ export default function Login({ onLogin }: LoginProps) {
       }
 
       if (authData.user) {
-        // Use metadata directly to bypass schema errors
-        const role = authData.user.user_metadata?.role || 'EMPLOYEE';
+        // 2. Fetch Detailed Profile to Cache for Offline Mode
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', authData.user.id)
+          .single();
+
+        const role = profile?.role || authData.user.user_metadata?.role || 'EMPLOYEE';
         
-        console.log("Logged in as:", role);
-        onLogin(role);
+        // 3. CACHE PROFILE FOR OFFLINE ACCESS
+        // We store the password temporarily for offline validation
+        await db.profiles.put({
+          id: authData.user.id,
+          username: profile?.username || email.split('@')[0],
+          email: email,
+          role: role as any,
+          display_password: password, // Plain text cache for offline-only validation
+          created_at: new Date().toISOString()
+        });
+
+        console.log("Logged in and cached as:", role);
+        onLogin(role as any, authData.user.id);
       }
     } catch (err: any) {
       setError(`[AUTH-FAILURE]: ${err.message}`);

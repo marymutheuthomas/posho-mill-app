@@ -1,12 +1,16 @@
 @import "tailwindcss";
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap');
 
 body {
   background-color: #F1F5F9;
   color: #020617;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Geist', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+h1, .text-4xl, .text-5xl, .text-6xl {
+  font-weight: 200 !important;
 }
 
 .mill-card {
@@ -20,10 +24,10 @@ body {
   background-color: #FFFFFF;
   border: 1px solid #CBD5E1;
   border-radius: 0.5rem;
-  padding: 0.75rem 1rem;
+  padding: 0.5rem 0.75rem;
   color: #020617;
   font-weight: 600;
-  min-height: 44px;
+  min-height: 38px;
 }
 
 .mill-input:focus {
@@ -36,10 +40,10 @@ body {
   background-color: #4F46E5;
   color: #FFFFFF;
   font-weight: 700;
-  padding: 0.75rem 1.5rem;
+  padding: 0.5rem 1rem;
   border-radius: 0.5rem;
   transition: all 0.2s;
-  min-height: 44px;
+  min-height: 38px;
 }
 
 .mill-btn-primary:hover {
@@ -50,10 +54,10 @@ body {
   background-color: #10B981;
   color: #FFFFFF;
   font-weight: 700;
-  padding: 0.75rem 1.5rem;
+  padding: 0.5rem 1rem;
   border-radius: 0.5rem;
   transition: all 0.2s;
-  min-height: 44px;
+  min-height: 38px;
 }
 
 .mill-btn-success:hover {

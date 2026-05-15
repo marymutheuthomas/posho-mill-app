@@ -6,8 +6,9 @@ const ASSETS = [
   '/icons.svg'
 ];
 
-// Install: Cache static assets
+// Install: Cache static assets and force activation
 self.addEventListener('install', (event) => {
+  self.skipWaiting(); // Force update to new version
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS);
@@ -24,30 +25,37 @@ self.addEventListener('fetch', (event) => {
   // Skip non-GET requests (Supabase writes)
   if (event.request.method !== 'GET') return;
 
-  // Skip Supabase API routes completely to avoid Response body consumption errors
-  if (url.pathname.startsWith('/rest/v1/') || url.hostname.includes('supabase.co')) return;
+  // Skip Supabase API routes and Vite HMR
+  if (url.pathname.startsWith('/rest/v1/') || url.hostname.includes('supabase.co') || url.pathname.includes('@vite')) return;
 
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       const fetchPromise = fetch(event.request).then((networkResponse) => {
-        // Update cache with fresh version
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, networkResponse.clone());
-        });
-        return networkResponse;
-      });
+        // VALIDATION: Only cache successful basic responses
+        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+          return networkResponse;
+        }
 
-      // Return cached version immediately (Stale), but update in background (Revalidate)
+        // IMPORTANT: Clone the response! 
+        const responseToCache = networkResponse.clone();
+        
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, responseToCache);
+        });
+        
+        return networkResponse;
+      }).catch(() => cachedResponse); // Fallback to cache on network failure
+
       return cachedResponse || fetchPromise;
     })
   );
 });
 
-// Activate: Cleanup old caches
+// Activate: Cleanup old caches and take control immediately
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)));
-    })
+    }).then(() => self.clients.claim()) // Take control of all tabs immediately
   );
 });

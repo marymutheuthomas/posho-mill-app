@@ -20,6 +20,10 @@ export default {
       boxShadow: {
         'mill': '0 1px 2px 0 rgb(0 0 0 / 0.05)',
         'mill-lg': '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
+      },
+      fontFamily: {
+        sans: ['Geist', 'system-ui', 'sans-serif'],
+        mono: ['Geist Mono', 'monospace'],
       }
     },
   },

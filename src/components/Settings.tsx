@@ -96,8 +96,8 @@ export default function Settings() {
                   <Tag size={20} />
                 </div>
                 <div>
-                  <h2 className="text-xl font-black text-slate-900 uppercase tracking-tighter">Price Configuration</h2>
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Global Rate Management</p>
+                  <h2 className="text-xl font-semibold text-slate-900 uppercase tracking-tighter">Price Configuration</h2>
+                  <p className="text-[10px] font-medium text-slate-500 uppercase tracking-widest">Global Rate Management</p>
                 </div>
               </div>
               <button onClick={() => refetch()} className="p-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all">
@@ -109,17 +109,17 @@ export default function Settings() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50/50">
-                    <th className="px-8 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b">Product Name</th>
-                    <th className="px-8 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b">Milling Fee (KES)</th>
-                    <th className="px-8 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b">Retail Price (KES)</th>
+                    <th className="px-8 py-4 text-[10px] font-semibold text-slate-500 uppercase tracking-widest border-b">Product Name</th>
+                    <th className="px-8 py-4 text-[10px] font-semibold text-slate-500 uppercase tracking-widest border-b">Milling Fee (KES)</th>
+                    <th className="px-8 py-4 text-[10px] font-semibold text-slate-500 uppercase tracking-widest border-b">Retail Price (KES)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {editedProducts.map(p => (
                     <tr key={p.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-8 py-4 font-black text-slate-900 uppercase text-xs">
+                      <td className="px-8 py-4 font-semibold text-slate-900 uppercase text-xs">
                         {p.name}
-                        <p className="text-[9px] text-slate-400 font-bold tracking-widest">{p.product_code}</p>
+                        <p className="text-[9px] text-slate-400 font-medium tracking-widest">{p.product_code}</p>
                       </td>
                       <td className="px-8 py-4">
                         <div className="relative max-w-[120px]">
@@ -127,7 +127,7 @@ export default function Settings() {
                             type="number" 
                             value={p.milling_fee} 
                             onChange={(e) => handleInputChange(p.id, 'milling_fee', e.target.value)}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-black focus:ring-2 focus:ring-slate-900 focus:border-slate-900 outline-none transition-all"
+                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-semibold focus:ring-2 focus:ring-slate-900 focus:border-slate-900 outline-none transition-all"
                           />
                         </div>
                       </td>
@@ -137,7 +137,7 @@ export default function Settings() {
                             type="number" 
                             value={p.selling_price} 
                             onChange={(e) => handleInputChange(p.id, 'selling_price', e.target.value)}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-black focus:ring-2 focus:ring-slate-900 focus:border-slate-900 outline-none transition-all"
+                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-semibold focus:ring-2 focus:ring-slate-900 focus:border-slate-900 outline-none transition-all"
                           />
                         </div>
                       </td>
@@ -173,8 +173,8 @@ export default function Settings() {
                 <Database size={20} className="text-emerald-400" />
               </div>
               <div>
-                <h3 className="text-lg font-black uppercase tracking-tighter">System Info</h3>
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Master Terminal Sync</p>
+                <h3 className="text-lg font-semibold uppercase tracking-tighter">System Info</h3>
+                <p className="text-[10px] font-medium text-slate-500 uppercase tracking-widest">Master Terminal Sync</p>
               </div>
             </div>
             
@@ -200,8 +200,8 @@ export default function Settings() {
                 <Shield size={20} className="text-slate-900" />
               </div>
               <div>
-                <h3 className="text-lg font-black uppercase tracking-tighter text-slate-900">Security</h3>
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Access & Policies</p>
+                <h3 className="text-lg font-semibold uppercase tracking-tighter text-slate-900">Security</h3>
+                <p className="text-[10px] font-medium text-slate-500 uppercase tracking-widest">Access & Policies</p>
               </div>
             </div>
             
@@ -222,7 +222,7 @@ export default function Settings() {
             
             <button 
               onClick={() => queryClient.invalidateQueries()}
-              className="w-full mt-6 py-4 bg-slate-100 text-slate-500 text-[10px] font-black uppercase rounded-xl hover:bg-slate-200 transition-all"
+              className="w-full mt-6 py-4 bg-slate-100 text-slate-500 text-[10px] font-semibold uppercase rounded-xl hover:bg-slate-200 transition-all"
             >
               Force Cache Refresh
             </button>

@@ -23,6 +23,10 @@ export default function Purchases() {
   const [successMsg, setSuccessMsg] = useState('');
   const [history, setHistory] = useState<PurchaseRecord[]>([]);
   const [formData, setFormData] = useState({ category: '', qtyReceived: '', unitPrice: '', supplierName: '' });
+  const [dateRange, setDateRange] = useState({
+    start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    end: new Date().toISOString().split('T')[0]
+  });
 
   // Admin Actions
   const [editModal, setEditModal] = useState<{ open: boolean; record: PurchaseRecord | null }>({ open: false, record: null });
@@ -35,8 +39,9 @@ export default function Purchases() {
       const { data, error: fetchErr } = await supabase
         .from('purchases')
         .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50);
+        .gte('created_at', `${dateRange.start}T00:00:00`)
+        .lte('created_at', `${dateRange.end}T23:59:59`)
+        .order('created_at', { ascending: false });
       
       if (fetchErr) throw fetchErr;
       setHistory((data as PurchaseRecord[]) || []);
@@ -239,77 +244,72 @@ export default function Purchases() {
       <div className="mill-card p-0 overflow-hidden bg-white border-slate-200 shadow-2xl">
         <div className="p-6 md:p-10 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <div className="flex items-center gap-3 md:gap-4">
-            <div className="w-10 h-10 md:w-12 md:h-12 bg-white rounded-xl md:rounded-2xl shadow-sm flex items-center justify-center text-slate-900 border border-slate-100">
-              <History size={20} />
+            <div className="w-8 h-8 md:w-10 md:h-10 bg-white rounded-lg md:rounded-xl shadow-sm flex items-center justify-center text-slate-900 border border-slate-100">
+              <History size={16} />
             </div>
             <div>
-              <h3 className="text-lg md:text-2xl font-black text-slate-900 uppercase tracking-tighter">Purchase History</h3>
-              <p className="hidden md:block text-[11px] font-black text-slate-500 uppercase tracking-widest">Expense Audit · Last 50 Records</p>
+              <h3 className="text-sm md:text-lg font-semibold text-slate-900 uppercase tracking-tight">Purchase History</h3>
+              <p className="hidden md:block text-[9px] font-medium text-slate-400 uppercase tracking-widest">Expense Audit · Last 50 Records</p>
             </div>
           </div>
-          <button onClick={fetchHistory} className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-slate-900 transition-all shadow-sm">
-            <RotateCcw size={18} className={loadingState === 'fetching' ? 'animate-spin' : ''} />
-          </button>
+          <div className="flex items-center gap-2">
+             <div className="flex items-center gap-1 bg-white border border-slate-100 p-1 rounded-md shadow-sm">
+                <input 
+                  type="date" 
+                  value={dateRange.start} 
+                  onChange={e => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                  className="text-[8px] font-semibold uppercase text-slate-500 outline-none bg-transparent w-[85px]"
+                />
+                <span className="text-slate-300 text-[8px]">/</span>
+                <input 
+                  type="date" 
+                  value={dateRange.end} 
+                  onChange={e => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                  className="text-[8px] font-semibold uppercase text-slate-500 outline-none bg-transparent w-[85px]"
+                />
+                <button onClick={fetchHistory} className="p-1 hover:bg-slate-50 rounded text-slate-400 hover:text-slate-900 transition-all">
+                  <RotateCcw size={11} className={loadingState === 'fetching' ? 'animate-spin' : ''} />
+                </button>
+             </div>
+          </div>
         </div>
 
-        {/* Mobile: Cards */}
-        <div className="md:hidden divide-y divide-slate-100">
-          {history.length === 0 && loadingState !== 'fetching' && (
-            <p className="p-12 text-center text-slate-400 font-black uppercase tracking-widest text-xs italic">No records found</p>
-          )}
-          {history.map(p => (
-            <div key={p.id} className="p-5 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-black text-slate-900 uppercase">{p.category}</p>
-                  <p className="text-[10px] text-slate-400 font-bold">{new Date(p.created_at).toLocaleDateString()}</p>
-                </div>
-                <span className="text-lg font-black text-slate-900 font-mono">KES {p.total_amount?.toLocaleString()}</span>
-              </div>
-              <div className="flex items-center justify-between text-[10px]">
-                <span className="font-bold text-slate-500 uppercase">{p.supplier_name || 'N/A'}</span>
-                <span className="font-bold text-slate-400">{p.quantity} units</span>
-              </div>
-              <div className="flex gap-2 pt-2 border-t border-slate-50">
-                <button onClick={() => openEditModal(p)} className="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg text-[10px] font-black uppercase">Edit</button>
-                <button onClick={() => setDeleteModal({ open: true, record: p })} className="flex-1 py-2 bg-red-50 text-red-600 rounded-lg text-[10px] font-black uppercase">Delete</button>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Desktop: Table */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50/50">
-                <th className="px-10 py-6 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Date</th>
-                <th className="px-10 py-6 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Category</th>
-                <th className="px-10 py-6 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Supplier</th>
-                <th className="px-10 py-6 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Quantity</th>
-                <th className="px-10 py-6 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Unit Price</th>
-                <th className="px-10 py-6 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Total</th>
-                <th className="px-10 py-6 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100 text-right">Actions</th>
+        <div className="overflow-auto max-h-[500px] border-t border-slate-100">
+          <table className="w-full text-left border-collapse min-w-[650px]">
+            <thead className="sticky top-0 z-10 bg-slate-50 shadow-sm">
+              <tr>
+                <th className="px-3 md:px-6 py-3 text-[8px] md:text-[9px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Date</th>
+                <th className="px-3 md:px-6 py-3 text-[8px] md:text-[9px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Category</th>
+                <th className="px-3 md:px-6 py-3 text-[8px] md:text-[9px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Supplier</th>
+                <th className="px-2 md:px-6 py-3 text-[8px] md:text-[9px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Qty</th>
+                <th className="px-2 md:px-6 py-3 text-[8px] md:text-[9px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Unit</th>
+                <th className="px-3 md:px-6 py-3 text-[8px] md:text-[9px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Total</th>
+                <th className="px-3 md:px-6 py-3 text-[8px] md:text-[9px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {history.length === 0 && loadingState !== 'fetching' && (
+                <tr>
+                  <td colSpan={7} className="p-20 text-center text-slate-300 font-semibold uppercase tracking-widest italic text-xs">No expense records found</td>
+                </tr>
+              )}
               {history.map(p => (
                 <tr key={p.id} className="hover:bg-slate-50/50 transition-colors group">
-                  <td className="px-10 py-5">
-                    <p className="text-[12px] font-black text-slate-900">{new Date(p.created_at).toLocaleDateString()}</p>
-                    <p className="text-[9px] font-bold text-slate-500 uppercase">{new Date(p.created_at).toLocaleTimeString()}</p>
+                  <td className="px-3 md:px-6 py-2 md:py-3">
+                    <p className="text-[9px] md:text-[11px] font-semibold text-slate-900">{new Date(p.created_at).toLocaleDateString()}</p>
+                    <p className="text-[7px] md:text-[8px] font-medium text-slate-500 uppercase">{new Date(p.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
                   </td>
-                  <td className="px-10 py-5">
-                    <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-[9px] font-black uppercase">{p.category}</span>
+                  <td className="px-3 md:px-6 py-2 md:py-3">
+                    <span className="px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[7px] md:text-[8px] font-semibold uppercase">{p.category}</span>
                   </td>
-                  <td className="px-10 py-5 font-black text-[13px] text-slate-900 uppercase">{p.supplier_name || '-'}</td>
-                  <td className="px-10 py-5 font-black text-slate-900">{p.quantity}</td>
-                  <td className="px-10 py-5 font-bold text-slate-500 text-sm">KES {p.unit_price?.toLocaleString()}</td>
-                  <td className="px-10 py-5 font-black text-slate-900 text-lg">KES {p.total_amount?.toLocaleString()}</td>
-                  <td className="px-10 py-5 text-right">
-                    <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => openEditModal(p)} className="p-2 bg-slate-100 text-slate-400 hover:text-slate-900 rounded-lg transition-all"><Pencil size={14}/></button>
-                      <button onClick={() => setDeleteModal({ open: true, record: p })} className="p-2 bg-red-50 text-red-400 hover:text-red-600 rounded-lg transition-all"><Trash2 size={14}/></button>
+                  <td className="px-3 md:px-6 py-2 md:py-3 font-semibold text-[10px] md:text-[12px] text-slate-900 uppercase truncate max-w-[100px] md:max-w-[150px]">{p.supplier_name || '-'}</td>
+                  <td className="px-2 md:px-6 py-2 md:py-3 font-semibold text-[10px] md:text-xs text-slate-900">{p.quantity}</td>
+                  <td className="px-2 md:px-6 py-2 md:py-3 font-medium text-slate-500 text-[9px] md:text-xs">{p.unit_price?.toLocaleString()}</td>
+                  <td className="px-3 md:px-6 py-2 md:py-3 font-semibold text-slate-900 text-[10px] md:text-sm">KES {p.total_amount?.toLocaleString()}</td>
+                  <td className="px-3 md:px-6 py-2 md:py-3 text-right">
+                    <div className="flex justify-end gap-1 md:gap-1.5">
+                      <button onClick={() => openEditModal(p)} className="p-1 bg-slate-100 text-slate-400 hover:text-slate-900 rounded-md transition-all"><Pencil size={11}/></button>
+                      <button onClick={() => setDeleteModal({ open: true, record: p })} className="p-1 bg-red-50 text-red-400 hover:text-red-600 rounded-md transition-all"><Trash2 size={11}/></button>
                     </div>
                   </td>
                 </tr>

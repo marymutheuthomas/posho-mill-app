@@ -38,7 +38,7 @@ export default function PowerAuditReport() {
         });
 
         // 3. Fetch Total Power Cost from sessions
-        const { data: sessions } = await supabase.from('milling_sessions').select('power_cost').eq('status', 'Completed');
+        const { data: sessions } = await supabase.from('milling_sessions').select('power_cost').eq('is_closed', true);
         const powerCost = sessions?.reduce((acc, curr) => acc + (curr.power_cost || 0), 0) || 0;
 
         setStats({

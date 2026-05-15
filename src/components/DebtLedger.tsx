@@ -6,6 +6,7 @@ import {
   Activity, Pencil, Trash2, X, Phone
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useDataMutation } from '../hooks/useDataMutation';
 
 interface DebtRecord {
   id: string;
@@ -37,7 +38,7 @@ export default function DebtLedger() {
     queryKey: ['debts'],
     queryFn: async () => {
       const [salesRes, dbRes] = await Promise.all([
-        supabase.from('sales_transactions').select('customer_name, total_price, payment_method').in('payment_method', ['Debt', 'Credit']),
+        supabase.from('sales_transactions').select('customer_name, total_price, payment_method, amount_debt').in('payment_method', ['Debt', 'Credit']),
         supabase.from('debt_book').select('*')
       ]);
 
@@ -61,7 +62,11 @@ export default function DebtLedger() {
             });
           }
           const rec = debtMap.get(key)!;
-          rec.original_debt += Number(tx.total_price || 0);
+          if (tx.amount_debt !== undefined && tx.amount_debt !== null) {
+            rec.original_debt += Number(tx.amount_debt);
+          } else {
+            rec.original_debt += Number(tx.total_price || 0);
+          }
         });
       }
 
@@ -91,36 +96,76 @@ export default function DebtLedger() {
       return Array.from(debtMap.values()).sort((a,b) => a.customer_name.localeCompare(b.customer_name));
     },
     staleTime: 1000 * 60 * 5,
+    meta: {
+      onError: (err: any) => {
+        if (err.code === '42501' || err.code === 'PGRST116') {
+          setError('Access Restricted: Customer Debt Registry is reserved for Admin oversight.');
+        } else {
+          setError('Failed to sync debt ledger: ' + err.message);
+        }
+      }
+    }
   });
 
-  // 2. Mutations
-  const addCustomerMutation = useMutation({
-    mutationFn: async (payload: any) => {
-      const { error } = await supabase.from('debt_book').insert([payload]);
+  // 2. Mutations (Offline-First)
+  const addCustomerMutation = useDataMutation({
+    type: 'repayment' as any,
+    queryKey: ['debts'],
+    mutationFn: async (payload) => {
+      const { data, error } = await supabase.from('debt_book').insert([payload]).select();
       if (error) throw error;
+      return data;
     },
-    onSuccess: () => {
-      setSuccess('Customer registered.');
+    onSuccess: (res) => {
+      if (res?.offline) {
+        setSuccess('OFFLINE MODE: Customer queued.');
+      } else {
+        setSuccess('Customer registered successfully.');
+      }
       setNewCustomerModal(false);
       setNewCustomer({ name: '', phone: '' });
       queryClient.invalidateQueries({ queryKey: ['debts'] });
     },
-    onError: (err: any) => setError(err.message)
+    onError: (err: any) => {
+      if (err.code === '42501' || err.code === 'PGRST116') {
+        setError('Access Restricted: You do not have permission to register customers.');
+      } else {
+        setError(err.message || 'Registration failed.');
+      }
+    }
   });
 
-  const repayMutation = useMutation({
-    mutationFn: async ({ id, newPaid, amount }: any) => {
-      const { error: updErr } = await supabase.from('debt_book').update({ amount_paid: newPaid }).eq('id', id);
-      if (updErr) throw updErr;
-      await supabase.from('repayments').insert([{ customer_id: id, amount, method: 'Cash' }]);
+  const repayMutation = useDataMutation({
+    type: 'repayment',
+    queryKey: ['debts'],
+    mutationFn: async ({ customer_name, amount_paid }: any) => {
+      const { data, error } = await supabase
+        .from('repayments')
+        .insert([{ 
+          customer_name: customer_name.toUpperCase().trim(), 
+          amount_paid: Number(amount_paid) 
+        }])
+        .select();
+      if (error) throw error;
+      return data;
     },
-    onSuccess: () => {
-      setSuccess('Payment recorded.');
+    onSuccess: (res) => {
+      if (res?.offline) {
+        setSuccess('OFFLINE MODE: Repayment queued.');
+      } else {
+        setSuccess('Repayment recorded and synced.');
+      }
       setRepayModal({ open: false, customer: null });
       setRepayAmount('');
       queryClient.invalidateQueries({ queryKey: ['debts'] });
     },
-    onError: (err: any) => setError(err.message)
+    onError: (err: any) => {
+      if (err.code === '42501' || err.code === 'PGRST116') {
+        setError('Access Restricted: You do not have permission to record repayments.');
+      } else {
+        setError(err.message || 'Repayment failed.');
+      }
+    }
   });
 
   const editMutation = useMutation({
@@ -170,9 +215,8 @@ export default function DebtLedger() {
     const amount = parseFloat(repayAmount);
     if (isNaN(amount) || amount <= 0) return;
     repayMutation.mutate({
-      id: repayModal.customer.id,
-      newPaid: (repayModal.customer.amount_paid || 0) + amount,
-      amount
+      customer_name: repayModal.customer.customer_name,
+      amount_paid: amount
     });
   };
 
@@ -245,9 +289,9 @@ export default function DebtLedger() {
                     </div>
                   </div>
                   <div>
-                    <h3 className="text-sm font-black text-mill-text uppercase">{d.customer_name}</h3>
+                    <h3 className="text-sm font-semibold text-slate-900 uppercase">{d.customer_name}</h3>
                     <div className="flex items-center gap-3 mt-1">
-                      <p className="text-[10px] font-bold text-slate-400 tracking-widest">{d.customer_phone}</p>
+                      <p className="text-[10px] font-medium text-slate-400 tracking-widest">{d.customer_phone}</p>
                       {d.customer_phone && d.customer_phone !== 'Unregistered' && (
                         <a 
                           href={`tel:${d.customer_phone}`}
@@ -261,7 +305,7 @@ export default function DebtLedger() {
                   </div>
                   <div className="flex items-center gap-2 pt-2 border-t border-slate-50">
                     <History size={12} className="text-slate-300" />
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Active: {d.updated_at ? new Date(d.updated_at).toLocaleDateString() : 'No activity'}</p>
+                    <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-tighter">Active: {d.updated_at ? new Date(d.updated_at).toLocaleDateString() : 'No activity'}</p>
                   </div>
                 </div>
 
@@ -272,7 +316,7 @@ export default function DebtLedger() {
                       <button onClick={() => setDeleteModal({ open: true, customer: d })} className="p-3 bg-red-50 text-red-600 rounded-xl"><Trash2 size={16}/></button>
                     </>
                   )}
-                  <button onClick={() => setRepayModal({ open: true, customer: d })} className="flex-1 bg-slate-900 text-white py-3.5 rounded-xl text-[10px] font-black uppercase shadow-lg hover:bg-emerald-600 transition-all flex items-center justify-center gap-2">
+                  <button onClick={() => setRepayModal({ open: true, customer: d })} className="flex-1 bg-slate-900 text-white py-3.5 rounded-xl text-[10px] font-semibold uppercase shadow-lg hover:bg-emerald-600 transition-all flex items-center justify-center gap-2">
                     <ArrowUpCircle size={16} /> Pay
                   </button>
                 </div>
@@ -287,22 +331,22 @@ export default function DebtLedger() {
         <table className="w-full text-left">
           <thead>
             <tr className="bg-slate-50/50">
-              <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Customer</th>
-              <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Borrowed</th>
-              <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Repaid</th>
-              <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Clearance</th>
-              <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Balance</th>
-              <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Last Payment</th>
-              <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 text-right">Actions</th>
+              <th className="px-10 py-6 text-[10px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Customer</th>
+              <th className="px-10 py-6 text-[10px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Borrowed</th>
+              <th className="px-10 py-6 text-[10px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Repaid</th>
+              <th className="px-10 py-6 text-[10px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Clearance</th>
+              <th className="px-10 py-6 text-[10px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Balance</th>
+              <th className="px-10 py-6 text-[10px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Last Payment</th>
+              <th className="px-10 py-6 text-[10px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {filteredDebts.map(d => (
               <tr key={d.id} className="hover:bg-slate-50/50 transition-colors group">
                 <td className="px-10 py-6">
-                  <p className="text-sm font-black text-slate-900 uppercase">{d.customer_name}</p>
+                  <p className="text-sm font-semibold text-slate-900 uppercase">{d.customer_name}</p>
                   <div className="flex items-center gap-2 mt-1">
-                    <p className="text-[10px] text-slate-400 font-bold">{d.customer_phone}</p>
+                    <p className="text-[10px] text-slate-400 font-medium">{d.customer_phone}</p>
                     {d.customer_phone && d.customer_phone !== 'Unregistered' && (
                       <a 
                         href={`tel:${d.customer_phone}`}

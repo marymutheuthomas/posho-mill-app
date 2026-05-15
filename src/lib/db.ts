@@ -2,7 +2,19 @@ import Dexie, { type Table } from 'dexie';
 
 export interface PendingTransaction {
   id?: number;
-  type: 'sale' | 'repayment' | 'purchase' | 'stock_take' | 'user_creation' | 'user_update' | 'user_delete';
+  type: 
+    | 'sale' 
+    | 'repayment' 
+    | 'purchase' 
+    | 'stock_take' 
+    | 'user_creation' 
+    | 'user_update' 
+    | 'user_delete'
+    | 'production_log'
+    | 'milling_session'
+    | 'milling_session_update'
+    | 'expense'
+    | 'daily_audit';
   payload: any;
   timestamp: number;
   retryCount: number;

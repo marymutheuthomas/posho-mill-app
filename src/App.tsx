@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, Activity, ShieldCheck, Factory, 
   ShoppingCart, BookOpen, Settings as SettingsIcon, Lock,
-  Wifi, WifiOff, Menu, AlertTriangle, X,
+  Wifi, WifiOff, Menu, X,
   Zap, ShoppingBag, Search, User, ChevronRight
 } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useActiveSession } from './hooks/useActiveSession';
 import { supabase } from './lib/supabase';
+import { db } from './lib/db';
 import Dashboard from './components/Dashboard';
 import ProductionEntry from './components/ProductionEntry';
 import Purchases from './components/Purchases';
@@ -16,46 +18,93 @@ import SessionControl from './components/SessionControl';
 import DebtLedger from './components/DebtLedger';
 import StockTake from './components/StockTake';
 import Settings from './components/Settings';
+import OperationalAlert from './components/OperationalAlert';
 import UserManagement from './components/UserManagement';
-
 import Login from './components/Login';
 
 function App() {
-  const [user, setUser] = useState<{ role: 'ADMIN' | 'EMPLOYEE' } | null>(null);
+  const [user, setUser] = useState<{ id: string; role: 'ADMIN' | 'EMPLOYEE' } | null>(null);
   const [activeTab, setActiveTab] = useState('Dashboard');
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [activeSessionType, setActiveSessionType] = useState<'Internal' | 'External' | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
+  const { data: pendingCount = 0 } = useQuery({
+    queryKey: ['pending-tx-count'],
+    queryFn: async () => await db.pendingTransactions.count(),
+    refetchInterval: 5000,
+  });
+
   useEffect(() => {
     const up = () => setIsOnline(true);
     const down = () => setIsOnline(false);
     window.addEventListener('online', up);
     window.addEventListener('offline', down);
+
+    // RESTORE SESSION ON MOUNT
+    async function restoreSession() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setUser({ 
+          id: session.user.id, 
+          role: session.user.user_metadata?.role || 'EMPLOYEE' 
+        });
+      }
+    }
+    restoreSession();
+
     return () => { 
       window.removeEventListener('online', up); 
       window.removeEventListener('offline', down);
     };
   }, []);
 
-  const { data: activeSession } = useQuery({
-    queryKey: ['active-session'],
-    queryFn: async () => {
-      const { data } = await supabase.from('milling_sessions')
-        .select('session_type')
-        .eq('is_closed', false)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      return data;
-    },
-    refetchInterval: 10000,
-  });
+  const { data: activeSession } = useActiveSession();
+
+  // BACKGROUND PROFILE SYNC (For Offline Logins)
+  useEffect(() => {
+    async function syncProfiles() {
+      if (!isOnline || user?.role !== 'ADMIN') return;
+      try {
+        const { data: remoteProfiles } = await supabase.from('profiles').select('*');
+        if (remoteProfiles) {
+          for (const p of remoteProfiles) {
+            const existing = await db.profiles.get(p.id);
+            await db.profiles.put({
+              ...p,
+              // Keep local display_password if already cached, as remote doesn't have it
+              display_password: existing?.display_password || p.display_password
+            });
+          }
+        }
+      } catch (err) {
+        console.warn("Profile sync skipped:", err);
+      }
+    }
+    syncProfiles();
+  }, [isOnline, user?.role]);
 
   useEffect(() => {
     setActiveSessionType(activeSession?.session_type as any || null);
   }, [activeSession]);
+
+  const { data: unclosedPrevSession } = useQuery({
+    queryKey: ['unclosed-prev-session'],
+    queryFn: async () => {
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      const { data } = await supabase.from('milling_sessions')
+        .select('id, created_at')
+        .eq('is_closed', false)
+        .lt('created_at', today.toISOString())
+        .maybeSingle();
+      return data;
+    }
+  });
+
+  const isAfter6AM = new Date().getHours() >= 6;
+  const showMorningRecovery = isAfter6AM && !!unclosedPrevSession;
 
   const showNotification = (msg: string) => {
     setNotification(msg);
@@ -76,7 +125,7 @@ function App() {
   ].filter(item => !item.adminOnly || user?.role === 'ADMIN');
 
   if (!user) {
-    return <Login onLogin={(role) => setUser({ role })} />;
+    return <Login onLogin={(role, id) => setUser({ role, id: id || 'offline-user' })} />;
   }
 
   const handleLogout = () => {
@@ -93,7 +142,9 @@ function App() {
       <button
         onClick={() => {
           if (isLocked) {
-            showNotification(`Access Locked: Active ${activeSessionType} session.`);
+            showNotification(`Access Locked: Active ${activeSessionType} session prevents access to ${item.name}.`);
+          } else if (!activeSessionType && (item.name === 'Production Hub' || item.name === 'Point of Sale')) {
+            showNotification(`⚠️ No Active Session: Please start an Internal or External production session before recording data.`);
           } else {
             setActiveTab(item.name);
             if (isMobile) setIsDrawerOpen(false);
@@ -209,16 +260,23 @@ function App() {
           </div>
 
           <div className="flex items-center gap-3 md:gap-6">
-            {activeSessionType && (
-              <div className="hidden md:flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-2 rounded-full border border-emerald-100 shadow-sm">
-                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                <span className="text-[10px] font-black uppercase tracking-widest">{activeSessionType} ACTIVE</span>
-              </div>
-            )}
-            
-            {activeSessionType && <div className="md:hidden w-3 h-3 bg-emerald-500 rounded-full border-2 border-white shadow-lg shadow-emerald-500/50" />}
-
             <div className="flex items-center gap-2">
+              <div className={`flex items-center gap-2 md:gap-3 px-2 md:px-4 py-1 md:py-2 rounded-full border shadow-sm transition-all ${!isOnline ? 'bg-red-50 border-red-100 text-red-700' : 'bg-slate-50 border-slate-100 text-slate-900'}`}>
+                {activeSessionType && (
+                  <>
+                    <div className="flex items-center gap-1.5 md:gap-2 pr-2 md:pr-3 border-r border-slate-200">
+                      <div className="w-1.5 md:w-2 h-1.5 md:h-2 bg-emerald-500 rounded-full animate-pulse" />
+                      <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-emerald-700">{activeSessionType}</span>
+                    </div>
+                  </>
+                )}
+                <div className="flex items-center gap-1.5 md:gap-2">
+                  <div className={`w-2 md:w-2.5 h-2 md:h-2.5 rounded-full ${!isOnline ? 'bg-red-500 animate-pulse' : pendingCount > 0 ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+                  <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest">
+                    {!isOnline ? 'OFFLINE' : pendingCount > 0 ? `${pendingCount} PENDING` : 'SYNCED'}
+                  </span>
+                </div>
+              </div>
               <div className={`p-1.5 rounded-lg ${isOnline ? 'bg-emerald-50' : 'bg-red-50'}`}>
                 {isOnline ? <Wifi className="text-emerald-500" size={14}/> : <WifiOff className="text-red-500" size={14}/>}
               </div>
@@ -237,21 +295,32 @@ function App() {
           </div>
         </header>
 
-        {/* NOTIFICATION LAYER */}
-        {notification && (
-          <div className="absolute top-24 left-1/2 -translate-x-1/2 z-50 bg-red-600 text-white px-8 py-4 rounded-[2rem] font-black flex items-center gap-4 shadow-2xl animate-bounce border-4 border-white/20 backdrop-blur-md">
-            <AlertTriangle size={24} />
-            <span className="uppercase text-sm tracking-tighter">{notification}</span>
-          </div>
-        )}
+        {/* OPERATIONAL ALERT LAYER */}
+        <div className="px-4 md:px-10 pt-6">
+          {showMorningRecovery && (
+            <OperationalAlert 
+              type="error"
+              persistent
+              message="🚨 Action Required: Yesterday's session is still open. Please close Meter Readings and perform Stock Take to begin today's work." 
+            />
+          )}
+
+          {notification && (
+            <OperationalAlert 
+              type="warning"
+              onClose={() => setNotification(null)}
+              message={notification} 
+            />
+          )}
+        </div>
 
         {/* CONTENT SCROLL AREA */}
         <div className="flex-1 overflow-y-auto px-4 py-6 md:p-10 pb-32 md:pb-10 custom-scrollbar">
-          {activeTab === 'Dashboard'        && <Dashboard onNavigate={setActiveTab} role={user.role} />}
-          {activeTab === 'Session Control'  && <SessionControl onNavigate={setActiveTab} />}
+          {activeTab === 'Dashboard'        && <Dashboard onNavigate={setActiveTab} role={user.role} isOnline={isOnline} pendingCount={pendingCount} />}
+          {activeTab === 'Session Control'  && <SessionControl onNavigate={setActiveTab} isOnline={isOnline} pendingCount={pendingCount} />}
           {activeTab === 'Insights & Audit' && <AuditHub />}
           {activeTab === 'Production Hub'   && <ProductionEntry />}
-          {activeTab === 'Point of Sale'     && <ServicePOS />}
+          {activeTab === 'Point of Sale'     && <ServicePOS role={user.role} />}
           {activeTab === 'Debt Ledger'      && <DebtLedger />}
           {activeTab === 'Purchases'        && <Purchases />}
           {activeTab === 'Stock Take'       && <StockTake role={user.role} />}

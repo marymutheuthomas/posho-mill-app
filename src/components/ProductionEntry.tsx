@@ -1,8 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
-import { withRetry } from '../lib/network';
 import { checkPreviousStockTake } from '../lib/auditUtils';
-import { Scale, AlertTriangle, CheckCircle, Save, Activity, Calendar, ArrowUpRight, ArrowDownRight, Lock } from 'lucide-react';
+import { Scale, AlertTriangle, CheckCircle, Save, Activity, Calendar, ArrowUpRight, ArrowDownRight, Lock, RotateCcw } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useDataMutation } from '../hooks/useDataMutation';
+import { useActiveSession } from '../hooks/useActiveSession';
+import ActiveSessionOverlay from './ActiveSessionOverlay';
 
 const PRODUCT_CODES = {
   INPUT: '101',
@@ -12,7 +15,7 @@ const PRODUCT_CODES = {
 };
 
 interface Product { id: string; product_code: string; name: string; current_stock: number; minimum_level?: number; }
-interface MillingSession { id: string; start_meter: number; session_type: string; }
+
 interface ProductionLog {
   id: string;
   created_at: string;
@@ -23,14 +26,10 @@ interface ProductionLog {
   output_product_id: string;
   products?: { name: string; product_code: string };
 }
-type LoadingState = 'idle' | 'fetching' | 'saving';
+
 
 export default function ProductionEntry() {
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
-  const [activeSession, setActiveSession] = useState<MillingSession | null>(null);
-  const [logs, setLogs] = useState<ProductionLog[]>([]);
-  const [loadingState, setLoadingState] = useState<LoadingState>('fetching');
-  const [isSyncing, setIsSyncing] = useState(false);
+  const queryClient = useQueryClient();
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [auditBlock, setAuditBlock] = useState(false);
@@ -43,50 +42,106 @@ export default function ProductionEntry() {
   const [byProductKg, setByProductKg] = useState('');
   const [manualWasteKg, setManualWasteKg] = useState('0');
 
-  const initData = async () => {
-    setLoadingState('fetching');
-    try {
-      const { data: prods } = await withRetry('Fetch Products', async () => await supabase.from('products').select('id, product_code, name, current_stock, minimum_level'));
-      setAllProducts((prods as Product[]) ?? []);
+  const { data: allProducts = [] } = useQuery({
+    queryKey: ['products'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('products').select('id, product_code, name, current_stock, minimum_level');
+      if (error) throw error;
+      return data as Product[];
+    }
+  });
 
-      const { data: sess } = await withRetry('Fetch Active Session', async () => 
-        await supabase.from('milling_sessions').select('*').eq('is_closed', false).order('created_at', { ascending: false }).limit(1).maybeSingle()
-      );
-      setActiveSession(sess as unknown as MillingSession);
+  const { data: activeSession } = useActiveSession();
 
-      // Fetch Month's Logs
+  const { data: logs = [], isLoading: loadingLogs } = useQuery({
+    queryKey: ['production-logs'],
+    queryFn: async () => {
       const startOfMonth = new Date();
       startOfMonth.setDate(1);
       startOfMonth.setHours(0, 0, 0, 0);
 
-      const { data: logData } = await withRetry('Fetch Logs', async () => 
-        await supabase.from('production_logs')
-          .select(`
-            id, created_at, input_kg, main_output_kg, byproduct_kg, waste_kg, output_product_id,
-            products:output_product_id (name, product_code)
-          `)
-          .gte('created_at', startOfMonth.toISOString())
-          .order('created_at', { ascending: false })
-          .limit(50)
-      );
-      const formattedLogs = (logData as any[])?.map(log => ({
+      const { data, error } = await supabase.from('production_logs')
+        .select(`
+          id, created_at, input_kg, main_output_kg, byproduct_kg, waste_kg, output_product_id,
+          products:output_product_id (name, product_code)
+        `)
+        .gte('created_at', startOfMonth.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(50);
+      
+      if (error) throw error;
+      return (data as any[])?.map(log => ({
         ...log,
         products: Array.isArray(log.products) ? log.products[0] : log.products
-      }));
-      setLogs(formattedLogs || []);
-    } catch (err: any) { setError(`Sync Error: ${err.message}`); }
-    finally { setLoadingState('idle'); }
-
-    // Audit Check: Enforce Stock Take rule
-    const audit = await checkPreviousStockTake();
-    if (!audit.isDone) {
-      setAuditBlock(true);
-    } else {
-      setAuditBlock(false);
+      })) as ProductionLog[];
     }
-  };
+  });
 
-  useEffect(() => { initData(); }, [successMsg]);
+  const productionMutation = useDataMutation({
+    type: 'production_log',
+    queryKey: ['production-logs'],
+    mutationFn: async (payload) => {
+      const { data, error } = await supabase.from('production_logs').insert([payload]).select();
+      if (error) throw error;
+      return data;
+    },
+    onMutate: async (logData) => {
+      // OPTIMISTIC UI: Update stock for input, output, and byproduct instantly
+      await queryClient.cancelQueries({ queryKey: ['products'] });
+      const previousProducts = queryClient.getQueryData(['products']);
+
+      queryClient.setQueryData(['products'], (old: any) => {
+        if (!old) return [];
+        return old.map((p: any) => {
+          let newStock = Number(p.current_stock) || 0;
+          
+          // Deduct Input
+          if (p.id === logData.input_product_id) {
+            newStock -= (Number(logData.input_kg) || 0);
+          }
+          // Add Main Output
+          if (p.id === logData.output_product_id) {
+            newStock += (Number(logData.main_output_kg) || 0);
+          }
+          // Add Byproduct
+          if (p.id === logData.byproduct_id) {
+            newStock += (Number(logData.byproduct_kg) || 0);
+          }
+          
+          return { ...p, current_stock: Math.max(0, newStock) };
+        });
+      });
+
+      return { previousProducts };
+    },
+    onSuccess: (res) => {
+      if (res.offline) {
+        setSuccessMsg('Connection lost. Data saved locally and will sync when online.');
+      } else {
+        setSuccessMsg('Yield recorded successfully!');
+      }
+      setInputKg(''); setMainOutputKg(''); setByProductKg(''); setByProductId(''); setManualWasteKg('0');
+      queryClient.invalidateQueries({ queryKey: ['production-logs'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['active-session'] });
+      queryClient.invalidateQueries({ queryKey: ['last-end-meter'] });
+    },
+    onError: (err: any) => {
+      if (err.code === '42501' || err.code === 'PGRST116') {
+        setError('Access Restricted: You do not have permission to record production logs.');
+      } else {
+        setError(err.message || 'Production recording failed.');
+      }
+    }
+  });
+
+  useEffect(() => {
+    const runAuditCheck = async () => {
+      const audit = await checkPreviousStockTake();
+      setAuditBlock(!audit.isDone);
+    };
+    runAuditCheck();
+  }, []);
 
   const inputProduct = useMemo(() => allProducts.find(p => p.product_code === PRODUCT_CODES.INPUT), [allProducts]);
   const mainOutputProducts = useMemo(() => allProducts.filter(p => PRODUCT_CODES.MAIN_OUTPUTS.includes(p.product_code) || p.name.toLowerCase().includes('maize retail') || p.name.toLowerCase().includes('retail')), [allProducts]);
@@ -104,7 +159,15 @@ export default function ProductionEntry() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(''); setSuccessMsg('');
-    if (!activeSession) { setError('NO ACTIVE SESSION: Open a session in "Session Control" first.'); return; }
+    if (!activeSession) { 
+      setError('NO ACTIVE SESSION: Please open a session in "Session Control" first.'); 
+      return; 
+    }
+    if (activeSession.is_closed) {
+      setError('SESSION IS CLOSED: This session has already been finalized.');
+      return;
+    }
+    const inputProduct = allProducts.find(p => p.product_code === PRODUCT_CODES.INPUT);
     if (!inputProduct) { setError('SYSTEM ERROR: Maize Bulk (101) not found in registry.'); return; }
     if (!mainProductId) { setError('Please select an Output Product (e.g., Grade 1).'); return; }
     
@@ -115,55 +178,47 @@ export default function ProductionEntry() {
     }
     if (!isInputValid) { setError('Check weights: Total output cannot exceed input.'); return; }
 
-    setIsSyncing(true);
-    setLoadingState('saving');
-    try {
-      // Optimistic UI Update
-      const optimisticLog: ProductionLog = {
-        id: crypto.randomUUID(),
-        created_at: new Date().toISOString(),
-        input_kg: inputVal,
-        main_output_kg: mainVal,
-        byproduct_kg: byVal || 0,
-        waste_kg: kukuFeedVal,
-        output_product_id: mainProductId,
-        products: { 
-          name: allProducts.find(p => p.id === mainProductId)?.name || '', 
-          product_code: allProducts.find(p => p.id === mainProductId)?.product_code || '' 
-        }
-      };
-      setLogs(prev => [optimisticLog, ...prev.slice(0, 49)]);
+    const payload = {
+      session_id: activeSession.id,
+      input_product_id: inputProduct.id || null,
+      input_kg: Number(inputKg) || 0,
+      output_product_id: mainProductId === "" ? null : mainProductId,
+      main_output_kg: Number(mainOutputKg) || 0,
+      byproduct_id: byProductId === "" ? null : byProductId,
+      byproduct_kg: byProductKg === "" ? 0 : Number(byProductKg),
+      waste_kg: Number(kukuFeedVal) || 0
+    };
 
-      const { error: logErr } = await withRetry('Insert Log', async () =>
-        await supabase.from('production_logs').insert([{
-          session_id: activeSession.id,
-          input_product_id: inputProduct.id,
-          input_kg: inputVal,
-          output_product_id: mainProductId,
-          main_output_kg: mainVal,
-          byproduct_id: byProductId || null,
-          byproduct_kg: byVal || 0,
-          waste_kg: kukuFeedVal 
-        }])
-      );
+    if (!payload.input_product_id) {
+      setError('FRONTEND LEAK PREVENTED: Missing valid input_product_id UUID.');
+      return;
+    }
+    if (!payload.output_product_id) {
+      setError('FRONTEND LEAK PREVENTED: Missing valid output_product_id UUID.');
+      return;
+    }
 
-      if (logErr) throw logErr;
-
-      setSuccessMsg(`Yield recorded successfully!`);
-      setInputKg(''); setMainOutputKg(''); setByProductKg(''); setByProductId(''); setManualWasteKg('0');
-    } catch (err: any) { setError(`DATABASE ERROR: ${err.message}`); }
-    finally { setIsSyncing(false); setLoadingState('idle'); }
+    // Check for silent "undefined" strings
+    for (const [key, value] of Object.entries(payload)) {
+      if (value === "undefined" || String(value) === "undefined") {
+        setError(`FRONTEND LEAK PREVENTED: Field [${key}] evaluated to string "undefined".`);
+        return;
+      }
+    }
+    
+    console.log('SANITIZED PRODUCTION LOG PAYLOAD:', payload);
+    productionMutation.mutate(payload);
   };
 
   if (auditBlock) {
     return (
-      <div className="flex flex-col items-center justify-center h-[60vh] space-y-8 max-w-2xl mx-auto text-center px-6">
-        <div className="w-24 h-24 bg-orange-50 rounded-[2rem] flex items-center justify-center shadow-xl shadow-orange-100">
-           <Lock size={48} className="text-orange-500" />
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6 max-w-2xl mx-auto text-center px-4 md:px-6">
+        <div className="w-20 h-20 md:w-24 md:h-24 bg-orange-50 rounded-2xl md:rounded-[2rem] flex items-center justify-center shadow-xl shadow-orange-100">
+           <Lock size={40} className="text-orange-500" />
         </div>
-        <div className="space-y-4">
-          <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter">Stock Take Required</h2>
-          <p className="text-sm font-bold text-slate-500 uppercase leading-relaxed">
+        <div className="space-y-3">
+          <h2 className="text-2xl md:text-4xl font-semibold text-slate-900 uppercase tracking-tight">Stock Take Required</h2>
+          <p className="text-sm font-medium text-slate-500 uppercase leading-relaxed">
             Production is restricted. Our records indicate that the **Previous Day's Stock Take** has not been completed. 
             Please perform a stock take to reconcile inventory before starting today's production.
           </p>
@@ -171,7 +226,7 @@ export default function ProductionEntry() {
         <div className="flex gap-4">
           <button 
             onClick={() => window.location.reload()} 
-            className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl hover:scale-105 transition-all"
+            className="w-full md:w-auto px-8 py-4 bg-slate-900 text-white rounded-xl font-semibold uppercase text-xs tracking-widest shadow-xl active:scale-95 transition-transform"
           >
             Refresh Status
           </button>
@@ -180,100 +235,107 @@ export default function ProductionEntry() {
     );
   }
 
-  if (loadingState === 'fetching' && logs.length === 0) return <div className="p-20 text-center font-black text-slate-300 uppercase tracking-widest">Synchronizing...</div>;
+  if (loadingLogs && logs.length === 0) return <div className="p-20 text-center font-semibold text-slate-300 uppercase tracking-widest animate-pulse">Synchronizing...</div>;
 
   return (
-    <div className="space-y-10">
-      {error && <div className="bg-red-600 text-white p-4 rounded-xl font-black flex items-center gap-3 shadow-lg mb-6"><AlertTriangle size={20}/>{error}</div>}
-      {successMsg && <div className="bg-emerald-50 border-2 border-emerald-200 text-emerald-900 p-4 rounded-xl font-bold flex items-center gap-3 mb-6"><CheckCircle size={20}/>{successMsg}</div>}
-
-      {error && <div className="bg-red-600 text-white p-4 rounded-xl font-black flex items-center gap-3 shadow-lg"><AlertTriangle size={20}/>{error}</div>}
-      {successMsg && <div className="bg-emerald-50 border-2 border-emerald-200 text-emerald-900 p-4 rounded-xl font-bold flex items-center gap-3"><CheckCircle size={20}/>{successMsg}</div>}
+    <div className="space-y-6 md:space-y-10 pb-32 px-4 md:px-0">
+      {error && <div className="bg-red-600 text-white p-4 rounded-xl font-semibold flex items-center gap-3 shadow-lg mb-6"><AlertTriangle size={20}/>{error}</div>}
+      {successMsg && <div className="bg-emerald-50 border-2 border-emerald-200 text-emerald-900 p-4 rounded-xl font-semibold flex items-center gap-3 mb-6"><CheckCircle size={20}/>{successMsg}</div>}
+      
+      {/* ACTIVE SESSION SMART HEADER */}
+      <ActiveSessionOverlay activeSession={activeSession} />
 
       {!activeSession ? (
-        <div className="mill-card p-16 text-center max-w-lg mx-auto border-dashed">
-          <Activity size={64} className="mx-auto mb-8 text-slate-200" />
-          <h2 className="text-2xl font-black text-mill-text uppercase mb-3">Mill is Idle</h2>
-          <p className="text-sm text-slate-500 mb-10 leading-relaxed uppercase font-bold tracking-tight">Initialize an **Internal Production** session to enable logging.</p>
+        <div className="mill-card p-8 md:p-16 text-center max-w-lg mx-auto border-dashed rounded-2xl">
+          <Activity className="mx-auto mb-6 md:mb-8 text-slate-200 w-12 h-12 md:w-16 md:h-16" />
+          <h2 className="text-xl md:text-2xl font-semibold text-slate-900 uppercase mb-3">Mill is Idle</h2>
+          <p className="text-sm text-slate-500 mb-8 md:mb-10 leading-relaxed uppercase font-medium tracking-tight">Initialize an **Internal Production** session to enable logging.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 md:gap-10">
           <div className="lg:col-span-3">
             {/* Entry Form */}
-            <div className="mill-card p-10 bg-white border-slate-100 shadow-xl shadow-slate-100/50">
-              <form onSubmit={handleSave} className="space-y-10">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                  <div className="space-y-8">
+            <div className="mill-card p-4 md:p-10 bg-white border-slate-100 shadow-xl shadow-slate-100/50 rounded-2xl">
+              <form onSubmit={handleSave} className="space-y-8 md:space-y-10">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
+                  <div className="space-y-6 md:space-y-8">
                     <div>
-                      <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4">Phase 1: Raw Input (Bulk)</label>
+                      <label className="block text-[10px] md:text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-3 md:mb-4">Phase 1: Raw Input (Bulk)</label>
                       <div className="relative group">
-                        <input type="number" step="0.01" required value={inputKg} onChange={e => setInputKg(e.target.value)} placeholder="0.00" className="mill-input w-full text-4xl font-black pr-20 py-6 border-slate-200 focus:border-mill-primary" />
-                        <span className="absolute right-6 top-1/2 -translate-y-1/2 font-black text-slate-300 uppercase text-lg group-focus-within:text-mill-primary transition-colors">KG</span>
+                        <input type="number" step="0.01" required value={inputKg} onChange={e => setInputKg(e.target.value)} placeholder="0.00" className="mill-input w-full text-2xl md:text-4xl font-semibold pr-16 md:pr-20 py-4 md:py-6 border-slate-200 focus:border-blue-600 text-base md:text-4xl" />
+                        <span className="absolute right-6 top-1/2 -translate-y-1/2 font-semibold text-slate-300 uppercase text-lg group-focus-within:text-blue-600 transition-colors">KG</span>
                       </div>
                       <div className="mt-3 flex justify-between px-2">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase">Available Bulk</span>
-                        <span className={`text-[10px] font-black ${!hasEnoughStock && inputVal > 0 ? 'text-red-600 animate-pulse' : 'text-mill-text'}`}>{inputProduct?.current_stock.toLocaleString()} KG</span>
+                        <span className="text-[10px] font-medium text-slate-400 uppercase">Available Bulk</span>
+                        <span className={`text-[10px] font-semibold ${!hasEnoughStock && inputVal > 0 ? 'text-red-600 animate-pulse' : 'text-slate-900'}`}>{inputProduct?.current_stock.toLocaleString()} KG</span>
                       </div>
                       {!hasEnoughStock && inputVal > 0 && (
-                        <p className="mt-2 text-[10px] font-black text-red-600 uppercase flex items-center gap-1">
-                          <AlertTriangle size={12} /> INSUFFICIENT STOCK FOR PROCESSING
+                        <p className="mt-2 text-[10px] font-semibold text-red-600 uppercase flex items-center gap-1">
+                          <AlertTriangle size={12} /> INSUFFICIENT STOCK
                         </p>
                       )}
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4">Phase 2: Main Flour Output</label>
-                      <select required value={mainProductId} onChange={e => setMainProductId(e.target.value)} className="mill-input w-full font-black mb-4 py-4 text-sm uppercase tracking-tight">
-                        <option value="">Select Flour Grade...</option>
+                      <label className="block text-[10px] md:text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-3 md:mb-4">Phase 2: Main Flour Output</label>
+                      <select required value={mainProductId} onChange={e => setMainProductId(e.target.value)} className="mill-input w-full font-semibold mb-4 py-3 md:py-4 text-base md:text-sm uppercase tracking-tight">
+                        <option value="">Select Grade...</option>
                         {mainOutputProducts.map(p => <option key={p.id} value={p.id}>{p.product_code} · {p.name}</option>)}
                       </select>
                       <div className="relative group">
-                        <input type="number" step="0.01" required value={mainOutputKg} onChange={e => setMainOutputKg(e.target.value)} placeholder="0.00" className="mill-input w-full text-4xl font-black pr-20 py-6" />
-                        <span className="absolute right-6 top-1/2 -translate-y-1/2 font-black text-slate-300 uppercase text-lg">KG</span>
+                        <input type="number" step="0.01" required value={mainOutputKg} onChange={e => setMainOutputKg(e.target.value)} placeholder="0.00" className="mill-input w-full text-2xl md:text-4xl font-semibold pr-16 md:pr-20 py-4 md:py-6 text-base md:text-4xl" />
+                        <span className="absolute right-6 top-1/2 -translate-y-1/2 font-semibold text-slate-300 uppercase text-lg">KG</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="space-y-8">
+                  <div className="space-y-6 md:space-y-8">
                     <div>
-                      <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4">Phase 3: By-Products & Yield</label>
-                      <select value={byProductId} onChange={e => setByProductId(e.target.value)} className="mill-input w-full font-black mb-4 py-4 text-sm uppercase tracking-tight bg-slate-50">
-                        <option value="">None (Optional By-Product)</option>
+                      <label className="block text-[10px] md:text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-3 md:mb-4">Phase 3: By-Products</label>
+                      <select value={byProductId} onChange={e => setByProductId(e.target.value)} className="mill-input w-full font-semibold mb-4 py-3 md:py-4 text-base md:text-sm uppercase tracking-tight bg-slate-50">
+                        <option value="">None (Optional)</option>
                         {byProductOptions.map(p => <option key={p.id} value={p.id}>{p.product_code} · {p.name}</option>)}
                       </select>
                       <div className="relative">
-                        <input type="number" step="0.01" value={byProductKg} onChange={e => setByProductKg(e.target.value)} placeholder="0.00" disabled={!byProductId} className="mill-input w-full text-4xl font-black pr-20 py-6 disabled:bg-slate-50 disabled:text-slate-300" />
-                        <span className="absolute right-6 top-1/2 -translate-y-1/2 font-black text-slate-300 uppercase text-lg">KG</span>
+                        <input type="number" step="0.01" value={byProductKg} onChange={e => setByProductKg(e.target.value)} placeholder="0.00" disabled={!byProductId} className="mill-input w-full text-2xl md:text-4xl font-semibold pr-16 md:pr-20 py-4 md:py-6 disabled:bg-slate-50 disabled:text-slate-300 text-base md:text-4xl" />
+                        <span className="absolute right-6 top-1/2 -translate-y-1/2 font-semibold text-slate-300 uppercase text-lg">KG</span>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="mill-card p-6 bg-emerald-50 border-emerald-200 flex flex-col justify-center">
-                        <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-1">Kuku Feed (108)</p>
-                        <p className="text-3xl font-black text-emerald-900">{kukuFeedVal.toFixed(2)} <span className="text-sm">KG</span></p>
-                        <p className="text-[8px] font-bold text-emerald-600 uppercase mt-1">Ready for sale</p>
+                      <div className="mill-card p-4 md:p-6 bg-emerald-50 border-emerald-200 flex flex-col justify-center rounded-xl">
+                        <p className="text-[9px] font-semibold text-emerald-600 uppercase tracking-widest mb-1">Kuku Feed</p>
+                        <p className="text-xl md:text-3xl font-semibold text-emerald-900">{kukuFeedVal.toFixed(2)} <span className="text-xs">KG</span></p>
                       </div>
-                      <div className="mill-card p-6 bg-slate-50 border-slate-200 flex flex-col justify-center">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">4. Processing Loss (Dust/Waste)</p>
-                        <input type="number" step="0.01" value={manualWasteKg} onChange={e => setManualWasteKg(e.target.value)} placeholder="0.01" className="mill-input w-full text-2xl" />
-                        <p className="text-[8px] font-bold text-slate-400 mt-1 uppercase">Defaults to 0.01kg per batch</p>
+                      <div className="mill-card p-4 md:p-6 bg-slate-50 border-slate-200 flex flex-col justify-center rounded-xl">
+                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Processing Loss</p>
+                        <input type="number" step="0.01" value={manualWasteKg} onChange={e => setManualWasteKg(e.target.value)} placeholder="0.01" className="mill-input w-full text-lg md:text-2xl font-semibold text-center" />
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <button type="submit" disabled={!isInputValid || isSyncing} className="mill-btn-primary w-full py-8 text-xl font-black flex items-center justify-center gap-4 shadow-2xl shadow-mill-primary/20 hover:-translate-y-1 active:translate-y-0 disabled:translate-y-0 disabled:bg-slate-200 disabled:shadow-none">
-                  <Save size={24} />
-                  {isSyncing ? 'SYNCING...' : 'CONFIRM & SYNC PRODUCTION'}
-                </button>
+                <div className="pt-4 md:pt-6">
+                  <button 
+                    type="submit" 
+                    disabled={!isInputValid || productionMutation.isPending} 
+                    className={`w-full py-4 md:py-6 rounded-2xl font-semibold uppercase text-sm tracking-widest flex items-center justify-center gap-4 shadow-xl transition-all active:scale-95 ${!isInputValid ? 'bg-slate-100 text-slate-300 cursor-not-allowed shadow-none' : 'bg-slate-900 text-white hover:bg-slate-800'}`}
+                  >
+                    {productionMutation.isPending ? (
+                      <><RotateCcw className="animate-spin" size={20} /> RECORDING...</>
+                    ) : (
+                      <><Save size={20} /> Record Daily Yield</>
+                    )}
+                  </button>
+                </div>
               </form>
             </div>
           </div>
 
-          <div className="space-y-8">
-            <div className="mill-card p-6 bg-white border-slate-100 shadow-lg">
-              <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-                <Scale size={16} className="text-mill-primary" /> Stock Monitor
+          <div className="space-y-6 md:space-y-8">
+            <div className="mill-card p-4 md:p-6 bg-white border-slate-100 shadow-lg rounded-2xl">
+              <h3 className="text-[10px] md:text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-4 md:mb-6 flex items-center gap-2">
+                <Scale size={16} className="text-blue-600" /> Stock Monitor
               </h3>
               <div className="space-y-4">
                 {allProducts.slice(0, 10).map(p => {
@@ -281,11 +343,11 @@ export default function ProductionEntry() {
                   return (
                     <div key={p.id} className="flex flex-col gap-1 border-b border-slate-50 pb-3 last:border-0">
                       <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-black text-mill-text uppercase">{p.name}</span>
-                        <span className={`text-[10px] font-black ${isLow ? 'text-red-600' : 'text-slate-400'}`}>{p.product_code}</span>
+                        <span className="text-[10px] font-semibold text-slate-900 uppercase">{p.name}</span>
+                        <span className={`text-[10px] font-semibold ${isLow ? 'text-red-600' : 'text-slate-400'}`}>{p.product_code}</span>
                       </div>
                       <div className="flex items-end justify-between">
-                        <span className="text-lg font-black text-mill-text">{p.current_stock.toLocaleString()} <span className="text-[10px] text-slate-300">KG</span></span>
+                        <span className="text-base md:text-lg font-semibold text-slate-900">{p.current_stock.toLocaleString()} <span className="text-[10px] text-slate-300">KG</span></span>
                         <div className={`w-1.5 h-1.5 rounded-full ${isLow ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}`} />
                       </div>
                     </div>
@@ -298,21 +360,21 @@ export default function ProductionEntry() {
       )}
 
       {/* Monthly History Table */}
-      <div className="mill-card p-0 overflow-hidden bg-white border-slate-100 shadow-xl">
-        <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
+      <div className="mill-card p-0 overflow-hidden bg-white border-slate-100 shadow-xl rounded-2xl">
+        <div className="p-4 md:p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center">
-              <Calendar size={20} className="text-mill-primary" />
+              <Calendar size={20} className="text-blue-600" />
             </div>
             <div>
-              <h3 className="text-lg font-black text-mill-text uppercase tracking-tight">Monthly Ledger</h3>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Yield History · Current Month</p>
+              <h3 className="text-base md:text-lg font-semibold text-slate-900 uppercase tracking-tight">Monthly Ledger</h3>
+              <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">Yield History</p>
             </div>
           </div>
-          <div className="flex gap-4">
+          <div className="hidden md:flex gap-4">
             <div className="px-4 py-2 bg-white rounded-lg border border-slate-200 text-center">
-              <p className="text-[9px] font-black text-slate-400 uppercase mb-0.5">Monthly Total</p>
-              <p className="text-sm font-black text-mill-text">
+              <p className="text-[9px] font-semibold text-slate-400 uppercase mb-0.5">Total</p>
+              <p className="text-sm font-semibold text-slate-900">
                 {logs.reduce((acc, l) => acc + (l.main_output_kg || 0), 0).toLocaleString()} KG
               </p>
             </div>
@@ -322,57 +384,45 @@ export default function ProductionEntry() {
           <table className="w-full text-left border-collapse">
             <thead className="sticky top-0 z-10">
               <tr className="bg-slate-50">
-                <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Date/Time</th>
-                <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Input (101)</th>
-                <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Main Output</th>
-                <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">By-Prod (Manual)</th>
-                <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Kuku Feed (108)</th>
-                <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Status</th>
+                <th className="px-6 md:px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Date/Time</th>
+                <th className="px-6 md:px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Input</th>
+                <th className="px-6 md:px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Main Output</th>
+                <th className="px-6 md:px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {logs.map(log => (
-                <tr key={log.id} className="hover:bg-slate-50/50 transition-colors group">
-                  <td className="px-8 py-5">
-                    <p className="text-[11px] font-black text-mill-text">{new Date(log.created_at).toLocaleDateString()}</p>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase">{new Date(log.created_at).toLocaleTimeString()}</p>
+              {logs.map((log, index) => (
+                <tr key={log.id || index} className="hover:bg-slate-50/50 transition-colors group">
+                  <td className="px-6 md:px-8 py-4 md:py-5">
+                    <p className="text-[11px] font-semibold text-slate-900">{new Date(log.created_at).toLocaleDateString()}</p>
+                    <p className="text-[9px] font-medium text-slate-400 uppercase">{new Date(log.created_at).toLocaleTimeString()}</p>
                   </td>
-                  <td className="px-8 py-5">
+                  <td className="px-6 md:px-8 py-4 md:py-5">
                     <div className="flex items-center gap-2">
                       <ArrowDownRight size={14} className="text-red-400" />
-                      <span className="text-sm font-black text-mill-text">{log.input_kg.toLocaleString()} <span className="text-[10px] text-slate-300">KG</span></span>
+                      <span className="text-sm font-semibold text-slate-900">{log.input_kg.toLocaleString()} <span className="text-[10px] text-slate-300">KG</span></span>
                     </div>
                   </td>
-                  <td className="px-8 py-5">
+                  <td className="px-6 md:px-8 py-4 md:py-5">
                     <div className="flex items-center gap-2">
                       <ArrowUpRight size={14} className="text-emerald-400" />
                       <div>
-                        <p className="text-sm font-black text-mill-text">{log.main_output_kg.toLocaleString()} <span className="text-[10px] text-slate-300">KG</span></p>
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">{log.products?.product_code} · {log.products?.name}</p>
+                        <p className="text-sm font-semibold text-slate-900">{log.main_output_kg.toLocaleString()} <span className="text-[10px] text-slate-300">KG</span></p>
+                        <p className="text-[9px] font-medium text-slate-400 uppercase tracking-tighter">{log.products?.product_code} · {log.products?.name}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-8 py-5">
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-tighter">
-                      {log.byproduct_kg > 0 ? `${log.byproduct_kg.toLocaleString()} KG` : '--'}
-                    </span>
-                  </td>
-                  <td className="px-8 py-5 text-center">
-                    <span className="inline-block px-3 py-1 bg-slate-900 text-white rounded-lg text-[10px] font-black uppercase tracking-widest">
-                      {log.waste_kg.toLocaleString()} KG
-                    </span>
-                  </td>
-                  <td className="px-8 py-5">
+                  <td className="px-6 md:px-8 py-4 md:py-5">
                     <div className="flex items-center gap-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Synced</span>
+                      <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Synced</span>
                     </div>
                   </td>
                 </tr>
               ))}
               {logs.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-8 py-20 text-center text-slate-300 font-black uppercase tracking-widest italic">No production recorded this month</td>
+                  <td colSpan={4} className="px-8 py-20 text-center text-slate-300 font-semibold uppercase tracking-widest italic">No production recorded</td>
                 </tr>
               )}
             </tbody>
