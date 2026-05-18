@@ -233,7 +233,7 @@ export default function StockTake({ role }: StockTakeProps) {
               placeholder="Search items..." 
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="mill-input w-full pl-9 py-2 text-[10px] font-medium uppercase tracking-tight"
+              className="mill-input w-full pl-9 py-2 text-[10px] font-medium uppercase tracking-tight max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
             />
           </div>
         </div>
@@ -286,7 +286,7 @@ export default function StockTake({ role }: StockTakeProps) {
                             value={counts[p.id] || ''}
                             onChange={(e) => handleCountChange(p.id, e.target.value)}
                             placeholder="0.00"
-                            className="mill-input w-full text-xs font-medium bg-slate-50 border-slate-200 focus:bg-white focus:border-slate-900 transition-all py-1 px-2 text-center h-8"
+                            className="mill-input w-full text-xs font-medium bg-slate-50 border-slate-200 focus:bg-white focus:border-slate-900 transition-all py-1 px-2 text-center h-8 max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
                           />
                           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-semibold text-slate-355">KG</span>
                         </div>
@@ -314,7 +314,7 @@ export default function StockTake({ role }: StockTakeProps) {
                       value={counts[p.id] || ''}
                       onChange={(e) => handleCountChange(p.id, e.target.value)}
                       placeholder="0.00"
-                      className="mill-input w-full text-xs font-medium bg-slate-50 border-slate-100 focus:bg-white focus:border-slate-900 transition-all py-1 px-2 text-center h-8"
+                      className="mill-input w-full text-xs font-medium bg-slate-50 border-slate-100 focus:bg-white focus:border-slate-900 transition-all py-1 px-2 text-center h-8 max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-slate-355 uppercase">KG</span>
                   </div>
@@ -426,12 +426,12 @@ export default function StockTake({ role }: StockTakeProps) {
             </div>
             <form onSubmit={handleEditAudit} className="p-8 space-y-6">
               <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Product</label>
-                <input disabled type="text" value={editModal.record?.product_name} className="mill-input w-full font-bold bg-slate-50 text-slate-400" />
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Product</label>
+                <input disabled type="text" value={editModal.record?.product_name} className="mill-input w-full font-bold bg-slate-50 text-slate-400 max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
               </div>
               <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">New Physical Count (KG)</label>
-                <input required type="number" step="0.01" value={editForm.physical} onChange={e => setEditForm({ physical: parseFloat(e.target.value) })} className="mill-input w-full font-bold text-2xl" />
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">New Physical Count (KG)</label>
+                <input required type="number" step="0.01" value={editForm.physical} onChange={e => setEditForm({ physical: parseFloat(e.target.value) })} className="mill-input w-full font-bold text-2xl max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
               </div>
               <button type="submit" disabled={editAuditMutation.isPending} className="mill-btn-primary w-full py-4 shadow-xl">
                 {editAuditMutation.isPending ? 'UPDATING...' : '✓ SAVE CHANGES'}
@@ -454,7 +454,7 @@ export default function StockTake({ role }: StockTakeProps) {
                 This will remove the discrepancy record for <span className="font-black text-white">{deleteModal.record?.product_name}</span>.
               </p>
             </div>
-            <div className="p-6 grid grid-cols-2 gap-4">
+            <div className="p-6 grid grid-cols-1 gap-3 md:grid-cols-2">
               <button onClick={() => setDeleteModal({ open: false, record: null })} className="py-4 rounded-xl bg-slate-100 text-slate-600 font-black text-xs uppercase hover:bg-slate-200 transition-all">Cancel</button>
               <button onClick={handleDeleteAudit} disabled={deleteAuditMutation.isPending} className="py-4 rounded-xl bg-red-600 text-white font-black text-xs uppercase hover:bg-red-700 transition-all shadow-lg shadow-red-200">
                 {deleteAuditMutation.isPending ? 'DELETING...' : 'YES, DELETE'}

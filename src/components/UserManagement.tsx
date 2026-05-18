@@ -185,10 +185,10 @@ export default function UserManagement() {
             </h2>
             <form onSubmit={handleCreateUser} className="space-y-6">
               <div className="space-y-4">
-                <input type="text" required placeholder="Full Name / Username" className="mill-input w-full font-black text-sm" value={username} onChange={e => setUsername(e.target.value)} />
-                <input type="email" required placeholder="Corporate Email" className="mill-input w-full font-black text-sm" value={email} onChange={e => setEmail(e.target.value)} />
-                <input type="password" required placeholder="Temporary Password" className="mill-input w-full font-black text-sm" value={password} onChange={e => setPassword(e.target.value)} />
-                <select className="mill-input w-full font-black text-sm" value={role} onChange={e => setRole(e.target.value as any)}>
+                <input type="text" required placeholder="Full Name / Username" className="mill-input w-full font-black text-sm max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" value={username} onChange={e => setUsername(e.target.value)} />
+                <input type="email" required placeholder="Corporate Email" className="mill-input w-full font-black text-sm max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" value={email} onChange={e => setEmail(e.target.value)} />
+                <input type="password" required placeholder="Temporary Password" className="mill-input w-full font-black text-sm max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" value={password} onChange={e => setPassword(e.target.value)} />
+                <select className="mill-input w-full font-black text-sm max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" value={role} onChange={e => setRole(e.target.value as any)}>
                   <option value="EMPLOYEE">Mill Employee</option>
                   <option value="ADMIN">System Administrator</option>
                 </select>
@@ -222,7 +222,7 @@ export default function UserManagement() {
                     <tr key={p.id} className="group hover:bg-slate-50/50 transition-colors">
                       <td className="px-8 py-6">
                         {editingId === p.id ? (
-                          <input type="text" className="mill-input py-2 text-xs font-black" value={editForm.username} onChange={e => setEditForm({ ...editForm, username: e.target.value })} />
+                          <input type="text" className="mill-input py-2 text-xs font-black max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" value={editForm.username} onChange={e => setEditForm({ ...editForm, username: e.target.value })} />
                         ) : (
                           <div>
                             <p className="text-sm font-black text-slate-900">{p.username}</p>
@@ -232,7 +232,7 @@ export default function UserManagement() {
                       </td>
                       <td className="px-8 py-6">
                         {editingId === p.id ? (
-                          <select className="mill-input py-2 text-xs font-black" value={editForm.role} onChange={e => setEditForm({ ...editForm, role: e.target.value as any })}>
+                          <select className="mill-input py-2 text-xs font-black max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" value={editForm.role} onChange={e => setEditForm({ ...editForm, role: e.target.value as any })}>
                             <option value="EMPLOYEE">EMPLOYEE</option>
                             <option value="ADMIN">ADMIN</option>
                           </select>

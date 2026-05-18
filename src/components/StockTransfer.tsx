@@ -203,10 +203,10 @@ export default function StockTransfer() {
 
             <form onSubmit={handleDispatch} className="space-y-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Select Product</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Select Product</label>
                 <select
                   required
-                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-6 py-4 font-bold outline-none focus:border-[#4F46E5] transition-all"
+                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-6 py-4 font-bold outline-none focus:border-[#4F46E5] transition-all max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
                   value={formData.productId}
                   onChange={(e) => setFormData({...formData, productId: e.target.value})}
                 >
@@ -218,13 +218,13 @@ export default function StockTransfer() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Transfer Quantity (KG)</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Transfer Quantity (KG)</label>
                 <input
                   type="number"
                   step="0.1"
                   required
                   placeholder="0.0"
-                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-6 py-4 font-bold outline-none focus:border-[#4F46E5] transition-all"
+                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-6 py-4 font-bold outline-none focus:border-[#4F46E5] transition-all max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
                   value={formData.quantity}
                   onChange={(e) => setFormData({...formData, quantity: e.target.value})}
                 />

@@ -320,13 +320,13 @@ export default function SessionControl({ role }: SessionControlProps) {
                     min={activeSession?.start_meter}
                     value={closingMeter} 
                     onChange={e => setClosingMeter(e.target.value)} 
-                    className="mill-input w-full font-semibold text-2xl md:text-4xl py-4 md:py-6 text-center border-slate-200 focus:border-red-500 transition-all text-base md:text-4xl" 
+                    className="mill-input w-full font-semibold text-2xl md:text-4xl py-4 md:py-6 text-center border-slate-200 focus:border-red-500 transition-all text-base md:text-4xl max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" 
                     placeholder="0.00"
                   />
                   <div className="absolute right-6 top-1/2 -translate-y-1/2 font-semibold text-slate-200 text-lg uppercase">kWh</div>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <button type="button" onClick={() => setEndModal(false)} className="py-4 md:py-5 rounded-2xl bg-slate-50 text-slate-400 font-semibold text-xs uppercase hover:bg-slate-100 transition-all">Cancel</button>
                 <button onClick={() => endMutation.mutate(parseFloat(closingMeter))} disabled={isSyncing} className="py-4 md:py-5 rounded-2xl bg-red-600 text-white font-semibold text-xs uppercase hover:bg-red-700 shadow-xl shadow-red-200 transition-all flex items-center justify-center gap-2">
                   {isSyncing ? 'SYNCING...' : <><ZapOff size={14}/> STOP MILL</>}

@@ -98,7 +98,7 @@ export default function Login({ onLogin }: LoginProps) {
 
           <form onSubmit={handleLogin} className="space-y-6">
             <div className="space-y-2">
-              <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Corporate Email</label>
+              <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Corporate Email</label>
               <div className="relative group/input">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within/input:text-[#F59E0B] transition-colors">
                   <Mail size={18} />
@@ -107,7 +107,7 @@ export default function Login({ onLogin }: LoginProps) {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white font-bold placeholder:text-slate-600 focus:outline-none focus:border-[#F59E0B]/50 focus:ring-4 focus:ring-[#F59E0B]/10 transition-all text-base"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white font-bold placeholder:text-slate-600 focus:outline-none focus:border-[#F59E0B]/50 focus:ring-4 focus:ring-[#F59E0B]/10 transition-all text-base max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
                   placeholder="admin@mill.com"
                   required
                 />
@@ -115,7 +115,7 @@ export default function Login({ onLogin }: LoginProps) {
             </div>
 
             <div className="space-y-2">
-              <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Secure Key</label>
+              <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Secure Key</label>
               <div className="relative group/input">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within/input:text-[#F59E0B] transition-colors">
                   <Lock size={18} />
@@ -124,7 +124,7 @@ export default function Login({ onLogin }: LoginProps) {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white font-bold placeholder:text-slate-600 focus:outline-none focus:border-[#F59E0B]/50 focus:ring-4 focus:ring-[#F59E0B]/10 transition-all text-base"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white font-bold placeholder:text-slate-600 focus:outline-none focus:border-[#F59E0B]/50 focus:ring-4 focus:ring-[#F59E0B]/10 transition-all text-base max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
                   placeholder="••••••••"
                   required
                 />

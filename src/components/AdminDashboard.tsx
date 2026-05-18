@@ -214,13 +214,13 @@ export default function AdminDashboard() {
               <div className="bg-white w-full max-w-lg rounded-[3rem] p-12 shadow-2xl animate-in zoom-in-95 duration-300">
                  <h3 className="text-2xl font-black uppercase tracking-tighter mb-10 text-[#5C4033]">Operational Expense</h3>
                  <form onSubmit={handleAddExpense} className="space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
-                       <select className="bg-gray-50 border border-gray-100 rounded-2xl px-4 py-4 font-bold" value={expenseForm.category} onChange={e => setExpenseForm({...expenseForm, category: e.target.value})}>
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                       <select className="bg-gray-50 border border-gray-100 rounded-2xl px-4 py-4 font-bold max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" value={expenseForm.category} onChange={e => setExpenseForm({...expenseForm, category: e.target.value})}>
                           <option value="Rent">Rent</option><option value="Wages">Wages</option><option value="Repair">Repair</option><option value="Other">Other</option>
                        </select>
                        <input type="date" className="bg-gray-50 border border-gray-100 rounded-2xl px-4 max-md:px-2 max-md:py-1 max-md:text-[10px] font-bold" value={expenseForm.date} onChange={e => setExpenseForm({...expenseForm, date: e.target.value})}/>
                     </div>
-                    <input type="number" required placeholder="Amount KES" className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-5 text-4xl font-black" value={expenseForm.amount} onChange={e => setExpenseForm({...expenseForm, amount: e.target.value})}/>
+                    <input type="number" required placeholder="Amount KES" className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-5 text-4xl font-black max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" value={expenseForm.amount} onChange={e => setExpenseForm({...expenseForm, amount: e.target.value})}/>
                     <div className="flex gap-4 pt-10">
                        <button type="button" onClick={() => setIsExpenseModalOpen(false)} className="flex-1 font-black text-gray-400 uppercase tracking-widest text-[10px]">Close</button>
                        <button type="submit" className="flex-[2] bg-[#5C4033] text-white font-black py-4 rounded-2xl uppercase tracking-[0.2em] shadow-xl hover:bg-black transition-all">Record Bookkeeping</button>

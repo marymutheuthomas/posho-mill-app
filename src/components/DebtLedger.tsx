@@ -261,7 +261,7 @@ export default function DebtLedger() {
               onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
               autoComplete="off" 
               autoCorrect="off"
-              className="w-full pl-12 pr-4 h-12 rounded-xl border border-slate-200 bg-slate-50/50 text-base font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder-slate-400" 
+              className="w-full pl-12 pr-4 h-12 rounded-xl border border-slate-200 bg-slate-50/50 text-base font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder-slate-400 max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" 
             />
           </div>
         </div>
@@ -428,26 +428,26 @@ export default function DebtLedger() {
 
                 {/* Amount Input */}
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider ml-1">Repayment Amount (KES)</label>
+                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider ml-1 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Repayment Amount (KES)</label>
                   <input
                     type="number"
                     inputMode="decimal"
                     placeholder="0.00"
                     value={paymentAmount}
                     onChange={(e) => setPaymentAmount(e.target.value)}
-                    className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder-slate-300"
+                    className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder-slate-300 max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
                     required
                   />
                 </div>
 
                 {/* Notes Input */}
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider ml-1">Transaction Notes</label>
+                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider ml-1 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Transaction Notes</label>
                   <textarea
                     placeholder="Reference, receipt no, details..."
                     value={paymentNotes}
                     onChange={(e) => setPaymentNotes(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 text-base font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder-slate-300 h-20 resize-none"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 text-base font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder-slate-300 h-20 resize-none max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
                   />
                 </div>
 
@@ -507,26 +507,26 @@ export default function DebtLedger() {
 
               <form onSubmit={handleAddCustomer} className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider ml-1">Full Name</label>
+                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider ml-1 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Full Name</label>
                   <input 
                     type="text" 
                     required 
                     value={newCustomer.name} 
                     onChange={e => setNewCustomer({...newCustomer, name: e.target.value})} 
                     placeholder="e.g. MAMA SARAH"
-                    className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder-slate-300" 
+                    className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder-slate-300 max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" 
                     autoFocus 
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider ml-1">Phone Number</label>
+                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider ml-1 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Phone Number</label>
                   <input 
                     type="text" 
                     required 
                     value={newCustomer.phone} 
                     onChange={e => setNewCustomer({...newCustomer, phone: e.target.value})} 
                     placeholder="e.g. 0712345678"
-                    className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder-slate-300" 
+                    className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder-slate-300 max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" 
                   />
                 </div>
                 <div className="flex gap-4 pt-3">
@@ -554,33 +554,33 @@ export default function DebtLedger() {
             </div>
             <form onSubmit={handleEditCustomer} className="p-6 space-y-4">
               <div className="space-y-1.5">
-                <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider ml-1">Customer Name</label>
+                <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider ml-1 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Customer Name</label>
                 <input 
                   required 
                   type="text" 
                   value={editForm.name} 
                   onChange={e => setEditForm({...editForm, name: e.target.value})} 
-                  className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all uppercase" 
+                  className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all uppercase max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" 
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider ml-1">Phone Number</label>
+                <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider ml-1 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Phone Number</label>
                 <input 
                   required 
                   type="text" 
                   value={editForm.phone} 
                   onChange={e => setEditForm({...editForm, phone: e.target.value})} 
-                  className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" 
+                  className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" 
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider ml-1">Original Debt (Base Balance)</label>
+                <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider ml-1 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Original Debt (Base Balance)</label>
                 <input 
                   required 
                   type="number" 
                   value={editForm.debt} 
                   onChange={e => setEditForm({...editForm, debt: parseFloat(e.target.value)})} 
-                  className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" 
+                  className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" 
                 />
               </div>
               <button type="submit" disabled={editMutation.isPending} className="w-full bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-white font-medium h-12 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md mt-2">

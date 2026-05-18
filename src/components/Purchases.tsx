@@ -231,9 +231,9 @@ export default function Purchases() {
             <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Package size={16}/> {mode === 'restock' ? 'Product' : 'Expense Details'}</h3>
             {mode === 'restock' ? (
               <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Product</label>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Product</label>
                 <select required value={formData.product_id} onChange={e => setFormData({...formData, product_id: e.target.value})}
-                  className="mill-input w-full font-bold bg-white">
+                  className="mill-input w-full font-bold bg-white max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900">
                   <option value="">Select product...</option>
                   {allProducts.map(p => <option key={p.id} value={p.id}>{p.name} ({p.product_code})</option>)}
                 </select>
@@ -241,13 +241,13 @@ export default function Purchases() {
             ) : (
               <>
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Expense Description</label>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Expense Description</label>
                   <input type="text" required placeholder="e.g. Monthly salary for staff" value={formData.expenseDesc}
-                    onChange={e => setFormData({...formData, expenseDesc: e.target.value})} className="mill-input w-full" />
+                    onChange={e => setFormData({...formData, expenseDesc: e.target.value})} className="mill-input w-full max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Category</label>
-                  <select value={formData.expenseCategory} onChange={e => setFormData({...formData, expenseCategory: e.target.value})} className="mill-input w-full font-bold bg-white">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Category</label>
+                  <select value={formData.expenseCategory} onChange={e => setFormData({...formData, expenseCategory: e.target.value})} className="mill-input w-full font-bold bg-white max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900">
                     <option value="">Select category...</option>
                     {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
@@ -260,24 +260,24 @@ export default function Purchases() {
         <div className="space-y-6">
           <div className="mill-card p-8 space-y-6">
             <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><DollarSign size={16}/> Financials</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Quantity (KG/Units)</label>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Quantity (KG/Units)</label>
                 <input type="number" step="0.01" placeholder="1" value={formData.qtyReceived} onChange={e => setFormData({...formData, qtyReceived: e.target.value})}
-                  className="mill-input w-full" />
+                  className="mill-input w-full max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
               </div>
               <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Unit Price</label>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Unit Price</label>
                 <input type="number" step="0.01" required placeholder="0.00" value={formData.unitPrice} onChange={e => setFormData({...formData, unitPrice: e.target.value})}
-                  className="mill-input w-full" />
+                  className="mill-input w-full max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
               </div>
             </div>
             <div>
-              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Supplier Name</label>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Supplier Name</label>
               <div className="relative">
                 <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
                 <input type="text" placeholder="Vendor details" value={formData.supplierName} onChange={e => setFormData({...formData, supplierName: e.target.value})}
-                  className="mill-input w-full pl-10" />
+                  className="mill-input w-full pl-10 max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
               </div>
             </div>
           </div>
@@ -412,8 +412,8 @@ export default function Purchases() {
               </div>
               {editModal.mode === 'restock' ? (
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Product</label>
-                  <select value={editForm.product_id} onChange={e => setEditForm({...editForm, product_id: e.target.value})} className="mill-input w-full font-bold bg-white text-slate-900">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Product</label>
+                  <select value={editForm.product_id} onChange={e => setEditForm({...editForm, product_id: e.target.value})} className="mill-input w-full font-bold bg-white text-slate-900 max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900">
                     <option value="">Select product...</option>
                     {allProducts.map(p => <option key={p.id} value={p.id}>{p.name} ({p.product_code})</option>)}
                   </select>
@@ -421,30 +421,30 @@ export default function Purchases() {
               ) : (
                 <>
                   <div>
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Expense Description</label>
-                    <input type="text" value={editForm.expenseDesc} onChange={e => setEditForm({...editForm, expenseDesc: e.target.value})} className="mill-input w-full font-bold" />
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Expense Description</label>
+                    <input type="text" value={editForm.expenseDesc} onChange={e => setEditForm({...editForm, expenseDesc: e.target.value})} className="mill-input w-full font-bold max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Category</label>
-                    <select value={editForm.expenseCategory} onChange={e => setEditForm({...editForm, expenseCategory: e.target.value})} className="mill-input w-full font-bold bg-white">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Category</label>
+                    <select value={editForm.expenseCategory} onChange={e => setEditForm({...editForm, expenseCategory: e.target.value})} className="mill-input w-full font-bold bg-white max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900">
                       {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
                 </>
               )}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Quantity (KG/Units)</label>
-                  <input type="number" step="0.01" value={editForm.qty || ''} onChange={e => setEditForm({...editForm, qty: parseFloat(e.target.value) || 0})} className="mill-input w-full font-bold" />
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Quantity (KG/Units)</label>
+                  <input type="number" step="0.01" value={editForm.qty || ''} onChange={e => setEditForm({...editForm, qty: parseFloat(e.target.value) || 0})} className="mill-input w-full font-bold max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Unit Price</label>
-                  <input type="number" step="0.01" value={editForm.price || ''} onChange={e => setEditForm({...editForm, price: parseFloat(e.target.value) || 0})} className="mill-input w-full font-bold" />
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Unit Price</label>
+                  <input type="number" step="0.01" value={editForm.price || ''} onChange={e => setEditForm({...editForm, price: parseFloat(e.target.value) || 0})} className="mill-input w-full font-bold max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
                 </div>
               </div>
               <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Supplier Name</label>
-                <input type="text" value={editForm.supplier} onChange={e => setEditForm({...editForm, supplier: e.target.value})} className="mill-input w-full font-bold uppercase" />
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Supplier Name</label>
+                <input type="text" value={editForm.supplier} onChange={e => setEditForm({...editForm, supplier: e.target.value})} className="mill-input w-full font-bold uppercase max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
               </div>
               <button type="submit" disabled={loadingState === 'saving'} className="mill-btn-primary w-full py-4 shadow-xl">
                 {loadingState === 'saving' ? 'UPDATING...' : '✓ SAVE CHANGES'}
@@ -470,7 +470,7 @@ export default function Purchases() {
                 </span>.
               </p>
             </div>
-            <div className="p-6 grid grid-cols-2 gap-4">
+            <div className="p-6 grid grid-cols-1 gap-3 md:grid-cols-2">
               <button onClick={() => setDeleteModal({ open: false, record: null })} className="py-4 rounded-xl bg-slate-100 text-slate-600 font-black text-xs uppercase hover:bg-slate-200 transition-all">Cancel</button>
               <button onClick={handleDeletePurchase} disabled={loadingState === 'saving'} className="py-4 rounded-xl bg-red-600 text-white font-black text-xs uppercase hover:bg-red-700 transition-all shadow-lg shadow-red-200">
                 {loadingState === 'saving' ? 'DELETING...' : 'YES, DELETE'}

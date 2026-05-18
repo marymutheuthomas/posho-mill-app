@@ -488,7 +488,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
           <div className="mill-card p-4 md:p-8 bg-white border-slate-100 shadow-2xl rounded-2xl">
             <form onSubmit={handleInitialSubmit} className="space-y-4 md:space-y-6">
                <div>
-                 <label className="block text-[10px] md:text-[11px] font-semibold text-slate-500 uppercase tracking-widest mb-2 md:mb-3">Mode</label>
+                 <label className="block text-[10px] md:text-[11px] font-semibold text-slate-500 uppercase tracking-widest mb-2 md:mb-3 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Mode</label>
                   <div className="flex gap-2">
                     {['Service', 'Product'].map(type => (
                       <button 
@@ -504,11 +504,11 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                </div>
 
                 <div>
-                  <label className="block text-[10px] md:text-[11px] font-semibold text-slate-500 uppercase tracking-widest mb-2">Product</label>
+                  <label className="block text-[10px] md:text-[11px] font-semibold text-slate-500 uppercase tracking-widest mb-2 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Product</label>
                   <select 
                     value={formData.productId} 
                     onChange={e => setFormData({...formData, productId: e.target.value})} 
-                    className="mill-input w-full font-medium py-3 md:py-4 px-4 rounded-xl uppercase text-base md:text-xs"
+                    className="mill-input w-full font-medium py-3 md:py-4 px-4 rounded-xl uppercase text-base md:text-xs max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
                   >
                     <option value="">Select Item...</option>
                     {products
@@ -528,15 +528,15 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] md:text-[11px] font-semibold text-slate-500 uppercase tracking-widest mb-2">Weight (KG)</label>
+                  <label className="block text-[10px] md:text-[11px] font-semibold text-slate-500 uppercase tracking-widest mb-2 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Weight (KG)</label>
                   <div className="relative">
-                    <input type="number" step="0.01" value={formData.weightKg} onChange={e => setFormData({...formData, weightKg: e.target.value})} className="mill-input w-full text-base md:text-xs font-medium py-3 md:py-4 px-4 rounded-xl pr-14 bg-slate-50/50" placeholder="0.00" />
+                    <input type="number" step="0.01" value={formData.weightKg} onChange={e => setFormData({...formData, weightKg: e.target.value})} className="mill-input w-full text-base md:text-xs font-medium py-3 md:py-4 px-4 rounded-xl pr-14 bg-slate-50/50 max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" placeholder="0.00" />
                     <span className="absolute right-5 top-1/2 -translate-y-1/2 font-semibold text-slate-300 text-xs">KG</span>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[10px] md:text-[11px] font-semibold text-slate-500 uppercase tracking-widest mb-2">Transaction Date</label>
+                  <label className="block text-[10px] md:text-[11px] font-semibold text-slate-500 uppercase tracking-widest mb-2 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Transaction Date</label>
                   <div className="relative">
                     <input 
                       type="date" 
@@ -551,7 +551,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
 
 
                 <div className="relative">
-                  <label className="block text-[10px] md:text-[11px] font-semibold text-slate-500 uppercase tracking-widest mb-2">Customer Selection</label>
+                  <label className="block text-[10px] md:text-[11px] font-semibold text-slate-500 uppercase tracking-widest mb-2 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Customer Selection</label>
                   <div className={`relative rounded-xl transition-all ${formData.paymentMethod === 'Debt' && !formData.customerId ? 'ring-2 ring-red-500 ring-offset-2' : ''}`}>
                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
                       <Search size={14} />
@@ -565,7 +565,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                         setSearchTerm(e.target.value);
                         setIsDropdownOpen(true);
                       }}
-                      className="mill-input w-full font-medium py-3 md:py-4 pl-11 pr-10 rounded-xl uppercase text-base md:text-xs"
+                      className="mill-input w-full font-medium py-3 md:py-4 pl-11 pr-10 rounded-xl uppercase text-base md:text-xs max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
                     />
                     <button 
                       type="button"
@@ -627,16 +627,16 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                   {formData.paymentMethod === 'Split' && (
                     <div className="grid grid-cols-3 gap-3 mt-4 animate-in slide-in-from-top-2 duration-300">
                       <div>
-                        <label className="block text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Cash</label>
-                        <input type="number" step="0.01" value={formData.amountCash} onChange={e => setFormData({...formData, amountCash: e.target.value})} className="mill-input w-full text-xs py-2 px-3 bg-slate-50 border-slate-200" placeholder="0" />
+                        <label className="block text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Cash</label>
+                        <input type="number" step="0.01" value={formData.amountCash} onChange={e => setFormData({...formData, amountCash: e.target.value})} className="mill-input w-full text-xs py-2 px-3 bg-slate-50 border-slate-200 max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" placeholder="0" />
                       </div>
                       <div>
-                        <label className="block text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1">M-Pesa</label>
-                        <input type="number" step="0.01" value={formData.amountMpesa} onChange={e => setFormData({...formData, amountMpesa: e.target.value})} className="mill-input w-full text-xs py-2 px-3 bg-slate-50 border-slate-200" placeholder="0" />
+                        <label className="block text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">M-Pesa</label>
+                        <input type="number" step="0.01" value={formData.amountMpesa} onChange={e => setFormData({...formData, amountMpesa: e.target.value})} className="mill-input w-full text-xs py-2 px-3 bg-slate-50 border-slate-200 max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" placeholder="0" />
                       </div>
                       <div>
-                        <label className="block text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Debt</label>
-                        <input type="number" step="0.01" value={formData.amountDebt} onChange={e => setFormData({...formData, amountDebt: e.target.value})} className="mill-input w-full text-xs py-2 px-3 bg-slate-50 border-slate-200" placeholder="0" />
+                        <label className="block text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Debt</label>
+                        <input type="number" step="0.01" value={formData.amountDebt} onChange={e => setFormData({...formData, amountDebt: e.target.value})} className="mill-input w-full text-xs py-2 px-3 bg-slate-50 border-slate-200 max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" placeholder="0" />
                       </div>
                     </div>
                   )}
@@ -702,7 +702,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                   <span className="text-2xl md:text-4xl font-semibold text-emerald-400 tracking-tighter">KES {parseFloat(formData.feeCharged).toLocaleString()}</span>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4 pt-4">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 pt-4">
                 <button onClick={() => setShowReceipt(false)} className="py-4 md:py-5 rounded-2xl bg-slate-800 text-slate-400 font-semibold text-sm uppercase hover:bg-slate-700 active:scale-95 transition-all">Back</button>
                 <button 
                   onClick={handleFinalCheckout} 
@@ -945,25 +945,25 @@ export default function ServicePOS({ role }: ServicePOSProps) {
             </div>
             <form onSubmit={handleEditSubmit} className="p-6 space-y-4">
               <div className="space-y-1.5">
-                <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider ml-1">Weight (KG)</label>
+                <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider ml-1 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Weight (KG)</label>
                 <input 
                   required 
                   type="number" 
                   step="0.01" 
                   value={editForm.weightKg} 
                   onChange={e => setEditForm({...editForm, weightKg: e.target.value})} 
-                  className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" 
+                  className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" 
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider ml-1">Total Price (KES)</label>
+                <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider ml-1 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Total Price (KES)</label>
                 <input 
                   required 
                   type="number" 
                   step="0.01" 
                   value={editForm.totalPrice} 
                   disabled 
-                  className="w-full px-4 h-12 rounded-xl border border-slate-200 bg-slate-50 text-base font-semibold text-slate-500 cursor-not-allowed" 
+                  className="w-full px-4 h-12 rounded-xl border border-slate-200 bg-slate-50 text-base font-semibold text-slate-500 cursor-not-allowed max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" 
                 />
               </div>
 
@@ -982,7 +982,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
               {!editForm.isSplit ? (
                 /* Toggle is OFF: Classic Single Payment Selection */
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider ml-1">Payment Method</label>
+                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider ml-1 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Payment Method</label>
                   <div className="grid grid-cols-3 gap-2">
                     {['Cash', 'M-Pesa', 'Debt'].map(m => (
                       <button 
@@ -1000,36 +1000,36 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                 /* Toggle is ON: Three Separate Active Split Amount Fields arranged side-by-side in 3-column micro-grid */
                 <div className="grid grid-cols-3 gap-2 pt-4 border-t border-slate-100">
                   <div className="space-y-1">
-                    <label className="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider ml-1 text-center">Cash</label>
+                    <label className="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider ml-1 text-center max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Cash</label>
                     <input
                       type="number"
                       step="0.01"
                       placeholder="0.00"
                       value={editForm.amountCash}
                       onChange={e => setEditForm({ ...editForm, amountCash: e.target.value })}
-                      className="w-full px-2 h-12 rounded-xl border border-slate-200 text-base font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder-slate-300 text-center"
+                      className="w-full px-2 h-12 rounded-xl border border-slate-200 text-base font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder-slate-300 text-center max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider ml-1 text-center">M-Pesa</label>
+                    <label className="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider ml-1 text-center max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">M-Pesa</label>
                     <input
                       type="number"
                       step="0.01"
                       placeholder="0.00"
                       value={editForm.amountMpesa}
                       onChange={e => setEditForm({ ...editForm, amountMpesa: e.target.value })}
-                      className="w-full px-2 h-12 rounded-xl border border-slate-200 text-base font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder-slate-300 text-center"
+                      className="w-full px-2 h-12 rounded-xl border border-slate-200 text-base font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder-slate-300 text-center max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider ml-1 text-center">Debt</label>
+                    <label className="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider ml-1 text-center max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Debt</label>
                     <input
                       type="number"
                       step="0.01"
                       placeholder="0.00"
                       value={editForm.amountDebt}
                       onChange={e => setEditForm({ ...editForm, amountDebt: e.target.value })}
-                      className="w-full px-2 h-12 rounded-xl border border-slate-200 text-base font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder-slate-300 text-center"
+                      className="w-full px-2 h-12 rounded-xl border border-slate-200 text-base font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder-slate-300 text-center max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
                     />
                   </div>
                 </div>
@@ -1079,7 +1079,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                 Are you sure? This will return <span className="font-black text-white underline">{deletingSale.weight_kg}KG of {products.find(p => p.id === deletingSale.product_id)?.name || 'Item'}</span> to the inventory.
               </p>
             </div>
-            <div className="p-6 grid grid-cols-2 gap-4">
+            <div className="p-6 grid grid-cols-1 gap-3 md:grid-cols-2">
               <button onClick={() => setDeletingSale(null)} className="py-4 rounded-xl bg-slate-100 text-slate-600 font-black text-xs uppercase hover:bg-slate-200 transition-all">Cancel</button>
               <button onClick={() => deleteSaleMutation.mutate(deletingSale)} disabled={deleteSaleMutation.isPending} className="py-4 rounded-xl bg-red-600 text-white font-black text-xs uppercase hover:bg-red-700 transition-all shadow-lg shadow-red-200">
                 {deleteSaleMutation.isPending ? 'DELETING...' : 'YES, VOID'}

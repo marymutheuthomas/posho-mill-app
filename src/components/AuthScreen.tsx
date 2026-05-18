@@ -72,33 +72,33 @@ export default function AuthScreen() {
 
             <form onSubmit={handleAuth} className="space-y-6">
               <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Terminal Username</label>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Terminal Username</label>
                 <div className="relative">
                   <User className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
                   <input 
                     type="text" required placeholder="Enter Username"
                     value={username} onChange={e => setUsername(e.target.value)}
-                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-5 pl-14 pr-6 font-black text-slate-900 focus:border-blue-600 focus:bg-white transition-all outline-none" 
+                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-5 pl-14 pr-6 font-black text-slate-900 focus:border-blue-600 focus:bg-white transition-all outline-none max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" 
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Access Password</label>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Access Password</label>
                 <div className="relative">
                   <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
                   <input 
                     type="password" required placeholder="••••••••"
                     value={password} onChange={e => setPassword(e.target.value)}
-                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-5 pl-14 pr-6 font-black text-slate-900 focus:border-blue-600 focus:bg-white transition-all outline-none" 
+                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-5 pl-14 pr-6 font-black text-slate-900 focus:border-blue-600 focus:bg-white transition-all outline-none max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" 
                   />
                 </div>
               </div>
 
               {!isLogin && (
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 ml-1">Clearance Level</label>
-                  <div className="grid grid-cols-2 gap-4">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 ml-1 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Clearance Level</label>
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                     <button 
                       type="button" onClick={() => setRole('EMPLOYEE')}
                       className={`py-4 rounded-2xl text-[10px] font-black uppercase transition-all border-2 ${role === 'EMPLOYEE' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-400 border-slate-100'}`}

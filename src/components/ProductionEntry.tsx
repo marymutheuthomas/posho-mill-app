@@ -248,7 +248,7 @@ export default function ProductionEntry() {
                   <div className="space-y-6 md:space-y-8">
                     <div>
                       <div className="flex items-center justify-between mb-3 md:mb-4">
-                        <label className="block text-[10px] md:text-[11px] font-semibold text-slate-400 uppercase tracking-widest">Phase 1: Raw Input (Bulk)</label>
+                        <label className="block text-[10px] md:text-[11px] font-semibold text-slate-400 uppercase tracking-widest max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Phase 1: Raw Input (Bulk)</label>
                         <input 
                           type="date" 
                           value={backdate}
@@ -257,7 +257,7 @@ export default function ProductionEntry() {
                         />
                       </div>
                       <div className="relative group">
-                        <input type="number" step="0.01" required value={inputKg} onChange={e => setInputKg(e.target.value)} placeholder="0.00" className="mill-input w-full text-2xl md:text-4xl font-semibold pr-16 md:pr-20 py-4 md:py-6 border-slate-200 focus:border-blue-600 text-base md:text-4xl" />
+                        <input type="number" step="0.01" required value={inputKg} onChange={e => setInputKg(e.target.value)} placeholder="0.00" className="mill-input w-full text-2xl md:text-4xl font-semibold pr-16 md:pr-20 py-4 md:py-6 border-slate-200 focus:border-blue-600 text-base md:text-4xl max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
                         <span className="absolute right-6 top-1/2 -translate-y-1/2 font-semibold text-slate-300 uppercase text-lg group-focus-within:text-blue-600 transition-colors">KG</span>
                       </div>
                       <div className="mt-3 flex justify-between px-2">
@@ -272,13 +272,13 @@ export default function ProductionEntry() {
                     </div>
 
                     <div>
-                      <label className="block text-[10px] md:text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-3 md:mb-4">Phase 2: Main Flour Output</label>
-                      <select required value={mainProductId} onChange={e => setMainProductId(e.target.value)} className="mill-input w-full font-semibold mb-4 py-3 md:py-4 text-base md:text-sm uppercase tracking-tight">
+                      <label className="block text-[10px] md:text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-3 md:mb-4 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Phase 2: Main Flour Output</label>
+                      <select required value={mainProductId} onChange={e => setMainProductId(e.target.value)} className="mill-input w-full font-semibold mb-4 py-3 md:py-4 text-base md:text-sm uppercase tracking-tight max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900">
                         <option value="">Select Grade...</option>
                         {mainOutputProducts.map(p => <option key={p.id} value={p.id}>{p.product_code} · {p.name}</option>)}
                       </select>
                       <div className="relative group">
-                        <input type="number" step="0.01" required value={mainOutputKg} onChange={e => setMainOutputKg(e.target.value)} placeholder="0.00" className="mill-input w-full text-2xl md:text-4xl font-semibold pr-16 md:pr-20 py-4 md:py-6 text-base md:text-4xl" />
+                        <input type="number" step="0.01" required value={mainOutputKg} onChange={e => setMainOutputKg(e.target.value)} placeholder="0.00" className="mill-input w-full text-2xl md:text-4xl font-semibold pr-16 md:pr-20 py-4 md:py-6 text-base md:text-4xl max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
                         <span className="absolute right-6 top-1/2 -translate-y-1/2 font-semibold text-slate-300 uppercase text-lg">KG</span>
                       </div>
                     </div>
@@ -286,25 +286,25 @@ export default function ProductionEntry() {
 
                   <div className="space-y-6 md:space-y-8">
                     <div>
-                      <label className="block text-[10px] md:text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-3 md:mb-4">Phase 3: By-Products</label>
-                      <select value={byProductId} onChange={e => setByProductId(e.target.value)} className="mill-input w-full font-semibold mb-4 py-3 md:py-4 text-base md:text-sm uppercase tracking-tight bg-slate-50">
+                      <label className="block text-[10px] md:text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-3 md:mb-4 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Phase 3: By-Products</label>
+                      <select value={byProductId} onChange={e => setByProductId(e.target.value)} className="mill-input w-full font-semibold mb-4 py-3 md:py-4 text-base md:text-sm uppercase tracking-tight bg-slate-50 max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900">
                         <option value="">None (Optional)</option>
                         {byProductOptions.map(p => <option key={p.id} value={p.id}>{p.product_code} · {p.name}</option>)}
                       </select>
                       <div className="relative">
-                        <input type="number" step="0.01" value={byProductKg} onChange={e => setByProductKg(e.target.value)} placeholder="0.00" disabled={!byProductId} className="mill-input w-full text-2xl md:text-4xl font-semibold pr-16 md:pr-20 py-4 md:py-6 disabled:bg-slate-50 disabled:text-slate-300 text-base md:text-4xl" />
+                        <input type="number" step="0.01" value={byProductKg} onChange={e => setByProductKg(e.target.value)} placeholder="0.00" disabled={!byProductId} className="mill-input w-full text-2xl md:text-4xl font-semibold pr-16 md:pr-20 py-4 md:py-6 disabled:bg-slate-50 disabled:text-slate-300 text-base md:text-4xl max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
                         <span className="absolute right-6 top-1/2 -translate-y-1/2 font-semibold text-slate-300 uppercase text-lg">KG</span>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                       <div className="mill-card p-4 md:p-6 bg-emerald-50 border-emerald-200 flex flex-col justify-center rounded-xl">
                         <p className="text-[9px] font-semibold text-emerald-600 uppercase tracking-widest mb-1">Kuku Feed</p>
                         <p className="text-xl md:text-3xl font-semibold text-emerald-900">{kukuFeedVal.toFixed(2)} <span className="text-xs">KG</span></p>
                       </div>
                       <div className="mill-card p-4 md:p-6 bg-slate-50 border-slate-200 flex flex-col justify-center rounded-xl">
                         <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Processing Loss</p>
-                        <input type="number" step="0.01" value={manualWasteKg} onChange={e => setManualWasteKg(e.target.value)} placeholder="0.01" className="mill-input w-full text-lg md:text-2xl font-semibold text-center" />
+                        <input type="number" step="0.01" value={manualWasteKg} onChange={e => setManualWasteKg(e.target.value)} placeholder="0.01" className="mill-input w-full text-lg md:text-2xl font-semibold text-center max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
                       </div>
                     </div>
                   </div>

@@ -127,7 +127,7 @@ export default function Settings() {
                             type="number" 
                             value={p.milling_fee} 
                             onChange={(e) => handleInputChange(p.id, 'milling_fee', e.target.value)}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-semibold focus:ring-2 focus:ring-slate-900 focus:border-slate-900 outline-none transition-all"
+                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-semibold focus:ring-2 focus:ring-slate-900 focus:border-slate-900 outline-none transition-all max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
                           />
                         </div>
                       </td>
@@ -137,7 +137,7 @@ export default function Settings() {
                             type="number" 
                             value={p.selling_price} 
                             onChange={(e) => handleInputChange(p.id, 'selling_price', e.target.value)}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-semibold focus:ring-2 focus:ring-slate-900 focus:border-slate-900 outline-none transition-all"
+                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-semibold focus:ring-2 focus:ring-slate-900 focus:border-slate-900 outline-none transition-all max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
                           />
                         </div>
                       </td>

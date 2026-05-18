@@ -75,32 +75,32 @@ export default function AuthTerminal() {
 
             <form onSubmit={handleAuth} className="space-y-5">
               <div className="space-y-2">
-                <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Staff ID / Name</label>
+                <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Staff ID / Name</label>
                 <div className="relative">
                   <User className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                   <input 
                     type="text" required placeholder="Enter ID"
                     value={username} onChange={e => setUsername(e.target.value)}
-                    className="w-full bg-white/50 border border-slate-200 rounded-2xl py-4 pl-12 pr-6 font-black text-slate-900 focus:border-[#0f172a] focus:bg-white transition-all outline-none h-[56px] text-sm shadow-inner" 
+                    className="w-full bg-white/50 border border-slate-200 rounded-2xl py-4 pl-12 pr-6 font-black text-slate-900 focus:border-[#0f172a] focus:bg-white transition-all outline-none h-[56px] text-sm shadow-inner max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" 
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Secure Key</label>
+                <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Secure Key</label>
                 <div className="relative">
                   <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                   <input 
                     type="password" required placeholder="••••••••"
                     value={password} onChange={e => setPassword(e.target.value)}
-                    className="w-full bg-white/50 border border-slate-200 rounded-2xl py-4 pl-12 pr-6 font-black text-slate-900 focus:border-[#0f172a] focus:bg-white transition-all outline-none h-[56px] text-sm shadow-inner" 
+                    className="w-full bg-white/50 border border-slate-200 rounded-2xl py-4 pl-12 pr-6 font-black text-slate-900 focus:border-[#0f172a] focus:bg-white transition-all outline-none h-[56px] text-sm shadow-inner max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" 
                   />
                 </div>
               </div>
 
               {!isLogin && (
                 <div className="space-y-2 animate-in slide-in-from-top-2">
-                  <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Clearance Level</label>
+                  <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Clearance Level</label>
                   <div className="grid grid-cols-2 gap-3">
                     <button type="button" onClick={() => setRole('EMPLOYEE')} className={`py-3 rounded-xl text-[9px] font-black uppercase transition-all border-2 ${role === 'EMPLOYEE' ? 'bg-[#0f172a] text-white border-[#0f172a]' : 'bg-white text-slate-400 border-slate-100'}`}>Operator</button>
                     <button type="button" onClick={() => setRole('ADMIN')} className={`py-3 rounded-xl text-[9px] font-black uppercase transition-all border-2 ${role === 'ADMIN' ? 'bg-[#0f172a] text-white border-[#0f172a]' : 'bg-white text-slate-400 border-slate-100'}`}>Manager</button>
