@@ -342,7 +342,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         
         {/* Left Column (Span 1): Balance Sheet Snapshot */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col min-h-[480px]">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6 flex flex-col min-h-[480px]">
           <div className="flex items-center justify-between mb-6 shrink-0">
             <div>
               <h3 className="text-sm font-black text-[#1E3A8A] uppercase tracking-tight">Statement of Financial Position</h3>
@@ -356,7 +356,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
           
           <div className="flex flex-col flex-1 justify-between">
             {/* Net Equity Massive Card */}
-            <div className="flex flex-col items-center justify-center text-center p-6 bg-slate-50 rounded-2xl border border-slate-100 mb-6 shadow-inner">
+            <div className="flex flex-col items-center justify-center text-center p-4 md:p-6 bg-slate-50 rounded-2xl border border-slate-100 mb-6 shadow-inner">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Business Equity</p>
               <h2 className="text-3xl md:text-4xl font-black text-emerald-600 tracking-tighter font-mono leading-none">
                 {formatCurrency(equity)}
@@ -401,7 +401,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
         </div>
 
         {/* Right Column (Span 2): The P&L Trend Composed Chart */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col min-h-[480px] xl:col-span-2">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6 flex flex-col min-h-[480px] xl:col-span-2">
           <div className="flex items-center justify-between mb-6 shrink-0">
             <div>
               <h3 className="text-sm font-black text-[#1E3A8A] uppercase tracking-tight">Monthly P&L Trend</h3>
@@ -452,7 +452,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
           
           {/* Card 1: Retail Sales Card */}
-          <div className="bg-[#F8FAFC] rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between min-h-[360px] hover:shadow-md transition-shadow">
+          <div className="bg-[#F8FAFC] rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6 flex flex-col justify-between min-h-[360px] hover:shadow-md transition-shadow">
             <div>
               <div className="flex items-center justify-between mb-4">
                 <div>
@@ -520,7 +520,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
           </div>
 
           {/* Card 2: External Service Card */}
-          <div className="bg-[#F8FAFC] rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between min-h-[360px] hover:shadow-md transition-shadow">
+          <div className="bg-[#F8FAFC] rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6 flex flex-col justify-between min-h-[360px] hover:shadow-md transition-shadow">
             <div>
               <div className="flex items-center justify-between mb-4">
                 <div>
@@ -582,7 +582,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
           </div>
 
           {/* Card 3: Internal Production Card */}
-          <div className="bg-[#F8FAFC] rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between min-h-[360px] hover:shadow-md transition-shadow">
+          <div className="bg-[#F8FAFC] rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6 flex flex-col justify-between min-h-[360px] hover:shadow-md transition-shadow">
             <div>
               <div className="flex items-center justify-between mb-4">
                 <div>
@@ -636,7 +636,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         
         {/* Card 1: Cash Collection (Period Inflow) */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between min-h-[140px] hover:shadow-md transition-shadow">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6 flex flex-col justify-between min-h-[140px] hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Period Cash Inflow</h3>
             <Wallet className="text-emerald-600" size={18} />
@@ -652,7 +652,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
         </div>
 
         {/* Card 2: Session Status (Milling authorization) */}
-        <div className={`bg-white rounded-2xl shadow-sm border p-6 flex flex-col justify-between min-h-[140px] transition-all ${
+        <div className={`bg-white rounded-2xl shadow-sm border p-4 md:p-6 flex flex-col justify-between min-h-[140px] transition-all ${
           activeSession ? 'border-emerald-300 bg-emerald-50/10' : 'border-slate-200'
         }`}>
           <div className="flex items-center justify-between mb-4">
@@ -670,7 +670,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
         </div>
 
         {/* Card 3: Stock Replenishment Alerts */}
-        <div className={`bg-white rounded-2xl shadow-sm border p-6 flex flex-col justify-between min-h-[140px] transition-all ${
+        <div className={`bg-white rounded-2xl shadow-sm border p-4 md:p-6 flex flex-col justify-between min-h-[140px] transition-all ${
           lowStockAlerts > 0 ? 'border-amber-300 bg-amber-50/10' : 'border-slate-200'
         }`}>
           <div className="flex items-center justify-between mb-4">
@@ -686,7 +686,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
         </div>
 
         {/* Card 4: Maize Reserve */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between min-h-[140px] hover:shadow-md transition-shadow">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6 flex flex-col justify-between min-h-[140px] hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Maize Reserve</h3>
             <Box className="text-blue-600" size={18} />
@@ -705,7 +705,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         
         {/* Live Inventory Monitor (Span 2) */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col min-h-[400px] xl:col-span-2">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6 flex flex-col min-h-[400px] xl:col-span-2">
           <div className="flex items-center justify-between mb-6 shrink-0">
             <div>
               <h3 className="text-sm font-black text-[#1E3A8A] uppercase tracking-tight">Live Inventory Monitor</h3>
@@ -748,7 +748,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
         </div>
 
         {/* Production Yield Stats Widget (Span 1) */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between min-h-[400px]">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6 flex flex-col justify-between min-h-[400px]">
           <div className="flex items-center justify-between mb-6 shrink-0">
             <div>
               <h3 className="text-sm font-black text-[#1E3A8A] uppercase tracking-tight">Production & Yield</h3>
@@ -894,12 +894,12 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
                   const isLoss = row.net_profit < 0;
                   return (
                     <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-6 py-4 text-xs font-bold text-slate-700">{row.display_month}</td>
-                      <td className="px-6 py-4 text-xs font-bold font-mono text-emerald-600 text-right">{formatCurrency(row.gross_revenue)}</td>
-                      <td className="px-6 py-4 text-xs font-bold font-mono text-rose-500 text-right">{formatCurrency(row.cogs)}</td>
-                      <td className="px-6 py-4 text-xs font-bold font-mono text-rose-500 text-right">{formatCurrency(row.other_operating_expenses || 0)}</td>
-                      <td className="px-6 py-4 text-xs font-bold font-mono text-rose-500 text-right">{formatCurrency(row.direct_power_costs || 0)}</td>
-                      <td className="px-6 py-4 text-xs font-black font-mono text-right bg-slate-50/80">
+                      <td className="px-6 py-3 text-xs font-medium text-slate-700">{row.display_month}</td>
+                      <td className="px-6 py-3 text-xs font-normal font-mono text-emerald-600 text-right">{formatCurrency(row.gross_revenue)}</td>
+                      <td className="px-6 py-3 text-xs font-normal font-mono text-rose-500 text-right">{formatCurrency(row.cogs)}</td>
+                      <td className="px-6 py-3 text-xs font-normal font-mono text-rose-500 text-right">{formatCurrency(row.other_operating_expenses || 0)}</td>
+                      <td className="px-6 py-3 text-xs font-normal font-mono text-rose-500 text-right">{formatCurrency(row.direct_power_costs || 0)}</td>
+                      <td className="px-6 py-3 text-xs font-semibold font-mono text-right bg-slate-50/80">
                         <span className={isLoss ? 'text-rose-600 animate-pulse' : 'text-emerald-600'}>
                           {formatCurrency(row.net_profit)}
                         </span>

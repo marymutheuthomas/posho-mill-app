@@ -34,43 +34,43 @@ export default function GlobalDateFilter({ startDate, endDate, onChange }: Globa
   };
 
   return (
-    <div className="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-md border-b border-slate-200 pb-4 pt-4 mb-6 shadow-sm -mt-4 -mx-4 md:-mx-8 px-4 md:px-8">
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+    <div className="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-md border-b border-slate-200 py-3 mb-4 shadow-sm -mt-4 -mx-4 px-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
         
-        {/* Presets */}
-        <div className="flex flex-wrap items-center gap-2">
+        {/* Presets - persistent, wrap gracefully */}
+        <div className="flex flex-wrap items-center gap-1.5">
           {presets.map((preset, idx) => (
             <button
               key={idx}
               onClick={preset.onClick}
-              className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest bg-white border border-slate-200 text-slate-600 rounded-lg shadow-sm hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all"
+              className="px-2.5 py-1.5 text-[9px] font-semibold uppercase tracking-wider bg-white border border-slate-200 text-slate-600 rounded-lg shadow-sm hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all"
             >
               {preset.label}
             </button>
           ))}
         </div>
 
-        {/* Date Inputs */}
-        <div className="flex items-center gap-3 bg-white p-2 rounded-xl border border-slate-200 shadow-sm w-full xl:w-auto">
-          <div className="flex items-center gap-2 px-2">
-            <Calendar className="text-slate-400" size={16} />
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest hidden sm:block">Range</span>
+        {/* Date Inputs - balanced layout with overflow safety */}
+        <div className="flex items-center gap-2 bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm w-full sm:w-auto justify-between sm:justify-end">
+          <div className="flex items-center gap-1.5 px-1 text-slate-400">
+            <Calendar size={14} className="shrink-0" />
+            <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest hidden xs:block">Range</span>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 min-w-0 flex-1 sm:flex-initial">
             <input 
               type="date" 
               value={format(startDate, 'yyyy-MM-dd')}
               onChange={handleStartChange}
-              className="text-xs font-bold text-slate-700 bg-slate-50 border border-slate-100 rounded-md px-2 py-1.5 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all cursor-pointer"
+              className="text-[11px] font-semibold text-slate-700 bg-slate-50 border border-slate-100 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer min-w-0 flex-1 sm:flex-initial"
             />
-            <span className="text-slate-300 font-bold">-</span>
+            <span className="text-slate-300 font-bold text-xs">-</span>
             <input 
               type="date" 
               value={format(endDate, 'yyyy-MM-dd')}
               onChange={handleEndChange}
               min={format(startDate, 'yyyy-MM-dd')}
-              className="text-xs font-bold text-slate-700 bg-slate-50 border border-slate-100 rounded-md px-2 py-1.5 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all cursor-pointer"
+              className="text-[11px] font-semibold text-slate-700 bg-slate-50 border border-slate-100 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer min-w-0 flex-1 sm:flex-initial"
             />
           </div>
         </div>

@@ -89,7 +89,7 @@ export default function BIDashboard() {
   }
 
   return (
-    <div className="max-w-[1400px] mx-auto p-4 md:p-8 space-y-6 bg-slate-50 min-h-screen">
+    <div className="max-w-[1400px] mx-auto p-3.5 md:p-8 space-y-6 bg-slate-50 min-h-screen overflow-x-hidden w-full min-w-0">
       
       {/* Dashboard Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
@@ -116,7 +116,7 @@ export default function BIDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         
         {/* Net Daily Cash Position */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex flex-col justify-between min-h-[140px]">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 md:p-6 flex flex-col justify-between min-h-[140px]">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Net Daily Cash</h3>
             <Wallet className="text-slate-400" size={18} />
@@ -130,7 +130,7 @@ export default function BIDashboard() {
         </div>
 
         {/* Total Service Revenue */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex flex-col justify-between min-h-[140px]">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 md:p-6 flex flex-col justify-between min-h-[140px]">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Service Revenue</h3>
             <Activity className="text-slate-400" size={18} />
@@ -144,7 +144,7 @@ export default function BIDashboard() {
         </div>
 
         {/* Total Retail Sales */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex flex-col justify-between min-h-[140px]">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 md:p-6 flex flex-col justify-between min-h-[140px]">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Retail Sales</h3>
             <TrendingUp className="text-slate-400" size={18} />
@@ -158,7 +158,7 @@ export default function BIDashboard() {
         </div>
 
         {/* Active Ghost Milling Alerts */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex flex-col justify-between min-h-[140px]">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 md:p-6 flex flex-col justify-between min-h-[140px]">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Ghost Alerts</h3>
             <AlertTriangle className={kpis.active_ghost_milling_alerts > 0 ? "text-red-500" : "text-emerald-500"} size={18} />
@@ -176,7 +176,7 @@ export default function BIDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* 3. Cash Flow Reconciliation Chart (Grid Span: 2 Columns) */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex flex-col lg:col-span-2 min-h-[420px]">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 md:p-6 flex flex-col lg:col-span-2 min-h-[420px]">
           <div className="flex items-center justify-between mb-8">
             <div>
               <h3 className="text-sm font-bold text-slate-900 uppercase tracking-tight">Cash Flow Reconciliation</h3>
@@ -209,7 +209,7 @@ export default function BIDashboard() {
         </div>
 
         {/* 2. The Leakage & Anomaly Radar (Grid Span: 1 Column) */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex flex-col min-h-[420px]">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 md:p-6 flex flex-col min-h-[420px]">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-sm font-bold text-slate-900 uppercase tracking-tight">Anomaly Radar</h3>
@@ -263,7 +263,7 @@ export default function BIDashboard() {
         </div>
 
         {/* 4. Production Efficiency Matrix (Grid Span: 1 Column) */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex flex-col min-h-[400px]">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 md:p-6 flex flex-col min-h-[400px]">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-sm font-bold text-slate-900 uppercase tracking-tight">Efficiency Matrix</h3>
@@ -316,7 +316,7 @@ export default function BIDashboard() {
 
         {/* 5. High-Risk Debtors Table (Grid Span: 1 Column) */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-100 flex flex-col h-[400px] overflow-hidden">
-          <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
+          <div className="p-4 md:p-5 border-b border-slate-100 flex items-center justify-between shrink-0">
             <div>
               <h3 className="text-sm font-bold text-slate-900 uppercase tracking-tight">High-Risk Debtors</h3>
               <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest mt-1">Credit Liability Monitor</p>
@@ -328,9 +328,9 @@ export default function BIDashboard() {
             <table className="w-full text-left border-collapse">
               <thead className="bg-slate-50 sticky top-0 z-10">
                 <tr>
-                  <th className="px-6 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Customer</th>
-                  <th className="px-6 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 text-right">Balance</th>
-                  <th className="px-6 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 text-right">Overdue</th>
+                  <th className="px-4 py-2.5 text-[9px] font-black text-slate-450 uppercase tracking-widest border-b border-slate-100">Customer</th>
+                  <th className="px-4 py-2.5 text-[9px] font-black text-slate-450 uppercase tracking-widest border-b border-slate-100 text-right">Balance</th>
+                  <th className="px-4 py-2.5 text-[9px] font-black text-slate-450 uppercase tracking-widest border-b border-slate-100 text-right">Overdue</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -338,19 +338,19 @@ export default function BIDashboard() {
                   const isHighRisk = debtor.days_overdue > 14;
                   return (
                     <tr key={idx} className={`${isHighRisk ? 'bg-red-50/50' : 'hover:bg-slate-50'} transition-colors`}>
-                      <td className="px-6 py-4">
-                        <p className={`text-[11px] font-bold uppercase ${isHighRisk ? 'text-red-900' : 'text-slate-900'}`}>
+                      <td className="px-4 py-2.5">
+                        <p className={`text-[11px] font-medium uppercase ${isHighRisk ? 'text-red-900' : 'text-slate-700'}`}>
                           {debtor.customer_name}
                         </p>
                       </td>
-                      <td className="px-6 py-4 text-right">
-                        <p className={`text-xs font-bold font-mono ${isHighRisk ? 'text-red-600' : 'text-slate-700'}`}>
-                          {Number(debtor.outstanding_balance || 0).toLocaleString()}
+                      <td className="px-4 py-2.5 text-right">
+                        <p className={`text-[11px] font-normal font-mono ${isHighRisk ? 'text-red-600' : 'text-slate-600'}`}>
+                          KSh {Number(debtor.outstanding_balance || 0).toLocaleString()}
                         </p>
                       </td>
-                      <td className="px-6 py-4 text-right">
-                        <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest ${isHighRisk ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-500'}`}>
-                          {debtor.days_overdue || 0} Days
+                      <td className="px-4 py-2.5 text-right">
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-semibold uppercase tracking-widest ${isHighRisk ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-500'}`}>
+                          {debtor.days_overdue || 0}d
                         </span>
                       </td>
                     </tr>
@@ -369,7 +369,7 @@ export default function BIDashboard() {
         </div>
 
         {/* 6. Inventory Velocity Leaderboard (Grid Span: 1 Column) */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex flex-col h-[400px]">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 md:p-6 flex flex-col h-[400px]">
           <div className="flex items-center justify-between mb-6 shrink-0">
             <div>
               <h3 className="text-sm font-bold text-slate-900 uppercase tracking-tight">Velocity Leaderboard</h3>

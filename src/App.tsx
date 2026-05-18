@@ -229,23 +229,18 @@ function App() {
         {/* TOP COMMAND BAR */}
         <header className="sticky top-0 z-40 h-12 md:h-20 bg-white/90 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-4 md:px-10 shrink-0 shadow-sm">
           
-          <div className="flex items-center gap-4">
-            {/* Mobile Hamburger Trigger */}
-            <button 
-              onClick={() => setIsDrawerOpen(true)}
-              className="md:hidden p-2 -ml-2 hover:bg-slate-100 rounded-lg transition-colors"
-            >
-              <Menu size={24} className="text-slate-900" />
-            </button>
-
-            <div className="hidden md:flex lg:flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center shadow-md md:hidden shrink-0">
+              <Zap className="text-white" size={16} />
+            </div>
+            <div className="hidden md:flex lg:flex items-center gap-2 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
                <span>Mill Console</span>
                <ChevronRight size={12} />
                <span className="text-slate-900">{activeTab}</span>
             </div>
             
-            <div className="md:flex lg:hidden items-center">
-               <h2 className="text-xs md:text-sm font-black text-slate-900 uppercase truncate max-w-[120px]">{activeTab}</h2>
+            <div className="md:hidden flex items-center">
+               <h2 className="text-xs font-semibold text-slate-900 uppercase truncate max-w-[120px]">{activeTab}</h2>
             </div>
           </div>
 
@@ -267,13 +262,13 @@ function App() {
                   <>
                     <div className="flex items-center gap-1.5 md:gap-2 pr-2 md:pr-3 border-r border-slate-200">
                       <div className="w-1.5 md:w-2 h-1.5 md:h-2 bg-emerald-500 rounded-full animate-pulse" />
-                      <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-emerald-700">{activeSessionType}</span>
+                      <span className="text-[8px] md:text-[10px] font-semibold uppercase tracking-widest text-emerald-700">{activeSessionType}</span>
                     </div>
                   </>
                 )}
                 <div className="flex items-center gap-1.5 md:gap-2">
                   <div className={`w-2 md:w-2.5 h-2 md:h-2.5 rounded-full ${!isOnline ? 'bg-red-500 animate-pulse' : pendingCount > 0 ? 'bg-amber-500' : 'bg-emerald-500'}`} />
-                  <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest">
+                  <span className="text-[8px] md:text-[10px] font-semibold uppercase tracking-widest">
                     {!isOnline ? 'OFFLINE' : pendingCount > 0 ? `${pendingCount} PENDING` : 'SYNCED'}
                   </span>
                 </div>
@@ -287,7 +282,7 @@ function App() {
 
             <div className="hidden lg:flex items-center gap-3 pl-2">
                <div className="text-right">
-                  <p className="text-[10px] font-black text-slate-900 uppercase leading-none">{user.role}</p>
+                  <p className="text-[10px] font-bold text-slate-900 uppercase leading-none">{user.role}</p>
                </div>
                <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center border border-slate-200 hover:border-slate-900 transition-all cursor-pointer">
                   <User size={20} className="text-slate-900" />
@@ -316,7 +311,7 @@ function App() {
         </div>
 
         {/* CONTENT SCROLL AREA */}
-        <div className="flex-1 overflow-y-auto px-4 py-6 md:p-10 pb-32 md:pb-10 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 md:p-10 pb-24 md:pb-10 custom-scrollbar">
           {activeTab === 'Dashboard'        && <Dashboard onNavigate={setActiveTab} role={user.role} isOnline={isOnline} pendingCount={pendingCount} />}
           {activeTab === 'Session Control'  && <SessionControl onNavigate={setActiveTab} role={user.role} isOnline={isOnline} pendingCount={pendingCount} />}
           {activeTab === 'Insights & Audit' && <MasterDashboard />}
@@ -329,33 +324,37 @@ function App() {
           {activeTab === 'User Management'  && <UserManagement />}
         </div>
 
-        {/* MOBILE BOTTOM NAVIGATION */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 h-20 bg-white/95 backdrop-blur-lg border-t border-slate-200 flex justify-around items-center z-50 px-6 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] pb-safe">
-           {[
-             { name: 'Dashboard', icon: LayoutDashboard },
-             { name: 'Point of Sale', icon: ShoppingBag, label: 'POS' },
-             { name: 'Stock Take', icon: ShieldCheck, label: 'Stock' }
-           ].map(item => {
+        {/* MOBILE PERSISTENT BOTTOM NAVIGATION BAR */}
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 h-14 bg-white/95 backdrop-blur-lg border-t border-slate-200 flex items-center justify-start gap-1.5 overflow-x-auto scrollbar-none z-50 px-4 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] pb-safe">
+           {menuItems.map(item => {
              const active = activeTab === item.name;
+             const isLocked = (activeSessionType === 'Internal' && item.name === 'Point of Sale') || 
+                              (activeSessionType === 'External' && item.name === 'Production Hub');
              return (
                <button
                  key={item.name}
-                 onClick={() => setActiveTab(item.name)}
-                 className={`flex flex-col items-center gap-1 transition-all relative ${active ? 'text-slate-900 scale-110' : 'text-slate-400'}`}
+                 onClick={() => {
+                   if (isLocked) {
+                     showNotification(`Access Locked: Active ${activeSessionType} session prevents access to ${item.name}.`);
+                   } else if (!activeSessionType && (item.name === 'Production Hub' || item.name === 'Point of Sale')) {
+                     showNotification(`⚠️ No Active Session: Please start an Internal or External production session before recording data.`);
+                   } else {
+                     setActiveTab(item.name);
+                   }
+                 }}
+                 className={`flex items-center gap-1.5 px-3 h-9 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                   active 
+                   ? 'bg-[#1E3A8A] text-white shadow-sm' 
+                   : isLocked 
+                     ? 'text-slate-300 opacity-50 cursor-not-allowed' 
+                     : 'text-slate-500 hover:bg-slate-50'
+                 }`}
                >
-                 <item.icon size={22} className={active ? 'text-slate-900' : 'text-slate-400'} />
-                 <span className="text-[8px] font-black uppercase tracking-widest">{item.label || item.name}</span>
-                 {active && <div className="absolute -top-1 w-1 h-1 bg-slate-900 rounded-full" />}
+                 <item.icon size={14} className="shrink-0" />
+                 <span>{item.name}</span>
                </button>
              );
            })}
-           <button 
-            onClick={() => setIsDrawerOpen(true)}
-            className="flex flex-col items-center gap-1 text-slate-400"
-           >
-              <Menu size={22} />
-              <span className="text-[8px] font-black uppercase tracking-widest">Menu</span>
-           </button>
         </nav>
       </main>
     </div>

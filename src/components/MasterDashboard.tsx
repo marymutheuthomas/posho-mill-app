@@ -304,9 +304,9 @@ export default function MasterDashboard() {
                       const hi = d.days_overdue > 14;
                       return (
                         <tr key={i} className={`${hi ? 'bg-red-50/50' : 'hover:bg-slate-50'} transition-colors`}>
-                          <td className="px-4 py-3"><p className={`text-[11px] font-bold uppercase ${hi ? 'text-red-800' : 'text-slate-800'}`}>{d.customer_name}</p></td>
-                          <td className="px-4 py-3 text-right"><p className={`text-xs font-black font-mono ${hi ? 'text-red-600' : 'text-slate-700'}`}>KSh {Number(d.outstanding_balance || 0).toLocaleString()}</p></td>
-                          <td className="px-4 py-3 text-right"><span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${hi ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-500'}`}>{d.days_overdue || 0}d</span></td>
+                          <td className="px-4 py-2.5"><p className={`text-[11px] font-medium uppercase ${hi ? 'text-red-800' : 'text-slate-750'}`}>{d.customer_name}</p></td>
+                          <td className="px-4 py-2.5 text-right"><p className={`text-[11px] font-normal font-mono ${hi ? 'text-red-600' : 'text-slate-600'}`}>KSh {Number(d.outstanding_balance || 0).toLocaleString()}</p></td>
+                          <td className="px-4 py-2.5 text-right"><span className={`px-2 py-0.5 rounded text-[9px] font-semibold uppercase ${hi ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-500'}`}>{d.days_overdue || 0}d</span></td>
                         </tr>
                       );
                     }) : (
@@ -337,12 +337,12 @@ export default function MasterDashboard() {
                   <tbody className="divide-y divide-slate-100">
                     {pl.map((r, i) => (
                       <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-6 py-4 text-sm font-bold text-slate-700">{r.display_month}</td>
-                        <td className="px-6 py-4 text-sm font-bold font-mono text-emerald-600 text-right">{fmt(r.gross_revenue)}</td>
-                        <td className="px-6 py-4 text-sm font-bold font-mono text-rose-500 text-right">{fmt(r.cogs || r.total_purchases || 0)}</td>
-                        <td className="px-6 py-4 text-sm font-bold font-mono text-rose-500 text-right">{fmt(r.other_operating_expenses || 0)}</td>
-                        <td className="px-6 py-4 text-sm font-bold font-mono text-rose-500 text-right">{fmt(r.direct_power_costs || 0)}</td>
-                        <td className="px-6 py-4 text-sm font-black font-mono text-right bg-slate-50">
+                        <td className="px-6 py-3 text-xs font-medium text-slate-700">{r.display_month}</td>
+                        <td className="px-6 py-3 text-xs font-normal font-mono text-emerald-600 text-right">{fmt(r.gross_revenue)}</td>
+                        <td className="px-6 py-3 text-xs font-normal font-mono text-rose-500 text-right">{fmt(r.cogs || r.total_purchases || 0)}</td>
+                        <td className="px-6 py-3 text-xs font-normal font-mono text-rose-500 text-right">{fmt(r.other_operating_expenses || 0)}</td>
+                        <td className="px-6 py-3 text-xs font-normal font-mono text-rose-500 text-right">{fmt(r.direct_power_costs || 0)}</td>
+                        <td className="px-6 py-3 text-xs font-semibold font-mono text-right bg-slate-50">
                           <span className={r.net_profit < 0 ? 'text-rose-600' : 'text-emerald-600'}>{fmt(r.net_profit)}</span>
                         </td>
                       </tr>
