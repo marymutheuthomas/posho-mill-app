@@ -13,6 +13,7 @@ type SessionType = 'Internal' | 'External';
 
 interface Session {
   id: string;
+  session_code?: string;
   session_type: string;
   status: string;
   start_meter: number;
@@ -177,7 +178,7 @@ export default function SessionControl({ role }: SessionControlProps) {
                         {activeSession ? activeSession.session_type : 'Ready to Start'}
                      </h1>
                      <p className={`text-[10px] md:text-xs font-medium uppercase tracking-widest mt-2 ${activeSession ? 'text-slate-400' : 'text-slate-400'}`}>
-                        {activeSession ? `Operator Terminal · Session ID: ${activeSession.id.slice(0, 8)}` : 'Initialize Mill Session to enable Point of Sale & Production Logging'}
+                        {activeSession ? `Operator Terminal · Session: ${activeSession.session_code || '---'}` : 'Initialize Mill Session to enable Point of Sale & Production Logging'}
                      </p>
                   </div>
                </div>

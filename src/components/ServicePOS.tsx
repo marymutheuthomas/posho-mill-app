@@ -31,6 +31,7 @@ interface Product {
 }
 interface TransactionLog { 
   id: string; 
+  receipt_code?: string;
   created_at: string; 
   total_price: number; 
   payment_method: string; 
@@ -168,7 +169,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
     queryKey: ['sales_history'],
     queryFn: async () => {
       const { data, error } = await supabase.from('sales_transactions')
-        .select('id, created_at, weight_kg, total_price, payment_method, customer_name, product_id, transaction_type, amount_cash, amount_mpesa, amount_debt')
+        .select('id, receipt_code, created_at, weight_kg, total_price, payment_method, customer_name, product_id, transaction_type, amount_cash, amount_mpesa, amount_debt')
         .order('created_at', { ascending: false })
         .limit(50);
       if (error) throw error;
@@ -820,6 +821,11 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                                   <span className="text-[10px] max-md:text-[9px] text-slate-400 block mt-0.5 leading-none">
                                     {new Date(log.created_at).toLocaleDateString()} {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                   </span>
+                                  {log.receipt_code && (
+                                    <span className="text-[11px] font-normal text-slate-400 block mt-0.5 leading-none uppercase tracking-widest">
+                                      {log.receipt_code}
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                             </td>

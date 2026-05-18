@@ -15,6 +15,7 @@ interface Product {
 
 interface PurchaseRecord { 
   id: string; 
+  purchase_code?: string;
   product_id: string | null;
   old_item_name?: string | null;
   category?: string | null;
@@ -351,6 +352,7 @@ export default function Purchases() {
                   <td className="px-2 py-1.5 md:px-3 md:py-1.5 max-md:text-[11px] whitespace-nowrap">
                     <p className="font-medium max-md:font-normal text-slate-800 max-md:text-[11px]">{new Date(p.created_at).toLocaleDateString()}</p>
                     <p className="text-[9px] max-md:text-[9px] text-slate-400 uppercase flex items-center gap-1 mt-0.5"><History size={10} className="opacity-40" /> {new Date(p.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                    {p.purchase_code && <p className="text-[11px] font-normal text-slate-400 uppercase tracking-widest mt-0.5">{p.purchase_code}</p>}
                   </td>
                   <td className="px-2 py-1.5 md:px-3 md:py-1.5 max-md:text-[11px] whitespace-nowrap">
                     <div className="flex items-center gap-1.5">

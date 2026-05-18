@@ -4,6 +4,7 @@ import { db } from '../lib/db';
 
 export interface MillingSession {
   id: string;
+  session_code?: string;
   session_type: string;
   status: string;
   start_meter: number;
