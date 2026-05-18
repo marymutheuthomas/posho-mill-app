@@ -420,7 +420,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
                   <Tooltip 
                     contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '12px', fontWeight: 'bold' }}
                     cursor={{ fill: '#f8fafc' }}
-                    formatter={(value: number) => formatCurrency(value)}
+                    formatter={(value: any) => formatCurrency(value)}
                   />
                   <Legend wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', paddingTop: '15px' }} iconType="circle" />
                   

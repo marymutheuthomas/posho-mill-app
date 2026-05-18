@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Activity, ShieldCheck, Factory, 
   ShoppingCart, BookOpen, Settings as SettingsIcon, Lock,
   Wifi, WifiOff, Menu, X,
-  Zap, ShoppingBag, Search, User, ChevronRight, Landmark
+  Zap, ShoppingBag, Search, User, ChevronRight
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useActiveSession } from './hooks/useActiveSession';
@@ -13,7 +13,7 @@ import Dashboard from './components/Dashboard';
 import ProductionEntry from './components/ProductionEntry';
 import Purchases from './components/Purchases';
 import ServicePOS from './components/ServicePOS';
-import AuditHub from './components/AuditHub';
+// import AuditHub from './components/AuditHub';
 import MasterDashboard from './components/MasterDashboard';
 import SessionControl from './components/SessionControl';
 import DebtLedger from './components/DebtLedger';

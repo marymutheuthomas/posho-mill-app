@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart } from 'recharts';
 import { subDays, startOfMonth, startOfYear, format } from 'date-fns';
-import { Wallet, TrendingUp, AlertTriangle, Box, CreditCard, Users, Zap, ShieldAlert, Activity, Landmark } from 'lucide-react';
+import { Wallet, TrendingUp, Box, Users, Zap, ShieldAlert, Activity, Landmark } from 'lucide-react';
 
 const fmt = (v: number) => `KSh ${Number(v || 0).toLocaleString()}`;
 
@@ -170,7 +170,7 @@ export default function MasterDashboard() {
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                       <XAxis dataKey="display_month" tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }} tickLine={false} axisLine={false} dy={6} />
                       <YAxis tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }} tickLine={false} axisLine={false} tickFormatter={v => `${(v/1000).toFixed(0)}k`} dx={-4} />
-                      <Tooltip contentStyle={{ borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '12px', fontWeight: 'bold' }} cursor={{ fill: '#f8fafc' }} formatter={(v: number) => fmt(v)} />
+                      <Tooltip contentStyle={{ borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '12px', fontWeight: 'bold' }} cursor={{ fill: '#f8fafc' }} formatter={(v: any) => fmt(v)} />
                       <Legend wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', paddingTop: '12px' }} iconType="circle" />
                       <Bar dataKey="gross_revenue" name="Revenue" fill="#1E3A8A" radius={[4, 4, 0, 0]} maxBarSize={36} />
                       <Line type="monotone" dataKey="total_expenses" name="Expenses" stroke="#e11d48" strokeWidth={2.5} dot={{ r: 3, fill: '#fff', strokeWidth: 2 }} />
