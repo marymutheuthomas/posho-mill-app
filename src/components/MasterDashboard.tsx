@@ -65,7 +65,7 @@ export default function MasterDashboard() {
               net_profit: Number(r.net_profit) || 0,
             })));
           }),
-        supabase.from('dashboard_daily_cash_flow').select('*').gte('reconciliation_date', si).lte('reconciliation_date', ei).order('date', { ascending: true }).limit(30)
+        supabase.from('dashboard_daily_cash_flow').select('*').gte('reconciliation_date', si).lte('reconciliation_date', ei).order('reconciliation_date', { ascending: true }).limit(30)
           .then(({ data }) => { if (data) setCashFlow(data); }),
         supabase.from('dashboard_power_leakage_radar').select('*').gte('audit_date', si).lte('audit_date', ei).limit(8)
           .then(({ data }) => { if (data) setLeakage(data); }),
@@ -195,7 +195,7 @@ export default function MasterDashboard() {
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={cashFlow} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 700 }} tickLine={false} axisLine={false} />
+                      <XAxis dataKey="reconciliation_date" tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 700 }} tickLine={false} axisLine={false} tickFormatter={(v) => { const d = new Date(v); return isNaN(d.getTime()) ? v : `${d.getDate()}/${d.getMonth()+1}`; }} />
                       <YAxis tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }} tickLine={false} axisLine={false} tickFormatter={v => `${(v/1000).toFixed(0)}k`} dx={-4} />
                       <Tooltip contentStyle={{ borderRadius: '10px', border: '1px solid #f1f5f9', fontSize: '12px', fontWeight: 'bold' }} cursor={{ fill: '#f8fafc' }} />
                       <Legend wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', paddingTop: '12px' }} iconType="circle" />
@@ -228,7 +228,7 @@ export default function MasterDashboard() {
                 {leakage.length > 0 ? leakage.map((a, i) => (
                   <div key={i} className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold text-slate-400">{new Date(a.session_date || Date.now()).toLocaleDateString()}</span>
+                      <span className="text-[10px] font-bold text-slate-400">{new Date(a.audit_date || Date.now()).toLocaleDateString()}</span>
                       <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${leakageBadge(a.leakage_alert)}`}>{a.leakage_alert || '—'}</span>
                     </div>
                     <div className="flex items-baseline justify-between">
@@ -258,7 +258,7 @@ export default function MasterDashboard() {
                         <p className="text-[11px] font-bold text-slate-700 uppercase">{r.product_name || 'Standard'}</p>
                         <div className="text-right">
                           <p className="text-sm font-black font-mono text-[#1E3A8A]">{Number(r.net_output_kg || 0).toLocaleString()} <span className="text-[9px] text-slate-300">KG</span></p>
-                          <p className="text-[9px] font-bold text-red-400">Waste: {Number(r.waste_kg || 0).toLocaleString()} KG</p>
+                          <p className="text-[9px] font-bold text-emerald-500">Value: KSh {Number(r.projected_retail_value || 0).toLocaleString()}</p>
                         </div>
                       </div>
                     )) : <p className="text-[10px] text-slate-300 italic">No internal data</p>}
@@ -271,7 +271,7 @@ export default function MasterDashboard() {
                       <div key={i} className="flex items-center justify-between">
                         <div>
                           <p className="text-[11px] font-bold text-slate-700 uppercase">Service Yield</p>
-                          <p className="text-[9px] font-bold text-slate-400">{new Date(r.session_date).toLocaleDateString()}</p>
+                          <p className="text-[9px] font-bold text-slate-400">{r.production_date ? new Date(r.production_date).toLocaleDateString() : '—'}</p>
                         </div>
                         <p className="text-sm font-black font-mono text-emerald-600">{Number(r.efficiency_score || 0).toFixed(2)}</p>
                       </div>

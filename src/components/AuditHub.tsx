@@ -79,89 +79,65 @@ export default function AuditHub() {
     try {
       // Strictly enforce Nairobi midnight bounds to UTC for Supabase
       const sDate = new Date(startDate);
-      const startUtc = new Date(sDate.getTime() - (3 * 60 * 60 * 1000)).toISOString(); // UTC+3 Midnight
+      const startUtc = new Date(sDate.getTime() - (3 * 60 * 60 * 1000)).toISOString();
 
       const eDate = new Date(endDate);
       eDate.setHours(23, 59, 59, 999);
       const endUtc = new Date(eDate.getTime() - (3 * 60 * 60 * 1000)).toISOString();
 
-      const [prod, txs, sess, pur, productsRes, repayRes] = await Promise.all([
-        supabase.from('production_logs').select('input_kg, main_output_kg, byproduct_kg, waste_kg').gte('created_at', startUtc).lte('created_at', endUtc),
-        supabase.from('sales_transactions').select('total_price, payment_method, product_id, transaction_type, amount_cash, amount_mpesa, amount_debt').gte('created_at', startUtc).lte('created_at', endUtc),
-        supabase.from('milling_sessions').select('session_type, start_meter, end_meter, power_cost, created_at').eq('is_closed', true).gte('created_at', startUtc).lte('created_at', endUtc),
+      // Fetch production logs for internal yield metrics (kept for kg-level accuracy)
+      const [prod, pur, cashFlowRes, leakageRes, intProdRes, extProdRes, plRes] = await Promise.all([
+        supabase.from('production_logs').select('input_kg, main_output_kg, waste_kg').gte('created_at', startUtc).lte('created_at', endUtc),
         supabase.from('purchases').select('total_amount, category').gte('created_at', startUtc).lte('created_at', endUtc),
-        supabase.from('products').select('id, milling_fee, selling_price, category'),
-        supabase.from('repayments').select('amount').gte('created_at', startUtc).lte('created_at', endUtc)
+        // Revenue splits, cash, M-Pesa, and debt from pre-aggregated view
+        supabase.from('dashboard_daily_cash_flow').select('*').gte('reconciliation_date', startUtc).lte('reconciliation_date', endUtc),
+        // Power leakage from dedicated radar view
+        supabase.from('dashboard_power_leakage_radar').select('*').gte('audit_date', startUtc).lte('audit_date', endUtc).limit(10),
+        // Internal production metrics
+        supabase.from('dashboard_internal_production').select('*').gte('production_date', sDate.toISOString().split('T')[0]).lte('production_date', eDate.toISOString().split('T')[0]),
+        // External milling service metrics
+        supabase.from('dashboard_external_production').select('*').gte('production_date', sDate.toISOString().split('T')[0]).lte('production_date', eDate.toISOString().split('T')[0]),
+        // Monthly P&L for net performance margin
+        supabase.from('dashboard_monthly_pl').select('*').gte('month_date', startUtc).lte('month_date', endUtc)
       ]);
 
-      const products = productsRes.data || [];
-      const salesData = txs.data || [];
-      const totalRepayments = repayRes.data?.reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0;
-
+      // Internal production from production_logs (precise kg-level)
       const intInput = prod.data?.reduce((acc, curr) => acc + Number(curr.input_kg || 0), 0) || 0;
       const intOutput = prod.data?.reduce((acc, curr) => acc + Number(curr.main_output_kg || 0), 0) || 0;
       const intWaste = prod.data?.reduce((acc, curr) => acc + Number(curr.waste_kg || 0), 0) || 0;
 
-      // Classification Logic: Split Milling Service revenue from Retail Sales
-      let millRev = 0;
-      let retailRev = 0;
-      let retailCount = 0;
-
-      salesData.forEach(tx => {
-        const p = products.find(x => x.id === tx.product_id);
-        const pCategory = (p?.category || '').toLowerCase();
-        const txCategory = (tx.transaction_type || '').toLowerCase();
-        
-        // Ensure Service maps to Milling Block
-        if (pCategory === 'service' || pCategory === 'milling' || txCategory === 'service' || txCategory === 'milling') {
-          millRev += Number(tx.total_price || 0);
-        } 
-        // Ensure Retail maps to Retail Block, and fallback "Other" or undefined to Retail
-        else {
-          retailRev += Number(tx.total_price || 0);
-          retailCount++;
-        }
-      });
-
+      // Revenue splits — sourced directly from dashboard_daily_cash_flow view
+      const cashFlowRows = cashFlowRes.data || [];
+      const millRev = cashFlowRows.reduce((acc, r) => acc + (Number(r.total_service_revenue) || 0), 0);
+      const retailRev = cashFlowRows.reduce((acc, r) => acc + (Number(r.total_retail_revenue) || 0), 0);
+      const retailCount = intProdRes.data?.length || 0;
       const totalRev = millRev + retailRev;
 
-      const revSplit = { cash: 0, mpesa: 0, debt: 0 };
-      txs.data?.forEach(t => {
-        if (t.amount_cash !== undefined && t.amount_cash !== null) {
-          revSplit.cash += Number(t.amount_cash || 0);
-          revSplit.mpesa += Number(t.amount_mpesa || 0);
-          revSplit.debt += Number(t.amount_debt || 0);
-        } else {
-          if (t.payment_method === 'Cash') revSplit.cash += t.total_price;
-          else if (t.payment_method === 'M-Pesa') revSplit.mpesa += t.total_price;
-          else if (t.payment_method === 'Debt') revSplit.debt += t.total_price;
-        }
-      });
+      // Cash/M-Pesa/Debt splits from cash flow view columns
+      const revSplitCash = cashFlowRows.reduce((acc, r) => acc + (Number(r.expected_physical_cash) || 0), 0);
+      const revSplitMpesa = cashFlowRows.reduce((acc, r) => acc + (Number(r.expected_mpesa_intake) || 0), 0);
+      const revSplitDebt = cashFlowRows.reduce((acc, r) => acc + (Number(r.total_new_debt_issued) || 0), 0);
+      const totalRepayments = cashFlowRows.reduce((acc, r) => acc + (Number(r.total_debt_collected) || 0), 0);
 
-      let intPower = 0, extPower = 0, totalPowerCost = 0;
-      sess.data?.forEach(s => {
-        const units = Number(s.start_meter || 0) - Number(s.end_meter || s.start_meter || 0);
-        if (s.session_type === 'INTERNAL') intPower += units;
-        else extPower += units;
-        totalPowerCost += Number(s.power_cost) || (units * 25.79);
-      });
+      // Power — sourced from dashboard_power_leakage_radar view (leakage units)
+      const leakageRows = leakageRes.data || [];
+      const leakage = leakageRows.reduce((acc, r) => acc + Math.max(0, Number(r.leakage_kwh) || 0), 0);
 
-      let leakage = 0;
-      if (sess.data && sess.data.length > 0) {
-        const sorted = [...sess.data].sort((a,b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-        const firstStart = Number(sorted[0].start_meter || 0);
-        const lastEnd = Number(sorted[sorted.length - 1].end_meter || sorted[sorted.length - 1].start_meter || 0);
-        const totalMeterDiff = firstStart - lastEnd;
-        const sumUnitsUsed = intPower + extPower;
-        
-        leakage = totalMeterDiff - sumUnitsUsed;
-        if (leakage < 0) leakage = 0; // Guard against weird reverse tracking
-      }
+      // Power units consumed — from external/internal production views
+      const extRows = extProdRes.data || [];
+      const intRows = intProdRes.data || [];
+      const intPower = intRows.reduce((acc, r) => acc + (Number(r.power_consumed_kwh) || 0), 0);
+      const extPower = extRows.reduce((acc, r) => acc + (Number(r.power_consumed_kwh) || 0), 0);
 
+      // Power cost and purchases
+      const totalPowerCost = cashFlowRows.reduce((acc, r) => acc + (Number(r.total_power_cost) || 0), 0);
       const totalPurchases = pur.data?.filter(c => {
         const cat = (c.category || '').toLowerCase();
         return cat.includes('grain') || cat.includes('stock');
       }).reduce((acc, curr) => acc + Number(curr.total_amount || 0), 0) || 0;
+
+      // Net Profit sourced from dashboard_monthly_pl view
+      const netEarnings = (plRes.data || []).reduce((acc, r) => acc + (Number(r.net_profit) || 0), 0);
 
       setStats({
         internal: {
@@ -181,12 +157,12 @@ export default function AuditHub() {
           itemsSold: retailCount
         },
         financials: {
-          cash: revSplit.cash,
-          mpesa: revSplit.mpesa,
-          debt: revSplit.debt - totalRepayments, // Net Debt (Outstanding)
+          cash: revSplitCash,
+          mpesa: revSplitMpesa,
+          debt: revSplitDebt - totalRepayments,
           purchases: totalPurchases,
           powerCost: totalPowerCost,
-          netEarnings: (totalRev - (revSplit.debt - totalRepayments)) - totalPowerCost - totalPurchases
+          netEarnings
         },
         leakageUnits: leakage
       });
@@ -207,6 +183,7 @@ export default function AuditHub() {
     }
     finally { setLoading(false); }
   };
+
 
   useEffect(() => { fetchAuditData(); }, [startDate, endDate]);
 

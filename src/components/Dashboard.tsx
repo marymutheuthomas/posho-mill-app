@@ -97,7 +97,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
           // Monthly P&L View
           supabase.from('dashboard_monthly_pl').select('*').gte('month_date', startIso).lte('month_date', endIso).order('month_date', { ascending: true }),
           // Daily Cash Flow View
-          supabase.from('dashboard_daily_cash_flow').select('*').gte('reconciliation_date', startIso).lte('reconciliation_date', endIso).order('date', { ascending: true }).limit(30),
+          supabase.from('dashboard_daily_cash_flow').select('*').gte('reconciliation_date', startIso).lte('reconciliation_date', endIso).order('reconciliation_date', { ascending: true }).limit(30),
           // Anomaly Radar View
           supabase.from('dashboard_power_leakage_radar').select('*').gte('audit_date', startIso).lte('audit_date', endIso).limit(10),
           // Products Inventory (current levels are live, but fetched alongside)
@@ -179,38 +179,15 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
   const lowStockAlerts = products.filter(p => Number(p.minimum_level) > 0 && Number(p.current_stock) < Number(p.minimum_level)).length;
   const activeProducts = products.filter(p => (p.category || '').toLowerCase() !== 'service' && (p.category || '').toLowerCase() !== 'milling');
 
-  // Sales and collection analytics in Nairobi Node
-  let totalRevenue = 0;
-  let serviceRevenue = 0;
-  let cashFromSales = 0;
+  // Period Cash Inflow — sourced directly from dashboard_daily_cash_flow view (Cash + M-Pesa + Repayments)
+  const cashCollection = cashFlowData.reduce((acc, curr) => acc + (Number(curr.total_liquid_inflow) || 0), 0);
 
-  salesTransactions.forEach(tx => {
-    const p = products.find(prod => prod.id === tx.product_id);
-    const pCategory = (p?.category || '').toLowerCase();
-    const txCategory = (tx.transaction_type || '').toLowerCase();
-    const isService = pCategory === 'service' || pCategory === 'milling' || txCategory === 'service' || txCategory === 'milling';
-    
-    const price = Number(tx.total_price || 0);
-    totalRevenue += price;
-    if (isService) {
-      serviceRevenue += price;
-    }
-    
-    if (tx.amount_cash !== undefined && tx.amount_cash !== null) {
-      cashFromSales += Number(tx.amount_cash);
-    } else if (tx.payment_method === 'Cash') {
-      cashFromSales += price;
-    }
-  });
-
-  const totalRepayments = repayments.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-  const cashCollection = cashFromSales + totalRepayments;
-
-  // Yield calculations in Nairobi Node
+  // Yield calculations from production_logs (precise kg-level accuracy)
   const totalInputKg = productionLogs.reduce((acc, curr) => acc + (Number(curr.input_kg) || 0), 0);
   const totalOutputKg = productionLogs.reduce((acc, curr) => acc + (Number(curr.main_output_kg) || 0), 0);
   const totalWasteKg = productionLogs.reduce((acc, curr) => acc + (Number(curr.waste_kg) || 0), 0);
   const yieldRate = totalInputKg > 0 ? (totalOutputKg / totalInputKg) * 100 : 0;
+  const serviceRevenue = externalProdData.reduce((acc, curr) => acc + (Number(curr.total_service_revenue) ?? 0), 0);
   const burnEfficiency = totalInputKg > 0 ? serviceRevenue / totalInputKg : 0;
 
   // Power Leakage badges and styling
@@ -244,32 +221,26 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
     return acc;
   }, []);
 
-  // Comparison from daily_audits
-  const auditExpectedCash = dailyAuditsData.reduce((acc, curr) => acc + (Number(curr.expected_cash_system) || 0), 0);
-  const auditActualCash = dailyAuditsData.reduce((acc, curr) => acc + (Number(curr.actual_cash_collected) || 0), 0);
-  const auditDiscrepancy = auditActualCash - auditExpectedCash;
+  // Audit Balance — unified liquid expectation (Cash + M-Pesa combined)
+  const auditExpectedLiquid = cashFlowData.reduce((acc, curr) => acc + (Number(curr.expected_liquid_total) || 0), 0);
+  const auditExpectedPhysicalCash = cashFlowData.reduce((acc, curr) => acc + (Number(curr.expected_physical_cash) || 0), 0);
+  const auditExpectedMpesa = cashFlowData.reduce((acc, curr) => acc + (Number(curr.expected_mpesa_intake) || 0), 0);
+  const auditActualCash = cashFlowData.reduce((acc, curr) => acc + (Number(curr.total_cash_collected) || 0), 0);
+  const auditDiscrepancy = auditActualCash - auditExpectedLiquid;
 
   // ── Card 2 Calculations: External Service ──
   const totalExtInputKg = externalProdData.reduce((acc, curr) => acc + (Number(curr.total_input_kg) || 0), 0);
   const totalExtServiceRevenue = externalProdData.reduce((acc, curr) => acc + (Number(curr.total_service_revenue) || 0), 0);
-  const totalExtKwhConsumed = externalProdData.reduce((acc, curr) => acc + ((Number(curr.total_input_kg) || 0) * (Number(curr.power_efficiency_kwh_per_kg) || 0)), 0);
+  const totalExtKwhConsumed = externalProdData.reduce((acc, curr) => acc + (Number(curr.power_consumed_kwh) || 0), 0);
   const avgExtPowerEfficiency = totalExtInputKg > 0 ? (totalExtKwhConsumed / totalExtInputKg) : 0;
 
   // ── Card 3 Calculations: Internal Production & Projected Retail Value ──
   const totalIntNetOutputKg = internalProdData.reduce((acc, curr) => acc + (Number(curr.net_output_kg) || 0), 0);
-  const totalIntKwhConsumed = internalProdData.reduce((acc, curr) => acc + ((Number(curr.net_output_kg) || 0) * (Number(curr.power_efficiency_kwh_per_kg) || 0)), 0);
+  const totalIntKwhConsumed = internalProdData.reduce((acc, curr) => acc + (Number(curr.power_consumed_kwh) || 0), 0);
   const avgIntPowerEfficiency = totalIntNetOutputKg > 0 ? (totalIntKwhConsumed / totalIntNetOutputKg) : 0;
 
-  // Multiply the output kg by the respective product selling prices (fetch from products table)
-  const projectedRetailValue = productionLogs.reduce((acc, log) => {
-    const outputProduct = products.find(p => p.id === log.output_product_id);
-    const byproductProduct = products.find(p => p.id === log.byproduct_id);
-    
-    const outputVal = (Number(log.main_output_kg) || 0) * (Number(outputProduct?.selling_price) || 0);
-    const byproductVal = (Number(log.byproduct_kg) || 0) * (Number(byproductProduct?.selling_price) || 0);
-    
-    return acc + outputVal + byproductVal;
-  }, 0);
+  // Projected Retail Value sourced directly from dashboard_internal_production view column
+  const projectedRetailValue = internalProdData.reduce((acc, row) => acc + (Number(row.projected_retail_value) || 0), 0);
 
   return (
     <div className="max-w-[1400px] mx-auto p-4 md:p-8 space-y-8 min-h-screen bg-[#F8FAFC]">
@@ -496,10 +467,13 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
                 <p className="text-xs font-extrabold text-[#1E3A8A] uppercase tracking-tight">Expected vs Collected</p>
               </div>
               <div className="text-right">
-                {dailyAuditsData.length > 0 ? (
+                {cashFlowData.length > 0 ? (
                   <>
                     <p className="font-mono font-bold text-[#1E3A8A]">
-                      {formatCurrency(auditActualCash)}
+                      {formatCurrency(auditExpectedLiquid)}
+                    </p>
+                    <p className="text-[11px] font-normal text-slate-500 mt-0.5">
+                      Cash: KSh {Math.round(auditExpectedPhysicalCash).toLocaleString()} | M-Pesa: KSh {Math.round(auditExpectedMpesa).toLocaleString()}
                     </p>
                     <p className={`text-[9px] font-black uppercase mt-0.5 ${
                       auditDiscrepancy === 0 ? 'text-emerald-600' :
@@ -646,7 +620,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
               {formatCurrency(cashCollection)}
             </p>
             <p className="text-[9px] font-bold text-slate-400 uppercase">
-              Sales Cash + Repayments ({cashFlowData.length} days reconciled)
+              Sales Cash + M-Pesa + Repayments ({cashFlowData.length} days reconciled)
             </p>
           </div>
         </div>
@@ -833,7 +807,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[9px] font-bold text-slate-500 font-mono">
-                    {new Date(alert.session_date || alert.audit_date || Date.now()).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    {new Date(alert.audit_date || Date.now()).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                   </span>
                   <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${getLeakageBadge(alert.leakage_alert)}`}>
                     {alert.leakage_alert || 'Normal'}

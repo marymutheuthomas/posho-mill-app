@@ -51,7 +51,7 @@ export default function BIDashboard() {
         if (leakages) setLeakageData(leakages);
 
         // Fetch Cash Flow Reconciliation
-        const { data: cashFlow } = await supabase.from('dashboard_daily_cash_flow').select('*').gte('reconciliation_date', startIso).lte('reconciliation_date', endIso).order('date', { ascending: true }).limit(30);
+        const { data: cashFlow } = await supabase.from('dashboard_daily_cash_flow').select('*').gte('reconciliation_date', startIso).lte('reconciliation_date', endIso).order('reconciliation_date', { ascending: true }).limit(30);
         if (cashFlow) setCashFlowData(cashFlow);
 
         // Fetch Production Efficiency
@@ -188,7 +188,7 @@ export default function BIDashboard() {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={cashFlowData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
+                  <XAxis dataKey="reconciliation_date" tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} tickFormatter={(v) => { const d = new Date(v); return isNaN(d.getTime()) ? v : `${d.getDate()}/${d.getMonth()+1}`; }} />
                   <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} tickFormatter={(val) => `KES ${val.toLocaleString()}`} />
                   <Tooltip 
                     contentStyle={{ borderRadius: '12px', border: '1px solid #f1f5f9', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px', fontWeight: 'bold' }} 
@@ -239,7 +239,7 @@ export default function BIDashboard() {
                   <div key={idx} className="flex flex-col p-4 rounded-xl border border-slate-100 bg-slate-50 space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                        {new Date(alert.session_date || new Date()).toLocaleDateString()}
+                      {new Date(alert.audit_date || Date.now()).toLocaleDateString()}
                       </span>
                       <span className={`px-2 py-1 rounded-md text-[8px] font-black uppercase tracking-widest border ${badgeClass}`}>
                         {alert.leakage_alert || 'Unknown Status'}
@@ -300,7 +300,7 @@ export default function BIDashboard() {
                   <div key={idx} className="flex items-center justify-between">
                     <div>
                       <p className="text-xs font-bold text-slate-900 uppercase">Service Efficiency</p>
-                      <p className="text-[9px] font-semibold text-slate-400 uppercase">{new Date(item.session_date).toLocaleDateString()}</p>
+                      <p className="text-[9px] font-semibold text-slate-400 uppercase">{item.production_date ? new Date(item.production_date).toLocaleDateString() : '—'}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-bold font-mono text-emerald-600">{(item.efficiency_score || 0).toFixed(2)}</p>

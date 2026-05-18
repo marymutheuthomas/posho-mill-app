@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useDataMutation } from '../hooks/useDataMutation';
+import { useActiveSession } from '../hooks/useActiveSession';
 
 interface StockTakeProps {
   role: 'ADMIN' | 'EMPLOYEE' | null;
@@ -41,6 +42,8 @@ export default function StockTake({ role }: StockTakeProps) {
   const [editModal, setEditModal] = useState<{ open: boolean; record: StockLog | null }>({ open: false, record: null });
   const [deleteModal, setDeleteModal] = useState<{ open: boolean; record: StockLog | null }>({ open: false, record: null });
   const [editForm, setEditForm] = useState({ physical: 0 });
+
+  const { data: activeSession } = useActiveSession();
 
   const isAdmin = role === 'ADMIN';
 
@@ -335,20 +338,28 @@ export default function StockTake({ role }: StockTakeProps) {
                    </p>
                 </div>
             </div>
-            <button 
-              onClick={submitStockTake}
-              disabled={auditMutation.isPending}
-              className={`w-full md:w-auto h-12 md:h-10 px-8 text-sm md:text-xs font-black rounded-lg flex items-center justify-center gap-3 shadow-md transition-all shrink-0 ${
-                auditMutation.isPending 
-                ? 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-75' 
-                : 'bg-emerald-600 text-white hover:bg-emerald-500'
-              }`}
-            >
-              <CheckCircle size={20} className="shrink-0" />
-              <span>
-                {auditMutation.isPending ? 'SYNCING...' : 'FINALIZE AUDIT'}
-              </span>
-            </button>
+            
+            <div className="flex flex-col items-end gap-2 w-full md:w-auto">
+              {activeSession && (
+                <p className="text-[11px] font-normal text-red-600 bg-red-50 border border-red-100 px-3 py-1.5 rounded-lg w-full text-center">
+                  Cannot perform stock take. Please close all active milling sessions first.
+                </p>
+              )}
+              <button 
+                onClick={submitStockTake}
+                disabled={auditMutation.isPending || !!activeSession}
+                className={`w-full md:w-auto h-12 md:h-10 px-8 text-sm md:text-xs font-black rounded-lg flex items-center justify-center gap-3 shadow-md transition-all shrink-0 ${
+                  auditMutation.isPending || activeSession
+                  ? 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-75 shadow-none' 
+                  : 'bg-emerald-600 text-white hover:bg-emerald-500'
+                }`}
+              >
+                <CheckCircle size={20} className="shrink-0" />
+                <span>
+                  {auditMutation.isPending ? 'SYNCING...' : 'FINALIZE AUDIT'}
+                </span>
+              </button>
+            </div>
           </div>
         </>
       ) : isAdmin ? (

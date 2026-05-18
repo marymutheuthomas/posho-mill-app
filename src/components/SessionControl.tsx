@@ -51,7 +51,7 @@ export default function SessionControl({ role }: SessionControlProps) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('milling_sessions')
-        .select('end_meter, start_meter')
+        .select('end_meter, start_meter, closed_at')
         .eq('is_closed', true)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -63,7 +63,31 @@ export default function SessionControl({ role }: SessionControlProps) {
     refetchInterval: 5000,
   });
 
+  const { data: latestStockTake, isLoading: loadingStockTake } = useQuery({
+    queryKey: ['latest-stock-take'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('stock_take_history')
+        .select('created_at')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    },
+    refetchInterval: 5000,
+  });
+
   const lastEndMeter = lastSessionData ? (lastSessionData.end_meter ?? lastSessionData.start_meter) : 0;
+
+  const isLockedForAudit = () => {
+    if (!lastSessionData || !lastSessionData.closed_at) return false;
+    if (!latestStockTake) return true;
+    return new Date(latestStockTake.created_at) < new Date(lastSessionData.closed_at);
+  };
+
+  const locked = isLockedForAudit();
 
   // —— QUERY 2: Active session ————————————————————————————————————————————
   const { data: activeSession, isLoading: loadingSession } = useQuery({
@@ -142,7 +166,7 @@ export default function SessionControl({ role }: SessionControlProps) {
 
 
 
-  if (loadingSession || loadingLastMeter) {
+  if (loadingSession || loadingLastMeter || loadingStockTake) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
         <RotateCcw className="w-10 h-10 text-slate-300 animate-spin" />
@@ -184,17 +208,33 @@ export default function SessionControl({ role }: SessionControlProps) {
                </div>
 
                {!activeSession ? (
-                  <div className="flex flex-wrap gap-3">
-                     {(['Internal', 'External'] as SessionType[]).map((type) => (
-                        <button
-                           key={type}
-                           onClick={() => setStartModal({ open: true, type: type as any })}
-                           className="flex-1 md:flex-none px-6 md:px-10 py-4 md:py-5 bg-slate-900 text-white rounded-xl md:rounded-2xl font-semibold text-xs md:text-sm uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl active:scale-95"
-                        >
-                           {type}
-                        </button>
-                     ))}
-                  </div>
+                  locked ? (
+                    <div className="flex flex-col gap-3 w-full md:w-auto max-w-sm">
+                      <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-xl">
+                        <p className="text-[11px] font-normal text-red-500 uppercase tracking-widest leading-relaxed">
+                          System Locked: A physical stock take audit must be performed and logged before opening the next milling session.
+                        </p>
+                      </div>
+                      <button
+                         onClick={() => onNavigate && onNavigate('Stock Take')}
+                         className="w-full px-6 py-4 bg-red-600 text-white rounded-xl font-semibold text-xs uppercase tracking-widest hover:bg-red-500 transition-all shadow-xl active:scale-95"
+                      >
+                         Perform Stock Take
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-3">
+                       {(['Internal', 'External'] as SessionType[]).map((type) => (
+                          <button
+                             key={type}
+                             onClick={() => setStartModal({ open: true, type: type as any })}
+                             className="flex-1 md:flex-none px-6 md:px-10 py-4 md:py-5 bg-slate-900 text-white rounded-xl md:rounded-2xl font-semibold text-xs md:text-sm uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl active:scale-95"
+                          >
+                             {type}
+                          </button>
+                       ))}
+                    </div>
+                  )
                ) : (
                   <button
                      onClick={() => setEndModal(true)}
