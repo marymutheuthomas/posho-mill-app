@@ -306,19 +306,19 @@ export default function Purchases() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-             <div className="flex items-center gap-1 bg-white border border-slate-100 p-1 rounded-md shadow-sm">
+             <div className="flex items-center gap-1 max-md:gap-1 bg-white border border-slate-100 p-1 max-md:p-0.5 rounded-md shadow-sm">
                 <input 
                   type="date" 
                   value={dateRange.start} 
                   onChange={e => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                  className="text-[8px] font-semibold uppercase text-slate-500 outline-none bg-transparent w-[85px]"
+                  className="text-[8px] max-md:text-[10px] font-semibold uppercase text-slate-500 outline-none bg-transparent w-[85px]"
                 />
                 <span className="text-slate-300 text-[8px]">/</span>
                 <input 
                   type="date" 
                   value={dateRange.end} 
                   onChange={e => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                  className="text-[8px] font-semibold uppercase text-slate-500 outline-none bg-transparent w-[85px]"
+                  className="text-[8px] max-md:text-[10px] font-semibold uppercase text-slate-500 outline-none bg-transparent w-[85px]"
                 />
                 <button onClick={fetchHistory} className="p-1 hover:bg-slate-50 rounded text-slate-400 hover:text-slate-900 transition-all">
                   <RotateCcw size={11} className={loadingState === 'fetching' ? 'animate-spin' : ''} />
@@ -327,50 +327,50 @@ export default function Purchases() {
           </div>
         </div>
 
-        <div className="overflow-auto max-h-[500px] border-t border-slate-100 p-3">
+        <div className="w-full overflow-auto max-h-[500px] border-t border-slate-100 p-3 max-md:p-2 scrollbar-thin">
           <table className="w-full text-left border-collapse min-w-[650px]">
             <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-200">
-              <tr className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                <th className="px-3 py-2">Date</th>
-                <th className="px-3 py-2">Product</th>
-                <th className="px-3 py-2">Supplier</th>
-                <th className="px-3 py-2">Qty</th>
-                <th className="px-3 py-2">Unit</th>
-                <th className="px-3 py-2">Total</th>
-                <th className="px-3 py-2 text-right">Actions</th>
+              <tr className="text-xs font-semibold text-slate-500 uppercase tracking-wider max-md:text-[11px] max-md:font-medium max-md:tracking-tight bg-slate-50">
+                <th className="px-2 py-1.5 md:px-3 md:py-2 max-md:font-medium">Date</th>
+                <th className="px-2 py-1.5 md:px-3 md:py-2 max-md:font-medium">Product</th>
+                <th className="px-2 py-1.5 md:px-3 md:py-2 max-md:font-medium">Supplier</th>
+                <th className="px-2 py-1.5 md:px-3 md:py-2 max-md:font-medium">Qty</th>
+                <th className="px-2 py-1.5 md:px-3 md:py-2 max-md:font-medium">Unit</th>
+                <th className="px-2 py-1.5 md:px-3 md:py-2 max-md:font-medium">Total</th>
+                <th className="px-2 py-1.5 md:px-3 md:py-2 text-right max-md:font-medium">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
               {history.length === 0 && loadingState !== 'fetching' && (
                 <tr>
-                  <td colSpan={7} className="p-20 text-center text-slate-300 font-semibold uppercase tracking-widest italic text-xs">No records found</td>
+                  <td colSpan={7} className="p-20 text-center text-slate-300 font-semibold uppercase tracking-widest italic text-xs max-md:text-[11px]">No records found</td>
                 </tr>
               )}
               {history.map(p => (
-                <tr key={p.id} className="hover:bg-slate-50/50 transition-colors group text-xs text-slate-650">
-                  <td className="px-3 py-1.5">
-                    <p className="font-medium text-slate-800">{new Date(p.created_at).toLocaleDateString()}</p>
-                    <p className="text-[9px] text-slate-400 uppercase flex items-center gap-1 mt-0.5"><History size={10} className="opacity-40" /> {new Date(p.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                <tr key={p.id} className="hover:bg-slate-50/50 transition-colors group text-xs text-slate-650 max-md:text-[11px]">
+                  <td className="px-2 py-1.5 md:px-3 md:py-1.5 max-md:text-[11px] whitespace-nowrap">
+                    <p className="font-medium max-md:font-normal text-slate-800 max-md:text-[11px]">{new Date(p.created_at).toLocaleDateString()}</p>
+                    <p className="text-[9px] max-md:text-[9px] text-slate-400 uppercase flex items-center gap-1 mt-0.5"><History size={10} className="opacity-40" /> {new Date(p.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
                   </td>
-                  <td className="px-3 py-1.5">
+                  <td className="px-2 py-1.5 md:px-3 md:py-1.5 max-md:text-[11px] whitespace-nowrap">
                     <div className="flex items-center gap-1.5">
                       {p.product_id 
-                        ? <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-100 text-[8px] font-semibold uppercase">Stock</span>
-                        : <span className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 border border-amber-100 text-[8px] font-semibold uppercase">Expense</span>
+                        ? <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-100 text-[8px] font-semibold max-md:font-normal uppercase">Stock</span>
+                        : <span className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 border border-amber-100 text-[8px] font-semibold max-md:font-normal uppercase">Expense</span>
                       }
-                      <span className="font-semibold text-slate-700 uppercase">
+                      <span className="font-semibold max-md:font-normal text-slate-700 uppercase max-md:text-[11px]">
                         {p.product_id ? getProductName(p.product_id) : (p.old_item_name || p.category || '-')}
                       </span>
                     </div>
                   </td>
-                  <td className="px-3 py-1.5 font-medium text-slate-700 uppercase truncate max-w-[120px]">{p.supplier_name || '—'}</td>
-                  <td className="px-3 py-1.5 font-mono text-slate-800">{p.quantity}</td>
-                  <td className="px-3 py-1.5 font-mono text-slate-600">{p.unit_price?.toLocaleString()}</td>
-                  <td className="px-3 py-1.5 font-mono font-medium text-slate-900">KES {p.total_amount?.toLocaleString()}</td>
-                  <td className="px-3 py-1.5 text-right">
+                  <td className="px-2 py-1.5 md:px-3 md:py-1.5 font-medium max-md:font-normal text-slate-700 uppercase truncate max-w-[120px] max-md:text-[11px] whitespace-nowrap">{p.supplier_name || '—'}</td>
+                  <td className="px-2 py-1.5 md:px-3 md:py-1.5 font-mono text-slate-800 max-md:text-[11px] whitespace-nowrap">{p.quantity}</td>
+                  <td className="px-2 py-1.5 md:px-3 md:py-1.5 font-mono text-slate-650 max-md:text-[11px] whitespace-nowrap">{p.unit_price?.toLocaleString()}</td>
+                  <td className="px-2 py-1.5 md:px-3 md:py-1.5 font-mono font-medium max-md:font-normal text-slate-900 max-md:text-[11px] whitespace-nowrap">KES {p.total_amount?.toLocaleString()}</td>
+                  <td className="px-2 py-1.5 md:px-3 md:py-1.5 text-right whitespace-nowrap">
                     <div className="flex justify-end gap-1">
-                      <button onClick={() => openEditModal(p)} className="p-1 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 border border-slate-100 rounded-md transition-all"><Pencil size={11}/></button>
-                      <button onClick={() => setDeleteModal({ open: true, record: p })} className="p-1 bg-red-50 hover:bg-red-100 text-red-655 border border-red-100/50 rounded-md transition-all"><Trash2 size={11}/></button>
+                      <button onClick={() => openEditModal(p)} className="p-1 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 border border-slate-100 rounded-md transition-all"><Pencil size={10}/></button>
+                      <button onClick={() => setDeleteModal({ open: true, record: p })} className="p-1 bg-red-50 hover:bg-red-100 text-red-655 border border-red-100/50 rounded-md transition-all"><Trash2 size={10}/></button>
                     </div>
                   </td>
                 </tr>

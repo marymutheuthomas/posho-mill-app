@@ -100,25 +100,25 @@ export default function MasterDashboard() {
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
       {/* ── Sticky Date Bar ── */}
-      <div className="sticky top-0 z-30 bg-[#F8FAFC]/95 backdrop-blur border-b border-slate-200 px-4 md:px-8 py-3 flex flex-wrap items-center gap-3">
+      <div className="static max-md:transform-none md:sticky md:top-0 z-30 bg-[#F8FAFC]/95 backdrop-blur border-b border-slate-200 px-4 md:px-8 py-3 max-md:p-2 flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-1.5">
           {presets.map(p => (
             <button key={p.label} onClick={p.fn}
-              className="px-3 py-1.5 text-[10px] font-black uppercase tracking-widest bg-white border border-slate-200 text-slate-500 rounded-lg hover:bg-[#1E3A8A] hover:text-white hover:border-[#1E3A8A] transition-all shadow-sm">
+              className="px-3 py-1.5 text-[10px] max-md:text-[10px] font-black uppercase tracking-widest bg-white border border-slate-200 text-slate-500 rounded-lg hover:bg-[#1E3A8A] hover:text-white hover:border-[#1E3A8A] transition-all shadow-sm">
               {p.label}
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-sm ml-auto">
+        <div className="flex items-center gap-2 max-md:gap-1 bg-white border border-slate-200 rounded-xl px-3 py-2 max-md:px-2 max-md:py-1 shadow-sm ml-auto">
           <input type="date" value={format(start, 'yyyy-MM-dd')}
             onChange={e => { const d = new Date(e.target.value); if (!isNaN(d.getTime())) setStart(d); }}
-            className="text-xs font-bold text-slate-700 bg-transparent outline-none cursor-pointer" />
-          <span className="text-slate-300 font-bold text-xs">→</span>
+            className="text-xs max-md:text-[10px] font-bold text-slate-700 bg-transparent outline-none cursor-pointer" />
+          <span className="text-slate-300 font-bold text-xs max-md:text-[10px]">→</span>
           <input type="date" value={format(end, 'yyyy-MM-dd')}
             onChange={e => { const d = new Date(e.target.value); if (!isNaN(d.getTime())) setEnd(d); }}
-            className="text-xs font-bold text-slate-700 bg-transparent outline-none cursor-pointer" />
+            className="text-xs max-md:text-[10px] font-bold text-slate-700 bg-transparent outline-none cursor-pointer" />
         </div>
-        {loading && <span className="text-[10px] font-bold text-[#F59E0B] uppercase tracking-widest animate-pulse">Syncing...</span>}
+        {loading && <span className="text-[10px] max-md:text-[10px] font-bold text-[#F59E0B] uppercase tracking-widest animate-pulse">Syncing...</span>}
       </div>
 
       <div className="max-w-[1440px] mx-auto px-4 md:px-8 py-6 space-y-6">

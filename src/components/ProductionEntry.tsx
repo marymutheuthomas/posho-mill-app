@@ -253,7 +253,7 @@ export default function ProductionEntry() {
                           type="date" 
                           value={backdate}
                           onChange={e => setBackdate(e.target.value)}
-                          className="text-[10px] font-semibold text-slate-900 bg-white border border-slate-200 px-3 py-1.5 rounded-lg outline-none cursor-pointer"
+                          className="text-[10px] max-md:text-[10px] font-semibold text-slate-900 bg-white border border-slate-200 px-3 py-1.5 max-md:px-2 max-md:py-1 rounded-lg outline-none cursor-pointer"
                         />
                       </div>
                       <div className="relative group">
@@ -374,50 +374,49 @@ export default function ProductionEntry() {
               </p>
             </div>
           </div>
-        </div>
-        <div className="overflow-x-auto overflow-y-auto max-h-[500px] p-3">
-          <table className="w-full text-left border-collapse">
+        </div>        <div className="w-full overflow-x-auto overflow-y-auto max-h-[500px] scrollbar-thin p-3 max-md:p-2">
+          <table className="w-full text-left border-collapse min-w-[500px]">
             <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-200">
-              <tr className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                <th className="px-3 py-2">Date / Time</th>
-                <th className="px-3 py-2">Input</th>
-                <th className="px-3 py-2">Main Output</th>
-                <th className="px-3 py-2">Status</th>
+              <tr className="text-xs font-semibold text-slate-500 uppercase tracking-wider max-md:text-[11px] max-md:font-medium max-md:tracking-tight bg-slate-50">
+                <th className="px-2 py-1.5 md:px-3 md:py-2 max-md:font-medium">Date / Time</th>
+                <th className="px-2 py-1.5 md:px-3 md:py-2 max-md:font-medium">Input</th>
+                <th className="px-2 py-1.5 md:px-3 md:py-2 max-md:font-medium">Main Output</th>
+                <th className="px-2 py-1.5 md:px-3 md:py-2 max-md:font-medium">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
               {logs.map((log, index) => (
-                <tr key={log.id || index} className="hover:bg-slate-50/50 transition-colors group text-xs text-slate-650">
-                  <td className="px-3 py-1.5">
-                    <p className="font-medium text-slate-800">{new Date(log.created_at).toLocaleDateString()}</p>
-                    <p className="text-[9px] text-slate-400 uppercase flex items-center gap-1 mt-0.5"><Scale size={10} className="opacity-40" /> {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                <tr key={log.id || index} className="hover:bg-slate-50/50 transition-colors group text-xs text-slate-650 max-md:text-[11px] max-md:font-normal">
+                  <td className="px-2 py-1.5 md:px-3 md:py-1.5 max-md:text-[11px] whitespace-nowrap">
+                    <p className="font-medium max-md:font-normal text-slate-800 max-md:text-[11px]">{new Date(log.created_at).toLocaleDateString()}</p>
+                    <p className="text-[9px] max-md:text-[9px] text-slate-400 uppercase flex items-center gap-1 mt-0.5"><Scale size={10} className="opacity-40" /> {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                   </td>
-                  <td className="px-3 py-1.5 font-mono text-slate-650">
+                  <td className="px-2 py-1.5 md:px-3 md:py-1.5 font-mono text-slate-650 max-md:text-[11px] whitespace-nowrap">
                     <div className="flex items-center gap-1">
                       <ArrowDownRight size={12} className="text-rose-500 animate-pulse" />
                       <span>{log.input_kg.toLocaleString()} kg</span>
                     </div>
                   </td>
-                  <td className="px-3 py-1.5 font-mono">
+                  <td className="px-2 py-1.5 md:px-3 md:py-1.5 font-mono max-md:text-[11px] whitespace-nowrap">
                     <div className="flex items-center gap-1">
                       <ArrowUpRight size={12} className="text-emerald-500" />
                       <div>
-                        <span className="text-slate-800 font-medium">{log.main_output_kg.toLocaleString()} kg</span>
-                        <p className="text-[9px] font-medium text-slate-400 uppercase tracking-tight font-sans mt-0.5">{log.products?.product_code} · {log.products?.name}</p>
+                        <span className="text-slate-800 font-medium max-md:font-normal max-md:text-[11px]">{log.main_output_kg.toLocaleString()} kg</span>
+                        <p className="text-[9px] max-md:text-[9px] font-medium max-md:font-normal text-slate-400 uppercase tracking-tight font-sans mt-0.5">{log.products?.product_code} · {log.products?.name}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-3 py-1.5">
+                  <td className="px-2 py-1.5 md:px-3 md:py-1.5 max-md:text-[11px] whitespace-nowrap">
                     <div className="flex items-center gap-1">
                       <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                      <span className="text-[9px] font-medium text-slate-400 uppercase tracking-wider">Synced</span>
+                      <span className="text-[9px] max-md:text-[9px] font-medium max-md:font-normal text-slate-400 uppercase tracking-wider">Synced</span>
                     </div>
                   </td>
                 </tr>
               ))}
               {logs.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-slate-450 font-medium uppercase tracking-wider text-xs italic">No production recorded</td>
+                  <td colSpan={4} className="px-6 py-12 text-center text-slate-450 font-medium uppercase tracking-wider text-xs italic max-md:text-[11px]">No production recorded</td>
                 </tr>
               )}
             </tbody>

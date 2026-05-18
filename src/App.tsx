@@ -239,9 +239,13 @@ function App() {
         <header className="sticky top-0 z-40 h-12 md:h-20 bg-white/90 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-4 md:px-10 shrink-0 shadow-sm">
           
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center shadow-md md:hidden shrink-0">
+            <button 
+              onClick={() => setIsDrawerOpen(true)}
+              className="w-8 h-8 bg-slate-900 hover:bg-slate-800 rounded-lg flex items-center justify-center shadow-md md:hidden shrink-0 active:scale-95 transition-all"
+              title="Open Drawer Menu"
+            >
               <Zap className="text-white" size={16} />
-            </div>
+            </button>
             <div className="hidden md:flex lg:flex items-center gap-2 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
                <span>Mill Console</span>
                <ChevronRight size={12} />

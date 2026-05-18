@@ -21,6 +21,7 @@ interface DebtRecord {
 export default function DebtLedger() {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   
@@ -223,6 +224,12 @@ export default function DebtLedger() {
     (d.customer_phone || '').includes(searchTerm)
   );
 
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(filteredDebts.length / itemsPerPage) || 1;
+  const validCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const startIndex = (validCurrentPage - 1) * itemsPerPage;
+  const paginatedDebts = filteredDebts.slice(startIndex, startIndex + itemsPerPage);
+
   const totalDebtExposure = debts.reduce((acc, curr) => acc + (curr.current_balance || 0), 0);
 
   return (
@@ -251,7 +258,7 @@ export default function DebtLedger() {
               type="text" 
               placeholder="Filter profiles..." 
               value={searchTerm} 
-              onChange={e => setSearchTerm(e.target.value)}
+              onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
               autoComplete="off" 
               autoCorrect="off"
               className="w-full pl-12 pr-4 h-12 rounded-xl border border-slate-200 bg-slate-50/50 text-base font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder-slate-400" 
@@ -271,35 +278,35 @@ export default function DebtLedger() {
           {/* LEFT & CENTER PANELS: Uncollapsed Responsive Flex Rows List */}
           <div className="lg:col-span-2 space-y-4">
             
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden p-3">
-              <div className="overflow-x-auto w-full">
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden p-3 max-md:p-2">
+              <div className="w-full overflow-x-auto scrollbar-thin">
                 <table className="w-full text-left border-collapse min-w-[700px]">
                   <thead className="bg-slate-50 border-b border-slate-200">
-                    <tr className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-                      <th className="px-3 py-2">Customer Details</th>
-                      <th className="px-3 py-2 text-right w-24">Borrowed</th>
-                      <th className="px-3 py-2 text-right w-24">Repaid</th>
-                      <th className="px-3 py-2 text-right w-28">Balance</th>
-                      <th className="px-3 py-2 text-center w-40">Actions</th>
+                    <tr className="text-xs font-semibold uppercase tracking-wider text-slate-500 bg-slate-50 border-b border-slate-200 max-md:text-[11px] max-md:font-medium max-md:tracking-tight">
+                      <th className="px-2 py-1.5 md:px-4 md:py-3 max-md:font-medium">Customer Details</th>
+                      <th className="px-2 py-1.5 md:px-4 md:py-3 text-right w-24 max-md:font-medium">Borrowed</th>
+                      <th className="px-2 py-1.5 md:px-4 md:py-3 text-right w-24 max-md:font-medium">Repaid</th>
+                      <th className="px-2 py-1.5 md:px-4 md:py-3 text-right w-28 max-md:font-medium">Balance</th>
+                      <th className="px-2 py-1.5 md:px-4 md:py-3 text-center w-40 max-md:font-medium">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 bg-white">
-                    {filteredDebts.map(d => {
+                    {paginatedDebts.map(d => {
                       const isSelected = d.id === selectedCustomerId;
                       return (
                         <tr 
                           key={d.id} 
-                          className={`hover:bg-slate-50/50 transition-colors text-xs text-slate-650 ${isSelected ? 'bg-amber-50/20' : ''}`}
+                          className={`hover:bg-slate-50/50 transition-colors text-xs text-slate-600 max-md:text-[11px] max-md:font-normal ${isSelected ? 'bg-amber-50/20' : ''}`}
                         >
                           {/* Client details */}
-                          <td className="px-3 py-2">
+                          <td className="px-2 py-1.5 md:px-4 md:py-3 whitespace-nowrap max-md:text-[11px]">
                             <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 bg-slate-50 border border-slate-100 rounded-full flex items-center justify-center text-slate-400 shrink-0">
+                              <div className="w-6 h-6 bg-slate-50 border border-slate-100 rounded-full flex items-center justify-center text-slate-400 shrink-0 max-md:w-5 max-md:h-5">
                                 <UserIcon size={12} />
                               </div>
                               <div>
-                                <p className="font-medium text-slate-800 uppercase tracking-tight leading-none">{d.customer_name}</p>
-                                <span className="text-[10px] text-slate-400 block mt-0.5 leading-none">
+                                <p className="font-medium max-md:font-normal text-slate-800 uppercase tracking-tight leading-none max-md:text-[11px]">{d.customer_name}</p>
+                                <span className="text-[10px] max-md:text-[9px] text-slate-400 block mt-0.5 leading-none">
                                   {d.customer_phone || 'No Phone'}
                                 </span>
                               </div>
@@ -307,22 +314,22 @@ export default function DebtLedger() {
                           </td>
 
                           {/* Borrowed */}
-                          <td className="px-3 py-2 text-right font-normal text-slate-600 font-mono">
+                          <td className="px-2 py-1.5 md:px-4 md:py-3 whitespace-nowrap text-right font-normal max-md:font-normal text-slate-650 font-mono max-md:text-[11px]">
                             KSh {d.original_debt?.toLocaleString()}
                           </td>
 
                           {/* Repaid */}
-                          <td className="px-3 py-2 text-right font-normal text-emerald-600 font-mono">
+                          <td className="px-2 py-1.5 md:px-4 md:py-3 whitespace-nowrap text-right font-normal max-md:font-normal text-emerald-600 font-mono max-md:text-[11px]">
                             KSh {d.amount_paid?.toLocaleString()}
                           </td>
 
                           {/* Balance */}
-                          <td className="px-3 py-2 text-right font-medium text-rose-600 font-mono">
+                          <td className="px-2 py-1.5 md:px-4 md:py-3 whitespace-nowrap text-right font-medium max-md:font-normal text-rose-600 font-mono max-md:text-[11px]">
                             KSh {(d.current_balance || 0).toLocaleString()}
                           </td>
 
                           {/* Actions */}
-                          <td className="px-3 py-2">
+                          <td className="px-2 py-1.5 md:px-4 md:py-3 whitespace-nowrap max-md:text-[11px]">
                             <div className="flex items-center justify-center gap-1.5">
                               <button 
                                 onClick={() => openEditModal(d)} 
@@ -340,7 +347,7 @@ export default function DebtLedger() {
                               </button>
                               <button 
                                 onClick={() => { setSelectedCustomerId(d.id); setFormError(null); }} 
-                                className={`px-2.5 h-7 rounded-lg text-[10px] font-semibold uppercase tracking-wider transition-all flex items-center justify-center gap-1 shadow-sm shrink-0 ${isSelected ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'bg-slate-900 hover:bg-emerald-600 text-white'}`}
+                                className={`px-2.5 h-7 rounded-lg text-[10px] font-semibold uppercase tracking-wider transition-all flex items-center justify-center gap-1 shadow-sm shrink-0 max-md:text-[9px] max-md:font-normal ${isSelected ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'bg-slate-900 hover:bg-emerald-600 text-white'}`}
                               >
                                 <ArrowUpCircle size={12} /> {isSelected ? 'Selected' : 'Select'}
                               </button>
@@ -352,7 +359,7 @@ export default function DebtLedger() {
 
                     {filteredDebts.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="p-10 text-center text-slate-400 font-medium uppercase tracking-wider text-xs italic">
+                        <td colSpan={5} className="p-10 text-center text-slate-400 font-medium uppercase tracking-wider text-xs italic max-md:text-[11px]">
                           No accounts match your filters
                         </td>
                       </tr>
@@ -360,6 +367,34 @@ export default function DebtLedger() {
                   </tbody>
                 </table>
               </div>
+
+              {/* Pagination Matrix for Debt Ledger */}
+              {filteredDebts.length > 0 && (
+                <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-4 shrink-0 rounded-b-2xl mt-3">
+                  <span className="text-[11px] text-slate-500 font-medium">
+                    Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredDebts.length)} of {filteredDebts.length} entries
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      disabled={validCurrentPage === 1}
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      className="px-2 py-1 text-[10px] font-semibold text-slate-600 bg-white border border-slate-200 rounded-md hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    >
+                      Previous
+                    </button>
+                    <span className="text-[10px] text-slate-500 font-semibold px-1">
+                      Page {validCurrentPage} of {totalPages}
+                    </span>
+                    <button
+                      disabled={validCurrentPage === totalPages}
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      className="px-2 py-1 text-[10px] font-semibold text-slate-600 bg-white border border-slate-200 rounded-md hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
           </div>

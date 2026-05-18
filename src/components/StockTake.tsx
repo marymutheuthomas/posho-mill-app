@@ -252,7 +252,7 @@ export default function StockTake({ role }: StockTakeProps) {
                    type="date" 
                    value={targetDate} 
                    onChange={e => setTargetDate(e.target.value)}
-                   className="text-[11px] font-semibold text-slate-900 bg-white border border-slate-200 px-3 py-1.5 rounded-lg outline-none cursor-pointer shadow-sm"
+                   className="text-[11px] max-md:text-[10px] font-semibold text-slate-900 bg-white border border-slate-200 px-3 py-1.5 max-md:px-2 max-md:py-1 rounded-lg outline-none cursor-pointer shadow-sm"
                  />
                </div>
                <div className="flex items-center gap-2 text-[9px] font-semibold text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-100 uppercase">
@@ -362,37 +362,37 @@ export default function StockTake({ role }: StockTakeProps) {
                  </div>
               </div>
            </div>
-            <div className="overflow-x-auto whitespace-nowrap">
+            <div className="w-full overflow-x-auto whitespace-nowrap scrollbar-thin">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                    <th className="px-3 py-2">Date / Time</th>
-                    <th className="px-3 py-2">Item Name</th>
-                    <th className="px-3 py-2">System Record</th>
-                    <th className="px-3 py-2">Physical Entry</th>
-                    <th className="px-3 py-2 text-right">Discrepancy</th>
-                    <th className="px-3 py-2 text-right">Actions</th>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider max-md:text-[11px] max-md:font-medium max-md:tracking-tight bg-slate-50">
+                    <th className="px-2 py-1.5 md:px-3 md:py-2 max-md:font-medium">Date / Time</th>
+                    <th className="px-2 py-1.5 md:px-3 md:py-2 max-md:font-medium">Item Name</th>
+                    <th className="px-2 py-1.5 md:px-3 md:py-2 max-md:font-medium">System Record</th>
+                    <th className="px-2 py-1.5 md:px-3 md:py-2 max-md:font-medium">Physical Entry</th>
+                    <th className="px-2 py-1.5 md:px-3 md:py-2 text-right max-md:font-medium">Discrepancy</th>
+                    <th className="px-2 py-1.5 md:px-3 md:py-2 text-right max-md:font-medium">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {history.map(log => (
-                    <tr key={log.id} className="hover:bg-slate-50/50 transition-colors group text-xs text-slate-650">
-                      <td className="px-3 py-1.5">
-                        <p className="font-medium text-slate-800">{new Date(log.created_at).toLocaleDateString()}</p>
-                        <p className="text-[9px] text-slate-400 uppercase flex items-center gap-1 mt-0.5"><Clock size={10}/> {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                    <tr key={log.id} className="hover:bg-slate-50/50 transition-colors group text-xs text-slate-650 max-md:text-[11px] max-md:font-normal">
+                      <td className="px-2 py-1.5 md:px-3 md:py-1.5 max-md:text-[11px] whitespace-nowrap">
+                        <p className="font-medium max-md:font-normal text-slate-800 max-md:text-[11px]">{new Date(log.created_at).toLocaleDateString()}</p>
+                        <p className="text-[9px] max-md:text-[9px] text-slate-400 uppercase flex items-center gap-1 mt-0.5"><Clock size={10}/> {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                       </td>
-                      <td className="px-3 py-1.5 font-medium text-slate-700 uppercase">{log.product_name}</td>
-                      <td className="px-3 py-1.5 font-mono text-slate-600">{log.system_stock.toLocaleString()} kg</td>
-                      <td className="px-3 py-1.5 font-mono text-slate-800">{log.physical_stock.toLocaleString()} kg</td>
-                      <td className="px-3 py-1.5 text-right font-mono">
-                        <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${log.discrepancy < 0 ? 'bg-red-50 text-red-600 border border-red-100/50' : log.discrepancy > 0 ? 'bg-emerald-50 text-emerald-600 border border-emerald-100/50' : 'bg-slate-50 text-slate-400 border border-slate-100/50'}`}>
+                      <td className="px-2 py-1.5 md:px-3 md:py-1.5 font-medium max-md:font-normal text-slate-700 uppercase max-md:text-[11px] whitespace-nowrap">{log.product_name}</td>
+                      <td className="px-2 py-1.5 md:px-3 md:py-1.5 font-mono text-slate-600 max-md:text-[11px] whitespace-nowrap">{log.system_stock.toLocaleString()} kg</td>
+                      <td className="px-2 py-1.5 md:px-3 md:py-1.5 font-mono text-slate-800 max-md:text-[11px] whitespace-nowrap">{log.physical_stock.toLocaleString()} kg</td>
+                      <td className="px-2 py-1.5 md:px-3 md:py-1.5 text-right font-mono max-md:text-[11px] whitespace-nowrap">
+                        <span className={`px-2 py-0.5 rounded text-[11px] font-semibold max-md:font-normal ${log.discrepancy < 0 ? 'bg-red-50 text-red-600 border border-red-100/50' : log.discrepancy > 0 ? 'bg-emerald-50 text-emerald-600 border border-emerald-100/50' : 'bg-slate-50 text-slate-400 border border-slate-100/50'} max-md:text-[11px]`}>
                           {log.discrepancy > 0 ? `+${log.discrepancy.toLocaleString()}` : log.discrepancy.toLocaleString()} kg
                         </span>
                       </td>
-                      <td className="px-3 py-1.5">
+                      <td className="px-2 py-1.5 md:px-3 md:py-1.5 whitespace-nowrap">
                          <div className="flex justify-center gap-1">
-                            <button onClick={() => { setEditForm({ physical: log.physical_stock }); setEditModal({ open: true, record: log }); }} className="p-1 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 border border-slate-100 rounded-md transition-all"><Pencil size={12}/></button>
-                            <button onClick={() => setDeleteModal({ open: true, record: log })} className="p-1 bg-red-50 hover:bg-red-100 text-red-600 border border-red-100/50 rounded-md transition-all"><Trash2 size={12}/></button>
+                            <button onClick={() => { setEditForm({ physical: log.physical_stock }); setEditModal({ open: true, record: log }); }} className="p-1 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 border border-slate-100 rounded-md transition-all"><Pencil size={10}/></button>
+                            <button onClick={() => setDeleteModal({ open: true, record: log })} className="p-1 bg-red-50 hover:bg-red-100 text-red-600 border border-red-100/50 rounded-md transition-all"><Trash2 size={10}/></button>
                          </div>
                       </td>
                     </tr>
@@ -404,7 +404,7 @@ export default function StockTake({ role }: StockTakeProps) {
                   )}
                 </tbody>
               </table>
-           </div>
+            </div>
 
         </div>
       ) : (

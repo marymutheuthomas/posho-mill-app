@@ -252,22 +252,22 @@ export default function AuditHub() {
              <p className="text-[10px] md:text-xs font-medium text-slate-400 uppercase tracking-widest">Financial P&L Oversight</p>
           </div>
           <div className="flex flex-col items-start md:items-end gap-3">
-            <div className="flex items-center gap-2 p-1 bg-slate-100 border border-slate-200 rounded-xl w-full md:w-auto">
+            <div className="flex items-center gap-2 max-md:gap-1 p-1 bg-slate-100 border border-slate-200 rounded-xl w-full md:w-auto">
               {(['today', 'week', 'month'] as const).map(p => (
-                <button key={p} onClick={() => setDatePreset(p)} className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-[10px] font-semibold uppercase tracking-widest transition-all ${preset === p ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-700'}`}>
+                <button key={p} onClick={() => setDatePreset(p)} className={`flex-1 md:flex-none px-6 py-2 max-md:px-2 max-md:py-1 rounded-lg text-[10px] max-md:text-[10px] font-semibold uppercase tracking-widest transition-all ${preset === p ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-700'}`}>
                   {p}
                 </button>
               ))}
             </div>
-            <div className="flex items-center gap-2 w-full md:w-auto">
-               <div className="flex-1 md:flex-none flex items-center gap-2 bg-white border border-slate-200 px-3 py-2 rounded-xl shadow-sm">
+            <div className="flex items-center gap-2 max-md:gap-1 w-full md:w-auto">
+               <div className="flex-1 md:flex-none flex items-center gap-2 max-md:gap-1 bg-white border border-slate-200 px-3 py-2 max-md:px-1.5 max-md:py-1 rounded-xl shadow-sm">
                   <Calendar size={14} className="text-slate-400" />
-                  <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="text-[11px] font-semibold text-slate-900 border-none p-0 focus:ring-0 w-full" />
+                  <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="text-[11px] max-md:text-[10px] font-semibold text-slate-900 border-none p-0 focus:ring-0 w-full" />
                </div>
-               <span className="text-slate-300 font-bold">→</span>
-               <div className="flex-1 md:flex-none flex items-center gap-2 bg-white border border-slate-200 px-3 py-2 rounded-xl shadow-sm">
+               <span className="text-slate-300 font-bold max-md:text-[10px]">→</span>
+               <div className="flex-1 md:flex-none flex items-center gap-2 max-md:gap-1 bg-white border border-slate-200 px-3 py-2 max-md:px-1.5 max-md:py-1 rounded-xl shadow-sm">
                   <Calendar size={14} className="text-slate-400" />
-                  <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="text-[11px] font-semibold text-slate-900 border-none p-0 focus:ring-0 w-full" />
+                  <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="text-[11px] max-md:text-[10px] font-semibold text-slate-900 border-none p-0 focus:ring-0 w-full" />
                </div>
             </div>
           </div>

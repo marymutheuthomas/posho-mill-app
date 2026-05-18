@@ -218,7 +218,7 @@ export default function AdminDashboard() {
                        <select className="bg-gray-50 border border-gray-100 rounded-2xl px-4 py-4 font-bold" value={expenseForm.category} onChange={e => setExpenseForm({...expenseForm, category: e.target.value})}>
                           <option value="Rent">Rent</option><option value="Wages">Wages</option><option value="Repair">Repair</option><option value="Other">Other</option>
                        </select>
-                       <input type="date" className="bg-gray-50 border border-gray-100 rounded-2xl px-4 font-bold" value={expenseForm.date} onChange={e => setExpenseForm({...expenseForm, date: e.target.value})}/>
+                       <input type="date" className="bg-gray-50 border border-gray-100 rounded-2xl px-4 max-md:px-2 max-md:py-1 max-md:text-[10px] font-bold" value={expenseForm.date} onChange={e => setExpenseForm({...expenseForm, date: e.target.value})}/>
                     </div>
                     <input type="number" required placeholder="Amount KES" className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-5 text-4xl font-black" value={expenseForm.amount} onChange={e => setExpenseForm({...expenseForm, amount: e.target.value})}/>
                     <div className="flex gap-4 pt-10">
