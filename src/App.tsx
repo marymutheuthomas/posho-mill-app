@@ -3,9 +3,9 @@ import {
   LayoutDashboard, Activity, ShieldCheck, Factory, 
   ShoppingCart, BookOpen, Settings as SettingsIcon, Lock,
   Wifi, WifiOff, Menu, X,
-  Zap, ShoppingBag, Search, User, ChevronRight
+  Zap, ShoppingBag, Search, User, ChevronRight, Landmark
 } from 'lucide-react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useActiveSession } from './hooks/useActiveSession';
 import { supabase } from './lib/supabase';
 import { db } from './lib/db';
@@ -14,6 +14,7 @@ import ProductionEntry from './components/ProductionEntry';
 import Purchases from './components/Purchases';
 import ServicePOS from './components/ServicePOS';
 import AuditHub from './components/AuditHub';
+import MasterDashboard from './components/MasterDashboard';
 import SessionControl from './components/SessionControl';
 import DebtLedger from './components/DebtLedger';
 import StockTake from './components/StockTake';
@@ -89,7 +90,7 @@ function App() {
     setActiveSessionType(activeSession?.session_type as any || null);
   }, [activeSession]);
 
-  const { data: unclosedPrevSession } = useQuery({
+  useQuery({
     queryKey: ['unclosed-prev-session'],
     queryFn: async () => {
       const today = new Date();
@@ -103,8 +104,8 @@ function App() {
     }
   });
 
-  const isAfter6AM = new Date().getHours() >= 6;
-  const showMorningRecovery = isAfter6AM && !!unclosedPrevSession;
+  // Temporarily disable the morning recovery banner
+  const showMorningRecovery = false;
 
   const showNotification = (msg: string) => {
     setNotification(msg);
@@ -317,8 +318,8 @@ function App() {
         {/* CONTENT SCROLL AREA */}
         <div className="flex-1 overflow-y-auto px-4 py-6 md:p-10 pb-32 md:pb-10 custom-scrollbar">
           {activeTab === 'Dashboard'        && <Dashboard onNavigate={setActiveTab} role={user.role} isOnline={isOnline} pendingCount={pendingCount} />}
-          {activeTab === 'Session Control'  && <SessionControl onNavigate={setActiveTab} isOnline={isOnline} pendingCount={pendingCount} />}
-          {activeTab === 'Insights & Audit' && <AuditHub />}
+          {activeTab === 'Session Control'  && <SessionControl onNavigate={setActiveTab} role={user.role} isOnline={isOnline} pendingCount={pendingCount} />}
+          {activeTab === 'Insights & Audit' && <MasterDashboard />}
           {activeTab === 'Production Hub'   && <ProductionEntry />}
           {activeTab === 'Point of Sale'     && <ServicePOS role={user.role} />}
           {activeTab === 'Debt Ledger'      && <DebtLedger />}

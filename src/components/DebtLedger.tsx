@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { 
-  User as UserIcon, Wallet, ArrowUpCircle, History, 
+  User as UserIcon, ArrowUpCircle, History, 
   CheckCircle, AlertTriangle, Search, UserPlus, 
-  Activity, Pencil, Trash2, X, Phone
+  Activity, Pencil, Trash2, X, Phone, Notebook, Landmark
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useDataMutation } from '../hooks/useDataMutation';
@@ -11,10 +11,11 @@ import { useDataMutation } from '../hooks/useDataMutation';
 interface DebtRecord {
   id: string;
   customer_name: string;
-  customer_phone: string;
+  customer_phone: string | null;
   original_debt: number;
   amount_paid: number;
-  updated_at: string;
+  current_balance: number;
+  last_transaction_date: string;
 }
 
 export default function DebtLedger() {
@@ -23,77 +24,29 @@ export default function DebtLedger() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   
-  const [repayModal, setRepayModal] = useState<{ open: boolean; customer: DebtRecord | null }>({ open: false, customer: null });
-  const [repayAmount, setRepayAmount] = useState('');
+  // Side-by-side selection target
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState<string>('');
+  const [paymentNotes, setPaymentNotes] = useState<string>('');
+  const [formError, setFormError] = useState<string | null>(null);
 
-  // Modal States
+  // Modal States for Customer Administration
   const [newCustomerModal, setNewCustomerModal] = useState(false);
   const [newCustomer, setNewCustomer] = useState({ name: '', phone: '' });
   const [editModal, setEditModal] = useState<{ open: boolean; customer: DebtRecord | null }>({ open: false, customer: null });
   const [deleteModal, setDeleteModal] = useState<{ open: boolean; customer: DebtRecord | null }>({ open: false, customer: null });
   const [editForm, setEditForm] = useState({ name: '', phone: '', debt: 0 });
 
-  // 1. Unified Debt Registry Query
+  // 1. Fetch data from our pristine database view
   const { data: debts = [], isLoading: loading } = useQuery({
     queryKey: ['debts'],
     queryFn: async () => {
-      const [salesRes, dbRes] = await Promise.all([
-        supabase.from('sales_transactions').select('customer_name, total_price, payment_method, amount_debt').in('payment_method', ['Debt', 'Credit']),
-        supabase.from('debt_book').select('*')
-      ]);
+      const { data, error } = await supabase
+        .from('customer_debt_summary')
+        .select('*');
 
-      if (dbRes.error) throw dbRes.error;
-
-      let debtMap = new Map<string, DebtRecord>();
-
-      // Sum raw sales
-      if (salesRes.data) {
-        salesRes.data.forEach(tx => {
-          if (!tx.customer_name || tx.customer_name.toLowerCase().includes('walk-in')) return;
-          const key = tx.customer_name.toLowerCase().trim();
-          if (!debtMap.has(key)) {
-            debtMap.set(key, {
-              id: 'raw-' + crypto.randomUUID(),
-              customer_name: tx.customer_name,
-              customer_phone: 'Unregistered',
-              original_debt: 0,
-              amount_paid: 0,
-              updated_at: new Date().toISOString()
-            });
-          }
-          const rec = debtMap.get(key)!;
-          if (tx.amount_debt !== undefined && tx.amount_debt !== null) {
-            rec.original_debt += Number(tx.amount_debt);
-          } else {
-            rec.original_debt += Number(tx.total_price || 0);
-          }
-        });
-      }
-
-      // Merge with registry
-      (dbRes.data || []).forEach(d => {
-        const key = (d.customer_name || '').toLowerCase().trim();
-        if (!key) return;
-        if (debtMap.has(key)) {
-          const rec = debtMap.get(key)!;
-          rec.id = d.id;
-          rec.customer_phone = d.customer_phone || rec.customer_phone;
-          rec.original_debt = Math.max(rec.original_debt, Number(d.original_debt || 0));
-          rec.amount_paid = Number(d.amount_paid || 0);
-          rec.updated_at = d.updated_at;
-        } else {
-          debtMap.set(key, {
-            id: d.id,
-            customer_name: d.customer_name,
-            customer_phone: d.customer_phone || 'N/A',
-            original_debt: Number(d.original_debt || 0),
-            amount_paid: Number(d.amount_paid || 0),
-            updated_at: d.updated_at || new Date().toISOString()
-          });
-        }
-      });
-
-      return Array.from(debtMap.values()).sort((a,b) => a.customer_name.localeCompare(b.customer_name));
+      if (error) throw error;
+      return (data || []).sort((a, b) => (a.customer_name || '').localeCompare(b.customer_name || '')) as DebtRecord[];
     },
     staleTime: 1000 * 60 * 5,
     meta: {
@@ -107,12 +60,15 @@ export default function DebtLedger() {
     }
   });
 
-  // 2. Mutations (Offline-First)
+  const activeCustomer = debts.find(d => d.id === selectedCustomerId);
+
+  // 2. Offline-First Registry & Repay Mutations
   const addCustomerMutation = useDataMutation({
-    type: 'repayment' as any,
+    type: 'repayment' as any, // queued correctly in pendings
     queryKey: ['debts'],
-    mutationFn: async (payload) => {
-      const { data, error } = await supabase.from('debt_book').insert([payload]).select();
+    mutationFn: async (payload: any) => {
+      const { recorded_by, ...cleanPayload } = payload;
+      const { data, error } = await supabase.from('debt_book').insert([cleanPayload]).select();
       if (error) throw error;
       return data;
     },
@@ -137,14 +93,23 @@ export default function DebtLedger() {
 
   const repayMutation = useDataMutation({
     type: 'repayment',
-    queryKey: ['debts'],
-    mutationFn: async ({ customer_name, amount_paid }: any) => {
+    queryKey: ['repayments'],
+    mutationFn: async (payload: { customer_id: string; amount: number; notes: string }) => {
+      // Explicitly construct a fresh, plain object literal
+      const networkPayload = {
+        customer_id: payload.customer_id,
+        amount: Number(payload.amount),
+        notes: payload.notes || ''
+      };
+
+      // Force remove any ghost keys that might be hiding in the object prototype or state tracking
+      delete (networkPayload as any).customer_name;
+      delete (networkPayload as any).customer_phone;
+
+      // Execute the call with the absolutely stripped payload
       const { data, error } = await supabase
         .from('repayments')
-        .insert([{ 
-          customer_name: customer_name.toUpperCase().trim(), 
-          amount_paid: Number(amount_paid) 
-        }])
+        .insert([networkPayload])
         .select();
       if (error) throw error;
       return data;
@@ -155,16 +120,16 @@ export default function DebtLedger() {
       } else {
         setSuccess('Repayment recorded and synced.');
       }
-      setRepayModal({ open: false, customer: null });
-      setRepayAmount('');
+      setSelectedCustomerId(null);
+      setPaymentAmount('');
+      setPaymentNotes('');
+      setFormError(null);
       queryClient.invalidateQueries({ queryKey: ['debts'] });
+      queryClient.invalidateQueries({ queryKey: ['debt_book'] });
+      queryClient.invalidateQueries({ queryKey: ['repayments'] });
     },
     onError: (err: any) => {
-      if (err.code === '42501' || err.code === 'PGRST116') {
-        setError('Access Restricted: You do not have permission to record repayments.');
-      } else {
-        setError(err.message || 'Repayment failed.');
-      }
+      setFormError(err.message || 'An error occurred updating the ledger.');
     }
   });
 
@@ -189,6 +154,7 @@ export default function DebtLedger() {
     onSuccess: () => {
       setSuccess('Record deleted.');
       setDeleteModal({ open: false, customer: null });
+      setSelectedCustomerId(null);
       queryClient.invalidateQueries({ queryKey: ['debts'] });
     },
     onError: (err: any) => setError(err.message)
@@ -210,18 +176,31 @@ export default function DebtLedger() {
     });
   };
 
-  const handleRepayment = () => {
-    if (!repayModal.customer || !repayAmount) return;
-    const amount = parseFloat(repayAmount);
-    if (isNaN(amount) || amount <= 0) return;
+  const handlePaymentSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCustomerId || !paymentAmount) return;
+    setFormError(null);
+
+    const amount = parseFloat(paymentAmount);
+    if (isNaN(amount) || amount <= 0) {
+      setFormError('Please enter a valid monetary amount.');
+      return;
+    }
+
+    if (activeCustomer && amount > activeCustomer.current_balance) {
+      setFormError(`Payment exceeds outstanding balance of KES ${(activeCustomer.current_balance || 0).toLocaleString()}`);
+      return;
+    }
+
     repayMutation.mutate({
-      customer_name: repayModal.customer.customer_name,
-      amount_paid: amount
+      customer_id: selectedCustomerId,
+      amount: amount,
+      notes: paymentNotes.trim()
     });
   };
 
   const openEditModal = (customer: DebtRecord) => {
-    setEditForm({ name: customer.customer_name, phone: customer.customer_phone, debt: customer.original_debt });
+    setEditForm({ name: customer.customer_name, phone: customer.customer_phone || '', debt: customer.original_debt });
     setEditModal({ open: true, customer });
   };
 
@@ -241,193 +220,291 @@ export default function DebtLedger() {
 
   const filteredDebts = debts.filter(d => 
     d.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    d.customer_phone.includes(searchTerm)
+    (d.customer_phone || '').includes(searchTerm)
   );
 
-  const totalDebtExposure = debts.reduce((acc, curr) => acc + (curr.original_debt - curr.amount_paid), 0);
+  const totalDebtExposure = debts.reduce((acc, curr) => acc + (curr.current_balance || 0), 0);
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-          <Activity size={12} className="animate-pulse" />
-          Total Exposure: KES {totalDebtExposure.toLocaleString()}
+    <div className="max-w-7xl mx-auto space-y-6 p-3 sm:p-6 overflow-x-hidden animate-in fade-in duration-300">
+      
+      {/* Top Exposure & Controls Ribbon */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 md:p-6 rounded-2xl border border-slate-100 shadow-sm">
+        <div className="space-y-1.5">
+          <div className="bg-red-50 border border-red-100 text-red-700 px-3 py-1.5 rounded-xl text-xs font-semibold uppercase tracking-wider flex items-center gap-2 w-fit">
+            <Activity size={14} className="animate-pulse" />
+            Total Outstanding Balance: KSh {totalDebtExposure.toLocaleString()}
+          </div>
+          <h2 className="text-xl font-medium text-slate-900 tracking-tight mt-1 uppercase">Master Debt Registry</h2>
+          <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Synchronized with Supabase Ledger Engine</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3">
-          <button onClick={() => setNewCustomerModal(true)} className="mill-btn-primary px-6 py-2.5 text-[10px] flex items-center justify-center gap-2 rounded-xl">
-            <UserPlus size={16} /> NEW CUSTOMER
+          <button 
+            onClick={() => setNewCustomerModal(true)} 
+            className="px-5 py-3 text-sm font-medium uppercase tracking-wide bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-white flex items-center justify-center gap-2 rounded-xl transition-all shadow-sm h-12"
+          >
+            <UserPlus size={18} /> REGISTER CUSTOMER
           </button>
           <div className="relative w-full sm:w-72">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
-            <input type="text" placeholder="Filter customers..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-              autoComplete="off" autoCorrect="off"
-              className="mill-input w-full pl-12 h-[52px]" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <input 
+              type="text" 
+              placeholder="Filter profiles..." 
+              value={searchTerm} 
+              onChange={e => setSearchTerm(e.target.value)}
+              autoComplete="off" 
+              autoCorrect="off"
+              className="w-full pl-12 pr-4 h-12 rounded-xl border border-slate-200 bg-slate-50/50 text-base font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder-slate-400" 
+            />
           </div>
         </div>
       </div>
 
-      {error && <div className="bg-red-600 text-white p-4 rounded-xl font-black flex items-center gap-3 shadow-lg"><AlertTriangle size={20}/>{error}</div>}
-      {success && <div className="bg-emerald-50 border-2 border-emerald-200 text-emerald-900 p-4 rounded-xl font-bold flex items-center gap-3"><CheckCircle size={20}/>{success}</div>}
+      {error && <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded-xl font-medium flex items-center gap-3"><AlertTriangle size={20} className="text-red-600 flex-shrink-0" />{error}</div>}
+      {success && <div className="bg-emerald-50 border border-emerald-200 text-emerald-950 p-4 rounded-xl font-medium flex items-center gap-3"><CheckCircle size={20} className="text-emerald-600 flex-shrink-0" />{success}</div>}
 
       {loading ? (
-        <div className="p-20 text-center font-black text-slate-300 animate-pulse">Syncing Ledger...</div>
+        <div className="p-20 text-center font-normal text-slate-400 animate-pulse uppercase tracking-widest text-sm">Syncing Ledger...</div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredDebts.map(d => {
-            const currentBalance = d.original_debt - d.amount_paid;
-            return (
-              <div key={d.id} className="mill-card p-6 flex flex-col justify-between hover:border-mill-primary transition-all">
-                <div className="space-y-4">
-                  <div className="flex justify-between items-start">
-                    <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center">
-                      <UserIcon size={18} className="text-slate-400" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          {/* LEFT & CENTER PANELS: Uncollapsed Responsive Flex Rows List */}
+          <div className="lg:col-span-2 space-y-4">
+            
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden divide-y divide-slate-100">
+              {/* Header Label for Registry list */}
+              <div className="hidden sm:flex items-center justify-between px-6 py-4 bg-slate-50/50 border-b border-slate-100">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Customer Details</span>
+                <div className="flex items-center gap-12 pr-28">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 w-16 text-right">Borrowed</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 w-16 text-right">Repaid</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 w-20 text-right">Balance</span>
+                </div>
+              </div>
+
+              {filteredDebts.map(d => {
+                const isSelected = d.id === selectedCustomerId;
+                return (
+                  <div 
+                    key={d.id} 
+                    className={`flex flex-wrap items-center justify-between gap-4 p-4 md:p-5 hover:bg-slate-50/30 transition-colors ${isSelected ? 'bg-amber-50/15 border-l-4 border-amber-500' : ''}`}
+                  >
+                    {/* Left side: Client details */}
+                    <div className="flex items-center gap-3 min-w-[200px] flex-1">
+                      <div className="w-11 h-11 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center text-slate-400">
+                        <UserIcon size={18} />
+                      </div>
+                      <div className="space-y-0.5">
+                        <h4 className="text-base font-medium text-slate-800 uppercase tracking-tight leading-none">{d.customer_name}</h4>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-normal text-slate-400">{d.customer_phone || 'No Phone'}</span>
+                          {d.customer_phone && d.customer_phone !== 'Unregistered' && (
+                            <a 
+                              href={`tel:${d.customer_phone}`} 
+                              className="text-emerald-600 hover:text-emerald-700 transition-colors" 
+                              title="Call Customer"
+                            >
+                              <Phone size={13} fill="currentColor" className="opacity-80" />
+                            </a>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className={`text-[13px] font-black ${currentBalance > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                        KES {currentBalance.toLocaleString()}
-                      </p>
+
+                    {/* Center details: Financial metrics */}
+                    <div className="flex flex-wrap items-center gap-4 sm:gap-8 text-right min-w-[260px] sm:min-w-fit flex-1 justify-between sm:justify-end">
+                      <div className="space-y-0.5">
+                        <span className="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider sm:hidden">Borrowed</span>
+                        <span className="text-sm font-normal text-slate-600">KSh {d.original_debt?.toLocaleString()}</span>
+                      </div>
+                      <div className="space-y-0.5">
+                        <span className="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider sm:hidden">Repaid</span>
+                        <span className="text-sm font-normal text-emerald-600">KSh {d.amount_paid?.toLocaleString()}</span>
+                      </div>
+                      <div className="space-y-0.5">
+                        <span className="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider sm:hidden">Balance</span>
+                        <span className="text-sm font-medium text-rose-600">KSh {(d.current_balance || 0).toLocaleString()}</span>
+                      </div>
                     </div>
+
+                    {/* Right side: Action touch targets */}
+                    <div className="flex items-center gap-2 min-w-[170px] justify-end">
+                      <button 
+                        onClick={() => openEditModal(d)} 
+                        className="h-11 w-11 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 border border-slate-100 rounded-xl transition-all flex items-center justify-center" 
+                        title="Edit Account"
+                      >
+                        <Pencil size={15} />
+                      </button>
+                      <button 
+                        onClick={() => setDeleteModal({ open: true, customer: d })} 
+                        className="h-11 w-11 bg-red-50 hover:bg-red-100 text-red-600 border border-red-100/50 rounded-xl transition-all flex items-center justify-center" 
+                        title="Delete Record"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                      <button 
+                        onClick={() => { setSelectedCustomerId(d.id); setFormError(null); }} 
+                        className={`px-4 h-11 rounded-xl text-xs font-medium uppercase transition-all flex items-center justify-center gap-1.5 shadow-sm ${isSelected ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'bg-slate-900 hover:bg-emerald-600 text-white'}`}
+                      >
+                        <ArrowUpCircle size={15} /> {isSelected ? 'Selected' : 'Select'}
+                      </button>
+                    </div>
+
+                    {/* Collapsed mobile row helper */}
+                    <div className="w-full pt-2 border-t border-slate-50 flex items-center gap-1.5 text-slate-400 sm:hidden">
+                      <History size={12} />
+                      <span className="text-[10px] font-medium uppercase tracking-tighter">
+                        Last Active: {d.last_transaction_date ? new Date(d.last_transaction_date).toLocaleDateString() : 'No Activity'}
+                      </span>
+                    </div>
+
                   </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-900 uppercase">{d.customer_name}</h3>
-                    <div className="flex items-center gap-3 mt-1">
-                      <p className="text-[10px] font-medium text-slate-400 tracking-widest">{d.customer_phone}</p>
-                      {d.customer_phone && d.customer_phone !== 'Unregistered' && (
-                        <a 
-                          href={`tel:${d.customer_phone}`}
-                          className="w-8 h-8 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
-                          title="Call Customer"
-                        >
-                          <Phone size={14} fill="currentColor" className="opacity-80" />
-                        </a>
-                      )}
-                    </div>
+                );
+              })}
+
+              {filteredDebts.length === 0 && (
+                <div className="p-16 text-center text-slate-400 font-medium uppercase tracking-wider text-xs italic">
+                  No accounts match your filters
+                </div>
+              )}
+            </div>
+
+          </div>
+
+          {/* RIGHT PANEL: Secure Payment Collector Form */}
+          <div className="bg-white rounded-2xl border border-slate-100 p-5 md:p-6 shadow-sm h-fit space-y-5">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-wider flex items-center gap-2 pb-3 border-b border-slate-50">
+                <Landmark className="text-emerald-600" size={18} /> Collect Repayment
+              </h3>
+            </div>
+
+            {activeCustomer ? (
+              <form onSubmit={handlePaymentSubmit} className="space-y-4">
+                
+                {/* Account Details Banner */}
+                <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Active Profile</span>
+                    <span className="text-xs font-normal text-slate-500">{activeCustomer.customer_phone || 'Unregistered Phone'}</span>
                   </div>
-                  <div className="flex items-center gap-2 pt-2 border-t border-slate-50">
-                    <History size={12} className="text-slate-300" />
-                    <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-tighter">Active: {d.updated_at ? new Date(d.updated_at).toLocaleDateString() : 'No activity'}</p>
+                  <h4 className="text-base font-semibold text-slate-900 uppercase tracking-tight">{activeCustomer.customer_name}</h4>
+                  <div className="flex justify-between pt-2 border-t border-slate-100">
+                    <span className="text-[10px] font-medium text-slate-400 uppercase">Outstanding Balance</span>
+                    <span className="text-sm font-semibold text-rose-600">KSh {(activeCustomer.current_balance || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="text-[9px] font-medium text-slate-400 uppercase pt-0.5">
+                    Last Transaction: {activeCustomer.last_transaction_date ? new Date(activeCustomer.last_transaction_date).toLocaleDateString() : 'No Recent Records'}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 pt-4 border-t border-slate-50">
-                  {!d.id.startsWith('raw-') && (
-                    <>
-                      <button onClick={() => openEditModal(d)} className="p-3 bg-slate-100 text-slate-600 rounded-xl"><Pencil size={16}/></button>
-                      <button onClick={() => setDeleteModal({ open: true, customer: d })} className="p-3 bg-red-50 text-red-600 rounded-xl"><Trash2 size={16}/></button>
-                    </>
-                  )}
-                  <button onClick={() => setRepayModal({ open: true, customer: d })} className="flex-1 bg-slate-900 text-white py-3.5 rounded-xl text-[10px] font-semibold uppercase shadow-lg hover:bg-emerald-600 transition-all flex items-center justify-center gap-2">
-                    <ArrowUpCircle size={16} /> Pay
-                  </button>
+                {/* Amount Input */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider ml-1">Repayment Amount (KES)</label>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    value={paymentAmount}
+                    onChange={(e) => setPaymentAmount(e.target.value)}
+                    className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder-slate-300"
+                    required
+                  />
+                </div>
+
+                {/* Notes Input */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider ml-1">Transaction Notes</label>
+                  <textarea
+                    placeholder="Reference, receipt no, details..."
+                    value={paymentNotes}
+                    onChange={(e) => setPaymentNotes(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 text-base font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder-slate-300 h-20 resize-none"
+                  />
+                </div>
+
+                {formError && (
+                  <div className="p-3 bg-red-50 text-red-800 text-xs font-medium rounded-xl border border-red-100 flex items-center gap-2">
+                    <AlertTriangle size={14} className="text-red-600 flex-shrink-0" /> {formError}
+                  </div>
+                )}
+
+                {/* Submit Action */}
+                <button
+                  type="submit"
+                  disabled={repayMutation.isPending}
+                  className="w-full bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-white font-medium h-12 rounded-xl transition-all shadow-sm text-xs uppercase tracking-wider disabled:bg-slate-200 disabled:text-slate-400"
+                >
+                  {repayMutation.isPending ? 'Syncing Ledger Records...' : 'Post Secure Payment'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedCustomerId(null)}
+                  className="w-full h-11 text-slate-400 hover:text-slate-600 text-xs font-medium uppercase tracking-wider transition-all"
+                >
+                  Cancel Collection
+                </button>
+              </form>
+            ) : (
+              <div className="text-center py-12 px-4 border border-dashed border-slate-200 rounded-2xl space-y-3">
+                <div className="w-12 h-12 bg-slate-50 border border-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto">
+                  <Notebook size={20} />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-slate-700 uppercase tracking-wider">No Profile Selected</p>
+                  <p className="text-[10px] text-slate-400 font-normal leading-relaxed max-w-[200px] mx-auto">
+                    Select a customer from the master registry to record repayments safely.
+                  </p>
                 </div>
               </div>
-            );
-          })}
+            )}
+          </div>
+
         </div>
       )}
 
-      {/* Desktop Table View */}
-      <div className="hidden lg:block bg-white rounded-2xl border border-slate-100 overflow-hidden mt-8 shadow-sm">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="bg-slate-50/50">
-              <th className="px-10 py-6 text-[10px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Customer</th>
-              <th className="px-10 py-6 text-[10px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Borrowed</th>
-              <th className="px-10 py-6 text-[10px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Repaid</th>
-              <th className="px-10 py-6 text-[10px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Clearance</th>
-              <th className="px-10 py-6 text-[10px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Balance</th>
-              <th className="px-10 py-6 text-[10px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Last Payment</th>
-              <th className="px-10 py-6 text-[10px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {filteredDebts.map(d => (
-              <tr key={d.id} className="hover:bg-slate-50/50 transition-colors group">
-                <td className="px-10 py-6">
-                  <p className="text-sm font-semibold text-slate-900 uppercase">{d.customer_name}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <p className="text-[10px] text-slate-400 font-medium">{d.customer_phone}</p>
-                    {d.customer_phone && d.customer_phone !== 'Unregistered' && (
-                      <a 
-                        href={`tel:${d.customer_phone}`}
-                        className="text-emerald-600 hover:text-emerald-700 transition-colors"
-                        title="Call Customer"
-                      >
-                        <Phone size={12} fill="currentColor" />
-                      </a>
-                    )}
-                  </div>
-                </td>
-                <td className="px-10 py-6">
-                  <p className="text-sm font-black text-slate-900">KES {d.original_debt?.toLocaleString()}</p>
-                </td>
-                <td className="px-10 py-6">
-                  <p className="text-sm font-black text-emerald-600">KES {d.amount_paid?.toLocaleString()}</p>
-                </td>
-                <td className="px-10 py-6 w-48">
-                  <div className="flex items-center gap-3">
-                     <div className="flex-1 bg-slate-100 h-2 rounded-full overflow-hidden">
-                        <div className="bg-emerald-500 h-full transition-all" style={{ width: `${Math.min(100, (d.amount_paid/(d.original_debt||1))*100)}%` }}></div>
-                     </div>
-                  </div>
-                </td>
-                <td className="px-10 py-6">
-                  <p className={`text-[11px] font-black ${(d.original_debt - d.amount_paid) > 0 ? 'text-red-600' : 'text-slate-900'}`}>KES {(d.original_debt - d.amount_paid).toLocaleString()}</p>
-                </td>
-                <td className="px-10 py-6">
-                  <p className="text-[10px] font-black text-slate-500">{new Date(d.updated_at).toLocaleDateString()}</p>
-                </td>
-                <td className="px-10 py-6 text-right">
-                  <div className="flex items-center justify-end gap-2">
-                     {!d.id.startsWith('raw-') && (
-                       <>
-                         <button onClick={() => openEditModal(d)} className="p-2.5 bg-slate-100 text-slate-400 hover:text-slate-900 hover:bg-slate-200 rounded-xl transition-all" title="Edit">
-                           <Pencil size={16} />
-                         </button>
-                         <button onClick={() => setDeleteModal({ open: true, customer: d })} className="p-2.5 bg-red-50 text-red-400 hover:text-red-600 hover:bg-red-100 rounded-xl transition-all" title="Delete">
-                           <Trash2 size={16} />
-                         </button>
-                       </>
-                     )}
-                     <button onClick={() => setRepayModal({ open: true, customer: d })}
-                      className="bg-slate-900 text-white px-4 py-2.5 rounded-xl text-[10px] font-black uppercase shadow-lg hover:bg-emerald-600 transition-all">
-                      Record Payment
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
       {/* New Customer Modal */}
       {newCustomerModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-6">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-200">
-            <div className="p-8 space-y-6">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200">
+            <div className="p-6 space-y-6">
               <div className="text-center">
-                <div className="w-16 h-16 bg-slate-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <UserPlus className="text-white" size={32} />
+                <div className="w-14 h-14 bg-slate-50 border border-slate-100 text-slate-700 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <UserPlus size={24} />
                 </div>
-                <h3 className="text-xl font-black text-mill-text uppercase tracking-tight">Register Customer</h3>
-                <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Add to Debt Book Registry</p>
+                <h3 className="text-lg font-medium text-slate-900 uppercase tracking-tight">Register Customer</h3>
+                <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest mt-1">Add to Debt Book Registry</p>
               </div>
 
               <form onSubmit={handleAddCustomer} className="space-y-4">
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Full Name</label>
-                  <input type="text" required value={newCustomer.name} onChange={e => setNewCustomer({...newCustomer, name: e.target.value})} placeholder="e.g. MAMA SARAH"
-                    className="mill-input w-full" autoFocus />
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider ml-1">Full Name</label>
+                  <input 
+                    type="text" 
+                    required 
+                    value={newCustomer.name} 
+                    onChange={e => setNewCustomer({...newCustomer, name: e.target.value})} 
+                    placeholder="e.g. MAMA SARAH"
+                    className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder-slate-300" 
+                    autoFocus 
+                  />
                 </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Phone Number</label>
-                  <input type="text" required value={newCustomer.phone} onChange={e => setNewCustomer({...newCustomer, phone: e.target.value})} placeholder="0712..."
-                    className="mill-input w-full" />
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider ml-1">Phone Number</label>
+                  <input 
+                    type="text" 
+                    required 
+                    value={newCustomer.phone} 
+                    onChange={e => setNewCustomer({...newCustomer, phone: e.target.value})} 
+                    placeholder="e.g. 0712345678"
+                    className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder-slate-300" 
+                  />
                 </div>
-                <div className="flex gap-4 pt-4">
-                  <button type="button" onClick={() => setNewCustomerModal(false)} className="flex-1 py-4 font-black text-xs uppercase text-slate-400">CANCEL</button>
-                  <button type="submit" disabled={addCustomerMutation.isPending} className="mill-btn-primary flex-1 py-4 text-xs uppercase tracking-widest">
+                <div className="flex gap-4 pt-3">
+                  <button type="button" onClick={() => setNewCustomerModal(false)} className="flex-1 h-12 font-medium text-xs uppercase text-slate-400 hover:text-slate-600 transition-colors">CANCEL</button>
+                  <button type="submit" disabled={addCustomerMutation.isPending} className="flex-1 bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-white font-medium h-12 rounded-xl text-xs uppercase tracking-wider transition-all">
                     {addCustomerMutation.isPending ? 'REGISTERING...' : 'REGISTER'}
                   </button>
                 </div>
@@ -437,64 +514,49 @@ export default function DebtLedger() {
         </div>
       )}
 
-      {/* Repayment Modal */}
-      {repayModal.open && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-6">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-200">
-            <div className="p-8 space-y-6">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Wallet className="text-emerald-500" size={32} />
-                </div>
-                <h3 className="text-xl font-black text-mill-text uppercase tracking-tight">Debt Repayment</h3>
-                <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">{repayModal.customer?.customer_name}</p>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Repayment Amount (KES)</label>
-                  <input type="number" 
-                    inputMode="decimal" autoComplete="off" autoCorrect="off"
-                    value={repayAmount} onChange={e => setRepayAmount(e.target.value)} placeholder="0.00"
-                    className="mill-input w-full text-3xl font-black py-6 border-slate-200" autoFocus />
-                </div>
-              </div>
-
-              <div className="flex gap-4 pt-4">
-                <button onClick={() => setRepayModal({ open: false, customer: null })} className="flex-1 py-4 font-black text-xs uppercase text-slate-400">CANCEL</button>
-                <button onClick={handleRepayment} disabled={repayMutation.isPending} className="mill-btn-primary flex-1 py-4 text-xs uppercase tracking-widest">
-                  {repayMutation.isPending ? 'PROCESSING...' : 'CONFIRM PAYMENT'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
       {/* EDIT CUSTOMER MODAL */}
       {editModal.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="p-8 bg-slate-900 text-white flex justify-between items-center">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-100">
+            <div className="p-6 bg-slate-900 text-white flex justify-between items-center">
               <div>
-                <h3 className="text-xl font-black uppercase tracking-tighter">Edit Account</h3>
-                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">Update Registry Details</p>
+                <h3 className="text-lg font-medium uppercase tracking-tight">Edit Account</h3>
+                <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest mt-1">Update Registry Details</p>
               </div>
               <button onClick={() => setEditModal({ open: false, customer: null })} className="p-2 hover:bg-white/10 rounded-full transition-all"><X size={20}/></button>
             </div>
-            <form onSubmit={handleEditCustomer} className="p-8 space-y-6">
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Customer Name</label>
-                <input required type="text" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} className="mill-input w-full font-bold uppercase" />
+            <form onSubmit={handleEditCustomer} className="p-6 space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider ml-1">Customer Name</label>
+                <input 
+                  required 
+                  type="text" 
+                  value={editForm.name} 
+                  onChange={e => setEditForm({...editForm, name: e.target.value})} 
+                  className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all uppercase" 
+                />
               </div>
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Phone Number</label>
-                <input required type="text" value={editForm.phone} onChange={e => setEditForm({...editForm, phone: e.target.value})} className="mill-input w-full font-bold" />
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider ml-1">Phone Number</label>
+                <input 
+                  required 
+                  type="text" 
+                  value={editForm.phone} 
+                  onChange={e => setEditForm({...editForm, phone: e.target.value})} 
+                  className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" 
+                />
               </div>
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Original Debt (Base Balance)</label>
-                <input required type="number" value={editForm.debt} onChange={e => setEditForm({...editForm, debt: parseFloat(e.target.value)})} className="mill-input w-full font-bold" />
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider ml-1">Original Debt (Base Balance)</label>
+                <input 
+                  required 
+                  type="number" 
+                  value={editForm.debt} 
+                  onChange={e => setEditForm({...editForm, debt: parseFloat(e.target.value)})} 
+                  className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" 
+                />
               </div>
-              <button type="submit" disabled={editMutation.isPending} className="mill-btn-primary w-full py-4 uppercase font-black tracking-widest shadow-xl">
+              <button type="submit" disabled={editMutation.isPending} className="w-full bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-white font-medium h-12 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md mt-2">
                 {editMutation.isPending ? 'SAVING CHANGES...' : '✓ SAVE UPDATES'}
               </button>
             </form>
@@ -505,19 +567,19 @@ export default function DebtLedger() {
       {/* DELETE CONFIRMATION MODAL */}
       {deleteModal.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="p-8 bg-red-600 text-white text-center">
-              <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <AlertTriangle size={32} />
+          <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-100">
+            <div className="p-6 bg-red-50 text-center border-b border-red-100">
+              <div className="w-14 h-14 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                <AlertTriangle size={28} />
               </div>
-              <h3 className="text-xl font-black uppercase tracking-tighter">Confirm Deletion</h3>
-              <p className="text-xs text-red-100 font-bold uppercase mt-1 leading-relaxed">
-                Are you sure you want to delete <span className="font-black text-white">{deleteModal.customer?.customer_name}</span>? This action cannot be undone.
+              <h3 className="text-lg font-medium text-red-950 uppercase tracking-tight">Confirm Deletion</h3>
+              <p className="text-xs text-red-700 font-normal mt-1 leading-relaxed">
+                Are you sure you want to delete <span className="font-semibold text-red-950">{deleteModal.customer?.customer_name}</span>? This action cannot be undone.
               </p>
             </div>
-            <div className="p-6 grid grid-cols-2 gap-4">
-              <button onClick={() => setDeleteModal({ open: false, customer: null })} className="py-4 rounded-xl bg-slate-100 text-slate-600 font-black text-xs uppercase hover:bg-slate-200 transition-all">Cancel</button>
-              <button onClick={handleDeleteCustomer} disabled={deleteMutation.isPending} className="py-4 rounded-xl bg-red-600 text-white font-black text-xs uppercase hover:bg-red-700 transition-all shadow-lg shadow-red-200">
+            <div className="p-4 grid grid-cols-2 gap-3 bg-slate-50/50">
+              <button onClick={() => setDeleteModal({ open: false, customer: null })} className="h-12 rounded-xl bg-white border border-slate-200 text-slate-500 font-medium text-xs uppercase hover:bg-slate-100 transition-all">Cancel</button>
+              <button onClick={handleDeleteCustomer} disabled={deleteMutation.isPending} className="h-12 rounded-xl bg-red-600 text-white font-medium text-xs uppercase hover:bg-red-700 transition-all shadow-sm">
                 {deleteMutation.isPending ? 'DELETING...' : 'YES, DELETE'}
               </button>
             </div>

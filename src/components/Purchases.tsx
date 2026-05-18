@@ -2,12 +2,22 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { withRetry } from '../lib/network';
 import { Package, User as UserIcon, RotateCcw, History, CheckCircle, AlertCircle, Pencil, Trash2, X, DollarSign } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
-const CATEGORIES = ['Maize Grain', 'Sacks', 'Fuel', 'Maintenance', 'Other'];
 type SyncStatus = 'pending' | 'synced' | 'failed';
+type PurchaseMode = 'restock' | 'expense';
+
+interface Product {
+  id: string;
+  name: string;
+  product_code: string;
+}
+
 interface PurchaseRecord { 
   id: string; 
-  category: string; 
+  product_id: string | null;
+  old_item_name?: string | null;
+  category?: string | null;
   quantity: number; 
   unit_price: number;
   total_amount: number; 
@@ -15,36 +25,64 @@ interface PurchaseRecord {
   created_at: string;
   status?: SyncStatus; 
 }
+
+const EXPENSE_CATEGORIES = ['Salary Payment', 'Electricity Bill', 'Mill Repair & Maintenance', 'Grease / Lubricants', 'Airtime & Internet', 'Packing Bags', 'Others'];
+
 type LoadingState = 'idle' | 'saving' | 'fetching';
 
 export default function Purchases() {
+  const queryClient = useQueryClient();
   const [loadingState, setLoadingState] = useState<LoadingState>('idle');
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [history, setHistory] = useState<PurchaseRecord[]>([]);
-  const [formData, setFormData] = useState({ category: '', qtyReceived: '', unitPrice: '', supplierName: '' });
+  const [mode, setMode] = useState<PurchaseMode>('restock');
+  const [formData, setFormData] = useState({ product_id: '', expenseDesc: '', expenseCategory: '', qtyReceived: '', unitPrice: '', supplierName: '' });
+
+  const handleModeChange = (m: PurchaseMode) => {
+    setMode(m);
+    setFormData(prev => ({ ...prev, product_id: '', expenseDesc: '', expenseCategory: '' }));
+  };
   const [dateRange, setDateRange] = useState({
     start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     end: new Date().toISOString().split('T')[0]
   });
 
+  // Fetch Products for the Dropdown
+  const { data: allProducts = [] } = useQuery({
+    queryKey: ['products'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('products').select('id, name, product_code').order('name');
+      if (error) throw error;
+      return data as Product[];
+    }
+  });
+
+  const getProductName = (pid: string) => {
+    return allProducts.find(p => p.id === pid)?.name || 'Unknown Item';
+  };
+
+  /** Single source of truth for display name in table rows and modals */
+  const getRecordLabel = (p: PurchaseRecord) =>
+    p.product_id ? getProductName(p.product_id) : (p.old_item_name || p.category || '—');
+
   // Admin Actions
-  const [editModal, setEditModal] = useState<{ open: boolean; record: PurchaseRecord | null }>({ open: false, record: null });
+  const [editModal, setEditModal] = useState<{ open: boolean; record: PurchaseRecord | null; mode: PurchaseMode }>({ open: false, record: null, mode: 'restock' });
   const [deleteModal, setDeleteModal] = useState<{ open: boolean; record: PurchaseRecord | null }>({ open: false, record: null });
-  const [editForm, setEditForm] = useState({ category: '', qty: 0, price: 0, supplier: '' });
+  const [editForm, setEditForm] = useState({ product_id: '', expenseDesc: '', expenseCategory: '', qty: 0, price: 0, supplier: '' });
 
   const fetchHistory = async () => {
     setLoadingState('fetching');
     try {
       const { data, error: fetchErr } = await supabase
         .from('purchases')
-        .select('*')
+        .select(`*`)
         .gte('created_at', `${dateRange.start}T00:00:00`)
         .lte('created_at', `${dateRange.end}T23:59:59`)
         .order('created_at', { ascending: false });
       
       if (fetchErr) throw fetchErr;
-      setHistory((data as PurchaseRecord[]) || []);
+      setHistory((data || []) as PurchaseRecord[]);
     } catch (err: any) {
       console.error('Fetch Error:', err.message);
     } finally {
@@ -52,76 +90,71 @@ export default function Purchases() {
     }
   };
 
+  // Re-fetch whenever the date range changes
   useEffect(() => {
     fetchHistory();
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dateRange.start, dateRange.end]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault(); setError(''); setSuccessMsg('');
+    
+    if (mode === 'restock' && !formData.product_id) {
+      setError('Please select a valid product.');
+      return;
+    }
+    if (mode === 'expense' && !formData.expenseDesc.trim()) {
+      setError('Please enter an expense description.');
+      return;
+    }
+
     const qty = parseFloat(formData.qtyReceived || '1');
     const price = parseFloat(formData.unitPrice || '0');
     const total_amount = qty * price;
     
-    // SCHEMA CHECK: Using customer_name instead of supplier_name as requested
-    const payload = { 
-      category: formData.category, 
-      quantity: qty, 
-      unit_price: price, 
-      total_amount, 
-      supplier_name: formData.supplierName 
-    };
+    const payload = mode === 'restock'
+      ? { product_id: formData.product_id, old_item_name: null, category: null, quantity: qty, unit_price: price, total_amount, supplier_name: formData.supplierName }
+      : { product_id: null, old_item_name: formData.expenseDesc, category: formData.expenseCategory || 'Others', quantity: qty, unit_price: price, total_amount, supplier_name: formData.supplierName };
 
     const np: PurchaseRecord = { 
       id: Date.now().toString(), 
-      category: payload.category, 
-      quantity: qty, 
-      unit_price: price,
-      total_amount, 
-      supplier_name: payload.supplier_name,
+      ...payload,
       created_at: new Date().toISOString(),
       status: 'pending' 
     };
+    
     setHistory(prev => [np, ...prev]);
-    setFormData({ category: '', qtyReceived: '', unitPrice: '', supplierName: '' });
+    setFormData({ product_id: '', expenseDesc: '', expenseCategory: '', qtyReceived: '', unitPrice: '', supplierName: '' });
     
     setLoadingState('saving');
     try {
-      const { error: insErr } = await withRetry('Insert Purchase', async () => await supabase.from('purchases').insert([payload]));
+      const { data, error: insErr } = await withRetry('Insert Purchase', async () => await supabase.from('purchases').insert([payload]).select());
       if (insErr) throw insErr;
-
-      // STOCK-IN LOGIC: If Maize (101), increment product stock
-      if (payload.category === 'Maize Grain') {
-        const { data: prods, error: pErr } = await supabase.from('products').select('id, current_stock, product_code, name');
-        if (pErr) throw new Error('Failed to access product catalog: ' + pErr.message);
-        
-        const pData = prods?.find(p => p.product_code === '101' || p.name.toLowerCase().includes('maize bulk') || p.name.toLowerCase().includes('grain'));
-        
-        if (pData) {
-          const { error: updErr } = await supabase
-            .from('products')
-            .update({ current_stock: Number(pData.current_stock || 0) + qty })
-            .eq('id', pData.id);
-          
-          if (updErr) throw new Error('Failed to update stock: ' + updErr.message);
-        } else {
-          throw new Error('SYSTEM ERROR: Could not find "Maize Bulk" (101) in the product registry to refill stock.');
-        }
-      }
-
-      setHistory(prev => prev.map(p => p.id === np.id ? { ...p, status: 'synced' } : p));
-      setSuccessMsg('Expense recorded & Stock Updated!');
+      
+      const serverRecord = data && data.length > 0 ? data[0] : null;
+      setHistory(prev => prev.map(p => p.id === np.id ? { ...p, id: serverRecord ? serverRecord.id : p.id, status: 'synced' } : p));
+      setSuccessMsg('Record saved successfully!');
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       fetchHistory();
     } catch (err: any) {
       setHistory(prev => prev.map(p => p.id === np.id ? { ...p, status: 'failed' } : p));
-      setError(err.message);
+      setError(`Insert Error: ${err.message}`);
     } finally {
       setLoadingState('idle');
     }
   };
 
   const openEditModal = (record: PurchaseRecord) => {
-    setEditForm({ category: record.category, qty: record.quantity, price: record.unit_price, supplier: record.supplier_name || '' });
-    setEditModal({ open: true, record });
+    const recMode: PurchaseMode = record.product_id ? 'restock' : 'expense';
+    setEditForm({ 
+      product_id: record.product_id || '', 
+      expenseDesc: record.old_item_name || '',
+      expenseCategory: record.category || '',
+      qty: record.quantity, 
+      price: record.unit_price, 
+      supplier: record.supplier_name || '' 
+    });
+    setEditModal({ open: true, record, mode: recMode });
   };
 
   const handleEditPurchase = async (e: React.FormEvent) => {
@@ -129,37 +162,22 @@ export default function Purchases() {
     if (!editModal.record) return;
     setLoadingState('saving');
     try {
-      const oldQty = editModal.record.quantity;
       const newQty = editForm.qty;
-      const diff = newQty - oldQty;
+      const updatePayload = editModal.mode === 'restock'
+        ? { product_id: editForm.product_id, old_item_name: null, category: null, quantity: newQty, unit_price: editForm.price, total_amount: newQty * editForm.price, supplier_name: editForm.supplier }
+        : { product_id: null, old_item_name: editForm.expenseDesc, category: editForm.expenseCategory || 'Others', quantity: newQty, unit_price: editForm.price, total_amount: newQty * editForm.price, supplier_name: editForm.supplier };
 
-      // 1. Update Purchase Record
-      const { error: updErr } = await supabase
-        .from('purchases')
-        .update({
-          category: editForm.category,
-          quantity: newQty,
-          unit_price: editForm.price,
-          total_amount: newQty * editForm.price,
-          supplier_name: editForm.supplier
-        })
-        .eq('id', editModal.record.id);
-      
+      const { error: updErr } = await supabase.from('purchases').update(updatePayload).eq('id', editModal.record.id);
       if (updErr) throw updErr;
 
-      // 2. Adjust Stock if Maize Grain
-      if (editForm.category === 'Maize Grain') {
-        const { data: prods } = await supabase.from('products').select('id, current_stock, product_code, name');
-        const pData = prods?.find(p => p.product_code === '101' || p.name.toLowerCase().includes('maize bulk'));
-        if (pData) {
-          await supabase.from('products').update({ current_stock: (pData.current_stock || 0) + diff }).eq('id', pData.id);
-        }
-      }
-
-      setSuccessMsg('Record and inventory updated successfully.');
-      setEditModal({ open: false, record: null });
+      setSuccessMsg('Purchase updated successfully.');
+      setEditModal({ open: false, record: null, mode: 'restock' });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       fetchHistory();
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) { 
+      setError(`Update Error: ${err.message}`); 
+      setEditModal({ open: false, record: null, mode: 'restock' });
+    }
     finally { setLoadingState('idle'); }
   };
 
@@ -170,10 +188,14 @@ export default function Purchases() {
       const { error: delErr } = await supabase.from('purchases').delete().eq('id', deleteModal.record.id);
       if (delErr) throw delErr;
 
-      setSuccessMsg('Expense record removed.');
+      setSuccessMsg('Record removed successfully.');
       setDeleteModal({ open: false, record: null });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       fetchHistory();
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) { 
+      setError(`Delete Error: ${err.message}`);
+      setDeleteModal({ open: false, record: null });
+    }
     finally { setLoadingState('idle'); }
   };
 
@@ -191,18 +213,47 @@ export default function Purchases() {
       {error && <div className="bg-red-600 text-white p-4 rounded-xl font-black flex items-center gap-3 shadow-lg"><AlertCircle size={20}/>{error}</div>}
       {successMsg && <div className="bg-emerald-50 border-2 border-emerald-200 text-emerald-900 p-4 rounded-xl font-bold flex items-center gap-3"><CheckCircle size={20}/>{successMsg}</div>}
 
+      {/* MODE TOGGLE */}
+      <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-2xl p-1.5 w-fit shadow-sm">
+        <button type="button" onClick={() => handleModeChange('restock')}
+          className={`px-5 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${
+            mode === 'restock' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-400 hover:text-slate-700'
+          }`}>📦 Inventory Restock</button>
+        <button type="button" onClick={() => handleModeChange('expense')}
+          className={`px-5 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${
+            mode === 'expense' ? 'bg-amber-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-700'
+          }`}>💸 General Expense</button>
+      </div>
+
       <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div className="space-y-6">
           <div className="mill-card p-8 space-y-6">
-            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Package size={16}/> Classification</h3>
-            <div>
-              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Category</label>
-              <select required value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}
-                className="mill-input w-full font-bold">
-                <option value="">Select category...</option>
-                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
+            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Package size={16}/> {mode === 'restock' ? 'Product' : 'Expense Details'}</h3>
+            {mode === 'restock' ? (
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Product</label>
+                <select required value={formData.product_id} onChange={e => setFormData({...formData, product_id: e.target.value})}
+                  className="mill-input w-full font-bold bg-white">
+                  <option value="">Select product...</option>
+                  {allProducts.map(p => <option key={p.id} value={p.id}>{p.name} ({p.product_code})</option>)}
+                </select>
+              </div>
+            ) : (
+              <>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Expense Description</label>
+                  <input type="text" required placeholder="e.g. Monthly salary for staff" value={formData.expenseDesc}
+                    onChange={e => setFormData({...formData, expenseDesc: e.target.value})} className="mill-input w-full" />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Category</label>
+                  <select value={formData.expenseCategory} onChange={e => setFormData({...formData, expenseCategory: e.target.value})} className="mill-input w-full font-bold bg-white">
+                    <option value="">Select category...</option>
+                    {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -211,7 +262,7 @@ export default function Purchases() {
             <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><DollarSign size={16}/> Financials</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Quantity (KG)</label>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Quantity (KG/Units)</label>
                 <input type="number" step="0.01" placeholder="1" value={formData.qtyReceived} onChange={e => setFormData({...formData, qtyReceived: e.target.value})}
                   className="mill-input w-full" />
               </div>
@@ -234,8 +285,10 @@ export default function Purchases() {
 
         <div className="md:col-span-2">
           <button type="submit" disabled={loadingState === 'saving'}
-            className="mill-btn-primary w-full py-5 text-lg shadow-lg shadow-mill-primary/20 flex items-center justify-center gap-3 uppercase tracking-widest">
-            {loadingState === 'saving' ? 'PROCESSING...' : '✓ RECORD EXPENSE & STOCK-IN'}
+            className={`mill-btn-primary w-full py-5 text-lg shadow-lg flex items-center justify-center gap-3 uppercase tracking-widest ${
+              mode === 'expense' ? 'bg-amber-500 hover:bg-amber-600' : ''
+            }`}>
+            {loadingState === 'saving' ? 'PROCESSING...' : mode === 'restock' ? '📦 RECORD RESTOCK' : '💸 RECORD EXPENSE'}
           </button>
         </div>
       </form>
@@ -249,7 +302,7 @@ export default function Purchases() {
             </div>
             <div>
               <h3 className="text-sm md:text-lg font-semibold text-slate-900 uppercase tracking-tight">Purchase History</h3>
-              <p className="hidden md:block text-[9px] font-medium text-slate-400 uppercase tracking-widest">Expense Audit · Last 50 Records</p>
+              <p className="hidden md:block text-[9px] font-medium text-slate-400 uppercase tracking-widest">Audit · Last 50 Records</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -279,7 +332,7 @@ export default function Purchases() {
             <thead className="sticky top-0 z-10 bg-slate-50 shadow-sm">
               <tr>
                 <th className="px-3 md:px-6 py-3 text-[8px] md:text-[9px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Date</th>
-                <th className="px-3 md:px-6 py-3 text-[8px] md:text-[9px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Category</th>
+                <th className="px-3 md:px-6 py-3 text-[8px] md:text-[9px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Product</th>
                 <th className="px-3 md:px-6 py-3 text-[8px] md:text-[9px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Supplier</th>
                 <th className="px-2 md:px-6 py-3 text-[8px] md:text-[9px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Qty</th>
                 <th className="px-2 md:px-6 py-3 text-[8px] md:text-[9px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Unit</th>
@@ -290,7 +343,7 @@ export default function Purchases() {
             <tbody className="divide-y divide-slate-100 bg-white">
               {history.length === 0 && loadingState !== 'fetching' && (
                 <tr>
-                  <td colSpan={7} className="p-20 text-center text-slate-300 font-semibold uppercase tracking-widest italic text-xs">No expense records found</td>
+                  <td colSpan={7} className="p-20 text-center text-slate-300 font-semibold uppercase tracking-widest italic text-xs">No records found</td>
                 </tr>
               )}
               {history.map(p => (
@@ -300,7 +353,15 @@ export default function Purchases() {
                     <p className="text-[7px] md:text-[8px] font-medium text-slate-500 uppercase">{new Date(p.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
                   </td>
                   <td className="px-3 md:px-6 py-2 md:py-3">
-                    <span className="px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[7px] md:text-[8px] font-semibold uppercase">{p.category}</span>
+                    <div className="flex items-center gap-2">
+                      {p.product_id 
+                        ? <span className="px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[7px] font-black uppercase">Stock</span>
+                        : <span className="px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[7px] font-black uppercase">Expense</span>
+                      }
+                      <span className="text-[9px] md:text-[11px] font-semibold text-slate-900 uppercase">
+                        {p.product_id ? getProductName(p.product_id) : (p.old_item_name || p.category || '-')}
+                      </span>
+                    </div>
                   </td>
                   <td className="px-3 md:px-6 py-2 md:py-3 font-semibold text-[10px] md:text-[12px] text-slate-900 uppercase truncate max-w-[100px] md:max-w-[150px]">{p.supplier_name || '-'}</td>
                   <td className="px-2 md:px-6 py-2 md:py-3 font-semibold text-[10px] md:text-xs text-slate-900">{p.quantity}</td>
@@ -327,23 +388,58 @@ export default function Purchases() {
                 <h3 className="text-xl font-black uppercase tracking-tighter">Edit Purchase</h3>
                 <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">Correct Typo or Amount</p>
               </div>
-              <button onClick={() => setEditModal({ open: false, record: null })} className="p-2 hover:bg-white/10 rounded-full transition-all"><X size={20}/></button>
+              <button onClick={() => setEditModal({ open: false, record: null, mode: 'restock' })} className="p-2 hover:bg-white/10 rounded-full transition-all"><X size={20}/></button>
             </div>
             <form onSubmit={handleEditPurchase} className="p-8 space-y-6">
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Category</label>
-                <select value={editForm.category} onChange={e => setEditForm({...editForm, category: e.target.value})} className="mill-input w-full font-bold">
-                   {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
+              {/* Mode toggle inside edit modal */}
+              <div className="flex gap-2">
+                <button type="button"
+                  onClick={() => {
+                    setEditModal(prev => ({...prev, mode: 'restock'}));
+                    // Clear expense fields; keep product_id as-is
+                    setEditForm(prev => ({...prev, expenseDesc: '', expenseCategory: ''}));
+                  }}
+                  className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${editModal.mode === 'restock' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-400 border-slate-200'}`}
+                >📦 Restock</button>
+                <button type="button"
+                  onClick={() => {
+                    setEditModal(prev => ({...prev, mode: 'expense'}));
+                    // *** CRITICAL: null out product_id to prevent FK constraint violations ***
+                    setEditForm(prev => ({...prev, product_id: ''}));
+                  }}
+                  className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${editModal.mode === 'expense' ? 'bg-amber-500 text-white border-amber-500' : 'bg-white text-slate-400 border-slate-200'}`}
+                >💸 Expense</button>
               </div>
+              {editModal.mode === 'restock' ? (
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Product</label>
+                  <select value={editForm.product_id} onChange={e => setEditForm({...editForm, product_id: e.target.value})} className="mill-input w-full font-bold bg-white text-slate-900">
+                    <option value="">Select product...</option>
+                    {allProducts.map(p => <option key={p.id} value={p.id}>{p.name} ({p.product_code})</option>)}
+                  </select>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Expense Description</label>
+                    <input type="text" value={editForm.expenseDesc} onChange={e => setEditForm({...editForm, expenseDesc: e.target.value})} className="mill-input w-full font-bold" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Category</label>
+                    <select value={editForm.expenseCategory} onChange={e => setEditForm({...editForm, expenseCategory: e.target.value})} className="mill-input w-full font-bold bg-white">
+                      {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                </>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Quantity (KG)</label>
-                  <input type="number" step="0.01" value={editForm.qty} onChange={e => setEditForm({...editForm, qty: parseFloat(e.target.value)})} className="mill-input w-full font-bold" />
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Quantity (KG/Units)</label>
+                  <input type="number" step="0.01" value={editForm.qty || ''} onChange={e => setEditForm({...editForm, qty: parseFloat(e.target.value) || 0})} className="mill-input w-full font-bold" />
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Unit Price</label>
-                  <input type="number" step="0.01" value={editForm.price} onChange={e => setEditForm({...editForm, price: parseFloat(e.target.value)})} className="mill-input w-full font-bold" />
+                  <input type="number" step="0.01" value={editForm.price || ''} onChange={e => setEditForm({...editForm, price: parseFloat(e.target.value) || 0})} className="mill-input w-full font-bold" />
                 </div>
               </div>
               <div>
@@ -368,7 +464,10 @@ export default function Purchases() {
               </div>
               <h3 className="text-xl font-black uppercase tracking-tighter">Delete Record?</h3>
               <p className="text-xs text-red-100 font-bold uppercase mt-1 leading-relaxed">
-                This action will permanently remove the record for <span className="font-black text-white">{deleteModal.record?.category}</span>. Inventory levels will NOT be reversed.
+                This action will permanently remove the record for{' '}
+                <span className="font-black text-white">
+                  {deleteModal.record ? getRecordLabel(deleteModal.record) : '—'}
+                </span>.
               </p>
             </div>
             <div className="p-6 grid grid-cols-2 gap-4">

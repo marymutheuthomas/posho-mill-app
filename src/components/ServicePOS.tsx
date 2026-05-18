@@ -74,7 +74,11 @@ export default function ServicePOS({ role }: ServicePOSProps) {
   const [editForm, setEditForm] = useState({
     weightKg: '',
     totalPrice: '',
-    paymentMethod: 'Cash' as 'Cash' | 'M-Pesa' | 'Debt'
+    paymentMethod: 'Cash' as 'Cash' | 'M-Pesa' | 'Debt' | 'Split',
+    isSplit: false,
+    amountCash: '0',
+    amountMpesa: '0',
+    amountDebt: '0'
   });
 
   // 1. Data Fetching Queries (Cache-First)
@@ -87,6 +91,20 @@ export default function ServicePOS({ role }: ServicePOSProps) {
     },
     staleTime: 1000 * 60 * 30, // 30 mins
   });
+
+  // Helper to resolve stock for retail maize to bulk maize
+  const getProductStock = (product: Product) => {
+    if (!product) return 0;
+    const nameLower = product.name.toLowerCase();
+    if (nameLower.includes('maize') && nameLower.includes('retail')) {
+      const bulkMaize = products.find(x => {
+        const xName = x.name.toLowerCase();
+        return xName.includes('maize') && xName.includes('bulk');
+      });
+      return bulkMaize ? (bulkMaize.current_stock || 0) : 0;
+    }
+    return product.current_stock || 0;
+  };
 
   const { data: customers = [] } = useQuery({
     queryKey: ['customers'],
@@ -166,23 +184,6 @@ export default function ServicePOS({ role }: ServicePOSProps) {
       if (error) throw error;
       return data;
     },
-    onMutate: async (txData) => {
-      // OPTIMISTIC UI: Instant stock deduction for offline responsiveness
-      await queryClient.cancelQueries({ queryKey: ['products'] });
-      const previousProducts = queryClient.getQueryData(['products']);
-
-      queryClient.setQueryData(['products'], (old: any) => {
-        if (!old) return [];
-        return old.map((p: any) => {
-          if (p.id === txData.product_id) {
-            return { ...p, current_stock: Math.max(0, (Number(p.current_stock) || 0) - (Number(txData.weight_kg) || 0)) };
-          }
-          return p;
-        });
-      });
-
-      return { previousProducts };
-    },
     onSuccess: (res) => {
       if (res.offline) {
         setSuccess('Connection lost. Data saved locally and will sync when online.');
@@ -228,10 +229,13 @@ export default function ServicePOS({ role }: ServicePOSProps) {
       if (res.offline) {
         setSuccess('OFFLINE MODE: Deletion queued.');
       } else {
-        const sale = res.payload;
-        setSuccess(`Inventory Adjusted: ${sale?.weight_kg || 'Item'} stock updated.`);
+        setSuccess('Sale voided. Stock restored by database.');
       }
+      queryClient.invalidateQueries({ queryKey: ['sales_history'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['debt_summary'] });
+      queryClient.invalidateQueries({ queryKey: ['debts'] });
+      queryClient.invalidateQueries({ queryKey: ['debt_book'] });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       setDeletingSale(null);
     }
@@ -248,10 +252,13 @@ export default function ServicePOS({ role }: ServicePOSProps) {
       if (res.offline) {
         setSuccess('OFFLINE MODE: Edit queued.');
       } else {
-        const variables = res.payload;
-        setSuccess(`Inventory Adjusted: ${variables?.weight_kg || 'Item'} stock updated.`);
+        setSuccess('Sale updated. Stock reconciled by database.');
       }
+      queryClient.invalidateQueries({ queryKey: ['sales_history'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['debt_summary'] });
+      queryClient.invalidateQueries({ queryKey: ['debts'] });
+      queryClient.invalidateQueries({ queryKey: ['debt_book'] });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       setEditingSale(null);
     }
@@ -263,16 +270,60 @@ export default function ServicePOS({ role }: ServicePOSProps) {
     const w = parseFloat(formData.weightKg) || 0;
     if (p && w > 0) {
       const rate = formData.transactionType === 'Service' ? (p.milling_fee || 0) : (p.selling_price || 0);
-      setFormData(prev => ({ ...prev, feeCharged: (w * rate).toFixed(2) }));
+      const exactCharge = w * rate;
+      // Round up to the nearest 5 KES (Kenya's smallest common coin)
+      const roundedCharge = Math.ceil(exactCharge / 5) * 5;
+      setFormData(prev => ({ ...prev, feeCharged: roundedCharge.toFixed(2) }));
     } else {
       setFormData(prev => ({ ...prev, feeCharged: '0.00' }));
     }
   }, [formData.productId, formData.weightKg, formData.transactionType, products]);
   
   useEffect(() => {
+    if (!editingSale) return;
+    const p = products.find(x => x.id === editingSale.product_id);
+    const w = parseFloat(editForm.weightKg) || 0;
+    if (p && w > 0) {
+      const rate = editingSale.transaction_type === 'Service' ? (p.milling_fee || 0) : (p.selling_price || 0);
+      const exactCharge = w * rate;
+      const roundedCharge = editingSale.transaction_type === 'Service'
+        ? Math.ceil(exactCharge / 5) * 5
+        : exactCharge;
+      
+      const totalPriceVal = roundedCharge.toFixed(2);
+      
+      setEditForm(prev => {
+        if (!prev.isSplit) {
+          return {
+            ...prev,
+            totalPrice: totalPriceVal,
+            amountCash: prev.paymentMethod === 'Cash' ? totalPriceVal : '0',
+            amountMpesa: prev.paymentMethod === 'M-Pesa' ? totalPriceVal : '0',
+            amountDebt: prev.paymentMethod === 'Debt' ? totalPriceVal : '0'
+          };
+        } else {
+          return {
+            ...prev,
+            totalPrice: totalPriceVal
+          };
+        }
+      });
+    } else {
+      setEditForm(prev => ({
+        ...prev,
+        totalPrice: '0.00',
+        amountCash: '0',
+        amountMpesa: '0',
+        amountDebt: '0'
+      }));
+    }
+  }, [editForm.weightKg, editingSale, products, editForm.paymentMethod, editForm.isSplit]);
+  
+  useEffect(() => {
     const runAuditCheck = async () => {
-      const audit = await checkPreviousStockTake();
-      setAuditBlock(!audit.isDone);
+      await checkPreviousStockTake();
+      // Temporarily disabled to allow backdating
+      setAuditBlock(false);
     };
     runAuditCheck();
   }, []);
@@ -291,8 +342,9 @@ export default function ServicePOS({ role }: ServicePOSProps) {
     const weight = parseFloat(formData.weightKg) || 0;
     if (weight <= 0) { setError('QUANTITY ERROR: Weight must be greater than 0.'); return; }
 
-    if (formData.transactionType === 'Product' && weight > (p.current_stock || 0)) {
-      setError(`STOCK ALERT: Only ${p.current_stock} units left.`);
+    const stockAvailable = getProductStock(p);
+    if (formData.transactionType === 'Product' && weight > stockAvailable) {
+      setError(`STOCK ALERT: Only ${stockAvailable} units left.`);
       return;
     }
 
@@ -342,22 +394,47 @@ export default function ServicePOS({ role }: ServicePOSProps) {
     
     if (isNaN(newWeight) || newWeight <= 0) { setError('Invalid weight'); return; }
 
+    const isSplit = editForm.isSplit;
+    const amountCash = isSplit ? (parseFloat(editForm.amountCash) || 0) : (editForm.paymentMethod === 'Cash' ? newPrice : 0);
+    const amountMpesa = isSplit ? (parseFloat(editForm.amountMpesa) || 0) : (editForm.paymentMethod === 'M-Pesa' ? newPrice : 0);
+    const amountDebt = isSplit ? (parseFloat(editForm.amountDebt) || 0) : (editForm.paymentMethod === 'Debt' ? newPrice : 0);
+
+    if (isSplit) {
+      const sum = amountCash + amountMpesa + amountDebt;
+      if (Math.abs(sum - newPrice) > 0.01) {
+        setError(`Allocations (KSh ${sum}) must balance exactly to the transaction total price (KSh ${newPrice}).`);
+        return;
+      }
+    }
+
     editSaleMutation.mutate({
       id: editingSale.id,
       oldWeight: editingSale.weight_kg,
       newWeight,
       productId: editingSale.product_id,
       total_price: newPrice,
-      payment_method: editForm.paymentMethod
+      payment_method: isSplit ? 'Split' : editForm.paymentMethod,
+      amount_cash: amountCash,
+      amount_mpesa: amountMpesa,
+      amount_debt: amountDebt
     });
   };
 
   const startEdit = (sale: TransactionLog) => {
+    const isSplit = sale.payment_method === 'Split' ||
+      ((sale.amount_cash || 0) > 0 && (sale.amount_mpesa || 0) > 0) ||
+      ((sale.amount_cash || 0) > 0 && (sale.amount_debt || 0) > 0) ||
+      ((sale.amount_mpesa || 0) > 0 && (sale.amount_debt || 0) > 0);
+
     setEditingSale(sale);
     setEditForm({
       weightKg: sale.weight_kg.toString(),
       totalPrice: sale.total_price.toString(),
-      paymentMethod: sale.payment_method as any
+      paymentMethod: (sale.payment_method === 'Split' ? 'Cash' : (sale.payment_method || 'Cash')) as any,
+      isSplit,
+      amountCash: (sale.amount_cash || 0).toString(),
+      amountMpesa: (sale.amount_mpesa || 0).toString(),
+      amountDebt: (sale.amount_debt || 0).toString()
     });
   };
 
@@ -443,7 +520,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                       })
                       .map(p => (
                         <option key={p.id} value={p.id}>
-                          {p.name} ({formData.transactionType === 'Service' ? `KES ${p.milling_fee}/KG` : `KES ${p.selling_price}/KG`})
+                          {p.name} (Stock: {getProductStock(p)} KG) — {formData.transactionType === 'Service' ? `KES ${p.milling_fee}/KG` : `KES ${p.selling_price}/KG`}
                         </option>
                       ))}
                   </select>
@@ -679,49 +756,70 @@ export default function ServicePOS({ role }: ServicePOSProps) {
       </div>
 
       {/* SALES HISTORY */}
-      <div className="mill-card p-0 overflow-hidden bg-white border-slate-200 shadow-2xl rounded-2xl">
-        <div className="p-4 md:p-10 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+      <div className="bg-white border border-slate-100 shadow-sm rounded-2xl overflow-hidden mt-6">
+        <div className="p-5 md:p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <div className="flex items-center gap-3 md:gap-4">
-            <div className="w-10 h-10 md:w-12 md:h-12 bg-white rounded-xl md:rounded-2xl shadow-sm flex items-center justify-center text-slate-900 border border-slate-100">
+            <div className="w-11 h-11 bg-white rounded-xl shadow-sm flex items-center justify-center text-slate-700 border border-slate-100">
               <Calendar size={20} />
             </div>
             <div>
-              <h3 className="text-lg md:text-2xl font-semibold text-slate-900 uppercase tracking-tight">Sales History</h3>
-              <p className="hidden md:block text-[11px] font-semibold text-slate-500 uppercase tracking-widest">Registry Audit · Historical Data</p>
+              <h3 className="text-lg font-medium text-slate-950 uppercase tracking-tight">Sales History Log</h3>
+              <p className="text-xs text-slate-400 font-medium uppercase tracking-wider mt-0.5">Registry Audit · Historical Data</p>
             </div>
           </div>
-          <button onClick={() => queryClient.invalidateQueries({ queryKey: ['sales_history'] })} className="p-2 md:p-2.5 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-slate-900 transition-all shadow-sm">
+          <button 
+            onClick={() => queryClient.invalidateQueries({ queryKey: ['sales_history'] })} 
+            className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-slate-900 transition-all shadow-sm"
+            title="Refresh History"
+          >
             <RotateCcw size={18} />
           </button>
         </div>
 
-        {/* Mobile: data cards */}
-        <div className="md:hidden divide-y divide-slate-100">
-          {salesHistory.length === 0 && (
-            <p className="p-12 text-center text-slate-400 font-semibold uppercase tracking-widest text-xs italic">No transactions</p>
-          )}
+        <div className="divide-y divide-slate-100">
           {salesHistory.map(log => {
             const prod = products.find(p => p.id === log.product_id);
             const isService = prod && (prod.milling_fee || 0) > 0 && !(prod.selling_price || 0);
             return (
-              <div key={log.id} className="p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-semibold text-slate-900 uppercase">{log.customer_name}</p>
-                    <p className="text-[10px] text-slate-400 font-medium">{new Date(log.created_at).toLocaleString()}</p>
+              <div 
+                key={log.id} 
+                className="flex flex-wrap items-center justify-between gap-4 p-4 md:p-5 hover:bg-slate-50/30 transition-colors"
+              >
+                {/* Left side: Client and Date/Time */}
+                <div className="flex items-center gap-3 min-w-[200px] flex-1">
+                  <div className="w-11 h-11 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center text-slate-400">
+                    <User size={18} />
                   </div>
-                  <span className="text-base font-semibold text-slate-900 font-mono">KES {log.total_price?.toLocaleString()}</span>
+                  <div className="space-y-0.5">
+                    <h4 className="text-base font-medium text-slate-800 uppercase tracking-tight leading-none">{log.customer_name || 'Walk-in'}</h4>
+                    <span className="text-xs font-normal text-slate-400">
+                      {new Date(log.created_at).toLocaleDateString()} {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-semibold uppercase ${isService ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{isService ? 'Service' : 'Retail'}</span>
-                  <span className="px-2 py-0.5 rounded-full text-[9px] font-semibold uppercase bg-slate-100 text-slate-600">{log.weight_kg} KG</span>
-                  <div className="flex flex-wrap gap-1">
+
+                {/* Center details: Product info, weights, payment methods */}
+                <div className="flex flex-wrap items-center gap-4 sm:gap-8 min-w-[280px] sm:min-w-fit flex-1 justify-between sm:justify-end text-right">
+                  <div className="space-y-0.5 text-left sm:text-right">
+                    <span className="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Product & Weight</span>
+                    <span className="text-sm font-normal text-slate-600">
+                      {prod?.name || 'Maize'} ({log.weight_kg} kg)
+                    </span>
+                  </div>
+                  <div className="space-y-0.5 text-left sm:text-right">
+                    <span className="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Category</span>
+                    <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-semibold uppercase ${isService ? 'bg-blue-50 text-blue-700 border border-blue-100/50' : 'bg-purple-50 text-purple-700 border border-purple-100/50'}`}>
+                      {isService ? 'Service' : 'Retail'}
+                    </span>
+                  </div>
+                  <div className="space-y-0.5 text-left sm:text-right">
+                    <span className="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Payment Method</span>
                     {[
                       (log.amount_cash || 0) > 0 ? `Cash: ${log.amount_cash}` : null,
                       (log.amount_mpesa || 0) > 0 ? `M-Pesa: ${log.amount_mpesa}` : null,
                       (log.amount_debt || 0) > 0 ? `Debt: ${log.amount_debt}` : null,
                     ].filter(Boolean).length > 0 ? (
-                      <span className="px-2 py-0.5 rounded-full text-[9px] font-semibold uppercase bg-slate-100 text-slate-700 border border-slate-200">
+                      <span className="block text-xs font-medium text-slate-700">
                         {[
                           (log.amount_cash || 0) > 0 ? `Cash: ${log.amount_cash}` : null,
                           (log.amount_mpesa || 0) > 0 ? `M-Pesa: ${log.amount_mpesa}` : null,
@@ -729,142 +827,185 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                         ].filter(Boolean).join(' | ')}
                       </span>
                     ) : (
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-semibold uppercase ${log.payment_method === 'Debt' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                      <span className={`block text-xs font-medium ${log.payment_method === 'Debt' ? 'text-rose-600' : 'text-emerald-600'}`}>
                         {log.payment_method}
                       </span>
                     )}
                   </div>
                 </div>
-                {role === 'ADMIN' && (
-                  <div className="flex items-center gap-2 pt-2 border-t border-slate-50">
-                    <button onClick={() => startEdit(log)} className="flex-1 py-3 bg-slate-50 text-blue-700 border border-slate-100 rounded-lg text-[10px] font-semibold uppercase flex items-center justify-center gap-1">
-                      <Pencil size={12} /> Edit
-                    </button>
-                    <button onClick={() => setDeletingSale(log)} className="flex-1 py-3 bg-rose-50 text-rose-600 rounded-lg text-[10px] font-semibold uppercase flex items-center justify-center gap-1">
-                      <Trash2 size={12} /> Delete
-                    </button>
+
+                {/* Right side: Price & Action Touch Targets */}
+                <div className="flex items-center justify-between sm:justify-end gap-6 min-w-[200px] flex-1 sm:flex-initial border-t border-slate-50 pt-2 sm:pt-0 sm:border-0">
+                  <div className="space-y-0.5 text-left sm:text-right">
+                    <span className="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider sm:hidden">Total Price</span>
+                    <span className="text-base font-semibold text-slate-800 font-mono">KSh {log.total_price?.toLocaleString()}</span>
                   </div>
-                )}
+
+                  {role === 'ADMIN' && (
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={() => startEdit(log)} 
+                        className="h-11 w-11 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 border border-slate-100 rounded-xl transition-all flex items-center justify-center" 
+                        title="Edit Sale"
+                      >
+                        <Pencil size={15} />
+                      </button>
+                      <button 
+                        onClick={() => setDeletingSale(log)} 
+                        className="h-11 w-11 bg-red-50 hover:bg-red-100 text-red-600 border border-red-100/50 rounded-xl transition-all flex items-center justify-center" 
+                        title="Delete Sale"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
               </div>
             );
           })}
-        </div>
 
-        {/* Desktop: full table */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50/50">
-                <th className="px-10 py-6 text-[10px] font-semibold text-slate-500 uppercase tracking-widest border-b border-slate-100">Date</th>
-                <th className="px-10 py-6 text-[10px] font-semibold text-slate-500 uppercase tracking-widest border-b border-slate-100">Customer</th>
-                <th className="px-10 py-6 text-[10px] font-semibold text-slate-500 uppercase tracking-widest border-b border-slate-100 text-center">Type</th>
-                <th className="px-10 py-6 text-[10px] font-semibold text-slate-500 uppercase tracking-widest border-b border-slate-100">Weight</th>
-                <th className="px-10 py-6 text-[10px] font-semibold text-slate-500 uppercase tracking-widest border-b border-slate-100">Total</th>
-                <th className="px-10 py-6 text-[10px] font-semibold text-slate-500 uppercase tracking-widest border-b border-slate-100">Payment</th>
-                <th className="px-10 py-6 text-[10px] font-semibold text-slate-500 uppercase tracking-widest border-b border-slate-100 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {salesHistory.map(log => {
-                const prod = products.find(p => p.id === log.product_id);
-                const isService = prod && (prod.milling_fee || 0) > 0 && !(prod.selling_price || 0);
-                return (
-                  <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-10 py-5">
-                      <p className="text-[12px] font-semibold text-slate-900">{new Date(log.created_at).toLocaleDateString()}</p>
-                      <p className="text-[9px] font-medium text-slate-500 uppercase">{new Date(log.created_at).toLocaleTimeString()}</p>
-                    </td>
-                    <td className="px-10 py-5 font-semibold text-[13px] text-slate-900 uppercase">{log.customer_name}</td>
-                    <td className="px-10 py-5 text-center">
-                      <span className={`px-3 py-1 rounded-full text-[9px] font-semibold uppercase ${isService ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{isService ? 'Service' : 'Retail'}</span>
-                    </td>
-                    <td className="px-10 py-5">
-                      <p className="text-[12px] font-semibold text-slate-900">{prod?.name || log.product_id?.slice(0,8)}</p>
-                      <p className="text-[10px] font-medium text-slate-500 uppercase font-mono">{log.weight_kg} KG</p>
-                    </td>
-                    <td className="px-10 py-5 font-semibold text-slate-900 font-mono">KES {log.total_price?.toLocaleString()}</td>
-                    <td className="px-10 py-5">
-                      <div className="flex flex-col gap-1">
-                        {[
-                          (log.amount_cash || 0) > 0 ? `Cash: ${log.amount_cash}` : null,
-                          (log.amount_mpesa || 0) > 0 ? `M-Pesa: ${log.amount_mpesa}` : null,
-                          (log.amount_debt || 0) > 0 ? `Debt: ${log.amount_debt}` : null,
-                        ].filter(Boolean).length > 0 ? (
-                          <div className="flex items-center gap-2">
-                             <div className="w-2 h-2 rounded-full bg-slate-400" />
-                             <span className="text-[10px] font-semibold uppercase text-slate-700">
-                               {[
-                                 (log.amount_cash || 0) > 0 ? `Cash: ${log.amount_cash}` : null,
-                                 (log.amount_mpesa || 0) > 0 ? `M-Pesa: ${log.amount_mpesa}` : null,
-                                 (log.amount_debt || 0) > 0 ? `Debt: ${log.amount_debt}` : null,
-                               ].filter(Boolean).join(' | ')}
-                             </span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full ${log.payment_method === 'Debt' ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}`} />
-                            <span className={`text-[10px] font-semibold uppercase ${log.payment_method === 'Debt' ? 'text-red-700' : 'text-emerald-700'}`}>{log.payment_method}</span>
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-10 py-5 text-right">
-                      {role === 'ADMIN' && (
-                         <div className="flex items-center justify-end gap-2">
-                            <button onClick={() => startEdit(log)} className="p-2 bg-slate-50 text-blue-700 border border-slate-100 hover:bg-blue-700 hover:text-white rounded-lg transition-all" title="Edit Sale">
-                               <Pencil size={14} />
-                            </button>
-                            <button onClick={() => setDeletingSale(log)} className="p-2 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white rounded-lg transition-all" title="Delete Sale">
-                               <Trash2 size={14} />
-                            </button>
-                         </div>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-              {salesHistory.length === 0 && (
-                <tr><td colSpan={7} className="px-10 py-24 text-center text-slate-400 font-semibold uppercase tracking-widest italic opacity-50">No transactions</td></tr>
-              )}
-            </tbody>
-          </table>
+          {salesHistory.length === 0 && (
+            <div className="p-16 text-center text-slate-400 font-medium uppercase tracking-wider text-xs italic">
+              No transactions recorded today
+            </div>
+          )}
         </div>
       </div>
+
       {/* EDIT SALE MODAL */}
       {editingSale && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="p-8 bg-slate-900 text-white flex justify-between items-center">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-100">
+            <div className="p-6 bg-slate-900 text-white flex justify-between items-center">
               <div>
-                <h3 className="text-xl font-black uppercase tracking-tighter">Edit Sale</h3>
-                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">Registry Correction</p>
+                <h3 className="text-lg font-medium uppercase tracking-tight">Edit Transaction</h3>
+                <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest mt-1">Registry Correction</p>
               </div>
               <button onClick={() => setEditingSale(null)} className="p-2 hover:bg-white/10 rounded-full transition-all"><X size={20}/></button>
             </div>
-            <form onSubmit={handleEditSubmit} className="p-8 space-y-6">
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Weight (KG)</label>
-                <input required type="number" step="0.01" value={editForm.weightKg} onChange={e => setEditForm({...editForm, weightKg: e.target.value})} className="mill-input w-full font-bold" />
+            <form onSubmit={handleEditSubmit} className="p-6 space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider ml-1">Weight (KG)</label>
+                <input 
+                  required 
+                  type="number" 
+                  step="0.01" 
+                  value={editForm.weightKg} 
+                  onChange={e => setEditForm({...editForm, weightKg: e.target.value})} 
+                  className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" 
+                />
               </div>
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Total Price (KES)</label>
-                <input required type="number" step="0.01" value={editForm.totalPrice} onChange={e => setEditForm({...editForm, totalPrice: e.target.value})} className="mill-input w-full font-bold" />
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider ml-1">Total Price (KES)</label>
+                <input 
+                  required 
+                  type="number" 
+                  step="0.01" 
+                  value={editForm.totalPrice} 
+                  disabled 
+                  className="w-full px-4 h-12 rounded-xl border border-slate-200 bg-slate-50 text-base font-semibold text-slate-500 cursor-not-allowed" 
+                />
               </div>
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Payment Method</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {['Cash', 'M-Pesa', 'Debt'].map(m => (
-                    <button key={m} type="button" onClick={() => setEditForm({...editForm, paymentMethod: m as any})} className={`py-3 rounded-xl font-black text-[10px] uppercase border transition-all ${editForm.paymentMethod === m ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>{m}</button>
-                  ))}
+
+              {/* Split Payment Options Toggle */}
+              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 shadow-sm">
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Split Payment Options</span>
+                <button
+                  type="button"
+                  onClick={() => setEditForm(prev => ({ ...prev, isSplit: !prev.isSplit }))}
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${editForm.isSplit ? 'bg-emerald-600' : 'bg-slate-200'}`}
+                >
+                  <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${editForm.isSplit ? 'translate-x-5' : 'translate-x-0'}`} />
+                </button>
+              </div>
+
+              {!editForm.isSplit ? (
+                /* Toggle is OFF: Classic Single Payment Selection */
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider ml-1">Payment Method</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {['Cash', 'M-Pesa', 'Debt'].map(m => (
+                      <button 
+                        key={m} 
+                        type="button" 
+                        onClick={() => setEditForm({...editForm, paymentMethod: m as any})} 
+                        className={`h-12 rounded-xl font-medium text-xs uppercase border transition-all ${editForm.paymentMethod === m ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100'}`}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-              <button type="submit" disabled={editSaleMutation.isPending} className="mill-btn-primary w-full py-4 uppercase font-black tracking-widest shadow-xl">
+              ) : (
+                /* Toggle is ON: Three Separate Active Split Amount Fields arranged side-by-side in 3-column micro-grid */
+                <div className="grid grid-cols-3 gap-2 pt-4 border-t border-slate-100">
+                  <div className="space-y-1">
+                    <label className="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider ml-1 text-center">Cash</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={editForm.amountCash}
+                      onChange={e => setEditForm({ ...editForm, amountCash: e.target.value })}
+                      className="w-full px-2 h-12 rounded-xl border border-slate-200 text-base font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder-slate-300 text-center"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider ml-1 text-center">M-Pesa</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={editForm.amountMpesa}
+                      onChange={e => setEditForm({ ...editForm, amountMpesa: e.target.value })}
+                      className="w-full px-2 h-12 rounded-xl border border-slate-200 text-base font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder-slate-300 text-center"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider ml-1 text-center">Debt</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={editForm.amountDebt}
+                      onChange={e => setEditForm({ ...editForm, amountDebt: e.target.value })}
+                      className="w-full px-2 h-12 rounded-xl border border-slate-200 text-base font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder-slate-300 text-center"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Validation Warning Guard Bar */}
+              {editForm.isSplit && (() => {
+                const totalAllocated = Number(editForm.amountCash || 0) + Number(editForm.amountMpesa || 0) + Number(editForm.amountDebt || 0);
+                const totalPriceTarget = Number(editForm.totalPrice || 0);
+                const isBalanced = Math.abs(totalAllocated - totalPriceTarget) < 0.01;
+                if (!isBalanced) {
+                  return (
+                    <div className="p-3 bg-rose-50 text-rose-900 border border-rose-200 rounded-xl text-[10px] font-bold leading-relaxed flex items-start gap-2 shadow-sm animate-in slide-in-from-top-2 duration-200">
+                      <AlertTriangle size={16} className="text-rose-600 flex-shrink-0 mt-0.5" />
+                      <span>
+                        Allocations (KSh {totalAllocated.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}) must balance exactly to the transaction total price (KSh {totalPriceTarget.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}).
+                      </span>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+
+              <button
+                type="submit"
+                disabled={editSaleMutation.isPending || (editForm.isSplit && Math.abs((Number(editForm.amountCash || 0) + Number(editForm.amountMpesa || 0) + Number(editForm.amountDebt || 0)) - Number(editForm.totalPrice || 0)) >= 0.01)}
+                className="w-full bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-white font-medium h-12 rounded-xl transition-all shadow-sm text-xs uppercase tracking-wider disabled:bg-slate-200 disabled:text-slate-400"
+              >
                 {editSaleMutation.isPending ? 'UPDATING...' : '✓ SAVE CHANGES'}
               </button>
             </form>
           </div>
         </div>
       )}
+
 
       {/* DELETE SALE MODAL */}
       {deletingSale && (

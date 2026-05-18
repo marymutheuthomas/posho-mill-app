@@ -14,7 +14,7 @@ const PRODUCT_CODES = {
   KUKU_FEED: '108'
 };
 
-interface Product { id: string; product_code: string; name: string; current_stock: number; minimum_level?: number; }
+interface Product { id: string; product_code: string; name: string; current_stock: number; minimum_level?: number; category?: string; }
 
 interface ProductionLog {
   id: string;
@@ -41,11 +41,12 @@ export default function ProductionEntry() {
   const [byProductId, setByProductId] = useState('');
   const [byProductKg, setByProductKg] = useState('');
   const [manualWasteKg, setManualWasteKg] = useState('0');
+  const [backdate, setBackdate] = useState(new Date().toISOString().split('T')[0]);
 
   const { data: allProducts = [] } = useQuery({
     queryKey: ['products'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('products').select('id, product_code, name, current_stock, minimum_level');
+      const { data, error } = await supabase.from('products').select('id, product_code, name, category, current_stock, minimum_level').order('product_code', { ascending: true });
       if (error) throw error;
       return data as Product[];
     }
@@ -81,38 +82,10 @@ export default function ProductionEntry() {
     type: 'production_log',
     queryKey: ['production-logs'],
     mutationFn: async (payload) => {
+      // STRICT INSERT ONLY. Zero stock math. Let the DB trigger handle it.
       const { data, error } = await supabase.from('production_logs').insert([payload]).select();
       if (error) throw error;
       return data;
-    },
-    onMutate: async (logData) => {
-      // OPTIMISTIC UI: Update stock for input, output, and byproduct instantly
-      await queryClient.cancelQueries({ queryKey: ['products'] });
-      const previousProducts = queryClient.getQueryData(['products']);
-
-      queryClient.setQueryData(['products'], (old: any) => {
-        if (!old) return [];
-        return old.map((p: any) => {
-          let newStock = Number(p.current_stock) || 0;
-          
-          // Deduct Input
-          if (p.id === logData.input_product_id) {
-            newStock -= (Number(logData.input_kg) || 0);
-          }
-          // Add Main Output
-          if (p.id === logData.output_product_id) {
-            newStock += (Number(logData.main_output_kg) || 0);
-          }
-          // Add Byproduct
-          if (p.id === logData.byproduct_id) {
-            newStock += (Number(logData.byproduct_kg) || 0);
-          }
-          
-          return { ...p, current_stock: Math.max(0, newStock) };
-        });
-      });
-
-      return { previousProducts };
     },
     onSuccess: (res) => {
       if (res.offline) {
@@ -120,7 +93,10 @@ export default function ProductionEntry() {
       } else {
         setSuccessMsg('Yield recorded successfully!');
       }
+      
       setInputKg(''); setMainOutputKg(''); setByProductKg(''); setByProductId(''); setManualWasteKg('0');
+      
+      // Invalidate queries so React pulls the newly triggered stock calculations straight from the DB
       queryClient.invalidateQueries({ queryKey: ['production-logs'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['active-session'] });
@@ -137,14 +113,15 @@ export default function ProductionEntry() {
 
   useEffect(() => {
     const runAuditCheck = async () => {
-      const audit = await checkPreviousStockTake();
-      setAuditBlock(!audit.isDone);
+      await checkPreviousStockTake();
+      // Temporarily disabled to allow backdating
+      setAuditBlock(false); 
     };
     runAuditCheck();
   }, []);
 
   const inputProduct = useMemo(() => allProducts.find(p => p.product_code === PRODUCT_CODES.INPUT), [allProducts]);
-  const mainOutputProducts = useMemo(() => allProducts.filter(p => PRODUCT_CODES.MAIN_OUTPUTS.includes(p.product_code) || p.name.toLowerCase().includes('maize retail') || p.name.toLowerCase().includes('retail')), [allProducts]);
+  const mainOutputProducts = useMemo(() => allProducts.filter(p => PRODUCT_CODES.MAIN_OUTPUTS.includes(p.product_code)), [allProducts]);
   const byProductOptions = useMemo(() => allProducts.filter(p => PRODUCT_CODES.BY_PRODUCTS.includes(p.product_code)), [allProducts]);
 
   const inputVal = parseFloat(inputKg) || 0;
@@ -178,6 +155,9 @@ export default function ProductionEntry() {
     }
     if (!isInputValid) { setError('Check weights: Total output cannot exceed input.'); return; }
 
+    const dateObj = new Date(backdate);
+    dateObj.setHours(new Date().getHours(), new Date().getMinutes(), new Date().getSeconds());
+
     const payload = {
       session_id: activeSession.id,
       input_product_id: inputProduct.id || null,
@@ -186,7 +166,8 @@ export default function ProductionEntry() {
       main_output_kg: Number(mainOutputKg) || 0,
       byproduct_id: byProductId === "" ? null : byProductId,
       byproduct_kg: byProductKg === "" ? 0 : Number(byProductKg),
-      waste_kg: Number(kukuFeedVal) || 0
+      waste_kg: Number(kukuFeedVal) || 0,
+      created_at: dateObj.toISOString()
     };
 
     if (!payload.input_product_id) {
@@ -256,11 +237,25 @@ export default function ProductionEntry() {
           <div className="lg:col-span-3">
             {/* Entry Form */}
             <div className="mill-card p-4 md:p-10 bg-white border-slate-100 shadow-xl shadow-slate-100/50 rounded-2xl">
+              <div className="mb-6 md:mb-8 border-b border-slate-100 pb-4">
+                <h3 className="text-lg md:text-xl font-bold text-slate-900 uppercase tracking-tight">Production Log</h3>
+                <p className="text-[10px] md:text-xs font-semibold italic text-amber-600 mt-2 bg-amber-50 p-3 rounded-lg border border-amber-100/50 inline-block">
+                  Note: To sell raw or unmilled products, please use the Sales/POS terminal. They cannot be logged as milled production.
+                </p>
+              </div>
               <form onSubmit={handleSave} className="space-y-8 md:space-y-10">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
                   <div className="space-y-6 md:space-y-8">
                     <div>
-                      <label className="block text-[10px] md:text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-3 md:mb-4">Phase 1: Raw Input (Bulk)</label>
+                      <div className="flex items-center justify-between mb-3 md:mb-4">
+                        <label className="block text-[10px] md:text-[11px] font-semibold text-slate-400 uppercase tracking-widest">Phase 1: Raw Input (Bulk)</label>
+                        <input 
+                          type="date" 
+                          value={backdate}
+                          onChange={e => setBackdate(e.target.value)}
+                          className="text-[10px] font-semibold text-slate-900 bg-white border border-slate-200 px-3 py-1.5 rounded-lg outline-none cursor-pointer"
+                        />
+                      </div>
                       <div className="relative group">
                         <input type="number" step="0.01" required value={inputKg} onChange={e => setInputKg(e.target.value)} placeholder="0.00" className="mill-input w-full text-2xl md:text-4xl font-semibold pr-16 md:pr-20 py-4 md:py-6 border-slate-200 focus:border-blue-600 text-base md:text-4xl" />
                         <span className="absolute right-6 top-1/2 -translate-y-1/2 font-semibold text-slate-300 uppercase text-lg group-focus-within:text-blue-600 transition-colors">KG</span>
@@ -338,7 +333,7 @@ export default function ProductionEntry() {
                 <Scale size={16} className="text-blue-600" /> Stock Monitor
               </h3>
               <div className="space-y-4">
-                {allProducts.slice(0, 10).map(p => {
+                {allProducts.filter(p => (p.category || '').toLowerCase() !== 'service' && (p.category || '').toLowerCase() !== 'milling').map(p => {
                   const isLow = p.minimum_level && p.current_stock < p.minimum_level;
                   return (
                     <div key={p.id} className="flex flex-col gap-1 border-b border-slate-50 pb-3 last:border-0">
