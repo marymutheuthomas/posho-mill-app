@@ -35,13 +35,10 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
   // Operational States
   const [leakageData, setLeakageData] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
-  const [salesTransactions, setSalesTransactions] = useState<any[]>([]);
-  const [repayments, setRepayments] = useState<any[]>([]);
   const [productionLogs, setProductionLogs] = useState<any[]>([]);
   
   // Daily Operations Monitor States
   const [retailSalesData, setRetailSalesData] = useState<any[]>([]);
-  const [dailyAuditsData, setDailyAuditsData] = useState<any[]>([]);
   const [externalProdData, setExternalProdData] = useState<any[]>([]);
   const [internalProdData, setInternalProdData] = useState<any[]>([]);
   
@@ -93,7 +90,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
         const startLocal = new Date(dateRange.start.getTime() - (dateRange.start.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
         const endLocal = new Date(dateRange.end.getTime() - (dateRange.end.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
 
-        const [plRes, cashFlowRes, leakageRes, productsRes, salesRes, repayRes, logsRes, retailSalesRes, auditsRes, extProdRes, intProdRes] = await Promise.all([
+        const [plRes, cashFlowRes, leakageRes, productsRes, logsRes, retailSalesRes, extProdRes, intProdRes] = await Promise.all([
           // Monthly P&L View
           supabase.from('dashboard_monthly_pl').select('*').gte('month_date', startIso).lte('month_date', endIso).order('month_date', { ascending: true }),
           // Daily Cash Flow View
@@ -102,16 +99,10 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
           supabase.from('dashboard_power_leakage_radar').select('*').gte('audit_date', startIso).lte('audit_date', endIso).limit(10),
           // Products Inventory (current levels are live, but fetched alongside)
           supabase.from('products').select('*').order('name'),
-          // Sales transactions within date bounds
-          supabase.from('sales_transactions').select('*').gte('created_at', startUtc).lte('created_at', endUtc),
-          // Repayments ledger within date bounds
-          supabase.from('repayments').select('*').gte('created_at', startUtc).lte('created_at', endUtc),
           // Production logs within date bounds
           supabase.from('production_logs').select('*').gte('created_at', startUtc).lte('created_at', endUtc),
           // Daily Operations - Retail Sales
           supabase.from('dashboard_retail_sales').select('*').gte('sales_date', startLocal).lte('sales_date', endLocal),
-          // Daily Operations - Audits
-          supabase.from('daily_audits').select('*').gte('audit_date', startLocal).lte('audit_date', endLocal),
           // Daily Operations - External production
           supabase.from('dashboard_external_production').select('*').gte('production_date', startLocal).lte('production_date', endLocal),
           // Daily Operations - Internal production
@@ -133,11 +124,8 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
         if (cashFlowRes.data) setCashFlowData(cashFlowRes.data);
         if (leakageRes.data) setLeakageData(leakageRes.data);
         if (productsRes.data) setProducts(productsRes.data);
-        if (salesRes.data) setSalesTransactions(salesRes.data);
-        if (repayRes.data) setRepayments(repayRes.data);
         if (logsRes.data) setProductionLogs(logsRes.data);
         if (retailSalesRes.data) setRetailSalesData(retailSalesRes.data);
-        if (auditsRes.data) setDailyAuditsData(auditsRes.data);
         if (extProdRes.data) setExternalProdData(extProdRes.data);
         if (intProdRes.data) setInternalProdData(intProdRes.data);
 

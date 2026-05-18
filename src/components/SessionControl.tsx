@@ -32,7 +32,7 @@ interface SessionControlProps {
 }
 
 // ——— Component ——————————————————————————————————————————————————————————————
-export default function SessionControl({ role }: SessionControlProps) {
+export default function SessionControl({ role, onNavigate }: SessionControlProps) {
   const queryClient = useQueryClient();
 
   // UI state

@@ -111,7 +111,6 @@ export default function AuditHub() {
       const millRev = cashFlowRows.reduce((acc, r) => acc + (Number(r.total_service_revenue) || 0), 0);
       const retailRev = cashFlowRows.reduce((acc, r) => acc + (Number(r.total_retail_revenue) || 0), 0);
       const retailCount = intProdRes.data?.length || 0;
-      const totalRev = millRev + retailRev;
 
       // Cash/M-Pesa/Debt splits from cash flow view columns
       const revSplitCash = cashFlowRows.reduce((acc, r) => acc + (Number(r.expected_physical_cash) || 0), 0);
