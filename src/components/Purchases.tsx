@@ -327,17 +327,17 @@ export default function Purchases() {
           </div>
         </div>
 
-        <div className="overflow-auto max-h-[500px] border-t border-slate-100">
+        <div className="overflow-auto max-h-[500px] border-t border-slate-100 p-3">
           <table className="w-full text-left border-collapse min-w-[650px]">
-            <thead className="sticky top-0 z-10 bg-slate-50 shadow-sm">
-              <tr>
-                <th className="px-3 md:px-6 py-3 text-[8px] md:text-[9px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Date</th>
-                <th className="px-3 md:px-6 py-3 text-[8px] md:text-[9px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Product</th>
-                <th className="px-3 md:px-6 py-3 text-[8px] md:text-[9px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Supplier</th>
-                <th className="px-2 md:px-6 py-3 text-[8px] md:text-[9px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Qty</th>
-                <th className="px-2 md:px-6 py-3 text-[8px] md:text-[9px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Unit</th>
-                <th className="px-3 md:px-6 py-3 text-[8px] md:text-[9px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Total</th>
-                <th className="px-3 md:px-6 py-3 text-[8px] md:text-[9px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100 text-right">Actions</th>
+            <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-200">
+              <tr className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                <th className="px-3 py-2">Date</th>
+                <th className="px-3 py-2">Product</th>
+                <th className="px-3 py-2">Supplier</th>
+                <th className="px-3 py-2">Qty</th>
+                <th className="px-3 py-2">Unit</th>
+                <th className="px-3 py-2">Total</th>
+                <th className="px-3 py-2 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
@@ -347,30 +347,30 @@ export default function Purchases() {
                 </tr>
               )}
               {history.map(p => (
-                <tr key={p.id} className="hover:bg-slate-50/50 transition-colors group">
-                  <td className="px-3 md:px-6 py-2 md:py-3">
-                    <p className="text-[9px] md:text-[11px] font-semibold text-slate-900">{new Date(p.created_at).toLocaleDateString()}</p>
-                    <p className="text-[7px] md:text-[8px] font-medium text-slate-500 uppercase">{new Date(p.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                <tr key={p.id} className="hover:bg-slate-50/50 transition-colors group text-xs text-slate-650">
+                  <td className="px-3 py-1.5">
+                    <p className="font-medium text-slate-800">{new Date(p.created_at).toLocaleDateString()}</p>
+                    <p className="text-[9px] text-slate-400 uppercase flex items-center gap-1 mt-0.5"><History size={10} className="opacity-40" /> {new Date(p.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
                   </td>
-                  <td className="px-3 md:px-6 py-2 md:py-3">
-                    <div className="flex items-center gap-2">
+                  <td className="px-3 py-1.5">
+                    <div className="flex items-center gap-1.5">
                       {p.product_id 
-                        ? <span className="px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[7px] font-black uppercase">Stock</span>
-                        : <span className="px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[7px] font-black uppercase">Expense</span>
+                        ? <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-100 text-[8px] font-semibold uppercase">Stock</span>
+                        : <span className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 border border-amber-100 text-[8px] font-semibold uppercase">Expense</span>
                       }
-                      <span className="text-[9px] md:text-[11px] font-semibold text-slate-900 uppercase">
+                      <span className="font-semibold text-slate-700 uppercase">
                         {p.product_id ? getProductName(p.product_id) : (p.old_item_name || p.category || '-')}
                       </span>
                     </div>
                   </td>
-                  <td className="px-3 md:px-6 py-2 md:py-3 font-semibold text-[10px] md:text-[12px] text-slate-900 uppercase truncate max-w-[100px] md:max-w-[150px]">{p.supplier_name || '-'}</td>
-                  <td className="px-2 md:px-6 py-2 md:py-3 font-semibold text-[10px] md:text-xs text-slate-900">{p.quantity}</td>
-                  <td className="px-2 md:px-6 py-2 md:py-3 font-medium text-slate-500 text-[9px] md:text-xs">{p.unit_price?.toLocaleString()}</td>
-                  <td className="px-3 md:px-6 py-2 md:py-3 font-semibold text-slate-900 text-[10px] md:text-sm">KES {p.total_amount?.toLocaleString()}</td>
-                  <td className="px-3 md:px-6 py-2 md:py-3 text-right">
-                    <div className="flex justify-end gap-1 md:gap-1.5">
-                      <button onClick={() => openEditModal(p)} className="p-1 bg-slate-100 text-slate-400 hover:text-slate-900 rounded-md transition-all"><Pencil size={11}/></button>
-                      <button onClick={() => setDeleteModal({ open: true, record: p })} className="p-1 bg-red-50 text-red-400 hover:text-red-600 rounded-md transition-all"><Trash2 size={11}/></button>
+                  <td className="px-3 py-1.5 font-medium text-slate-700 uppercase truncate max-w-[120px]">{p.supplier_name || '—'}</td>
+                  <td className="px-3 py-1.5 font-mono text-slate-800">{p.quantity}</td>
+                  <td className="px-3 py-1.5 font-mono text-slate-600">{p.unit_price?.toLocaleString()}</td>
+                  <td className="px-3 py-1.5 font-mono font-medium text-slate-900">KES {p.total_amount?.toLocaleString()}</td>
+                  <td className="px-3 py-1.5 text-right">
+                    <div className="flex justify-end gap-1">
+                      <button onClick={() => openEditModal(p)} className="p-1 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 border border-slate-100 rounded-md transition-all"><Pencil size={11}/></button>
+                      <button onClick={() => setDeleteModal({ open: true, record: p })} className="p-1 bg-red-50 hover:bg-red-100 text-red-655 border border-red-100/50 rounded-md transition-all"><Trash2 size={11}/></button>
                     </div>
                   </td>
                 </tr>

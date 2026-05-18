@@ -375,49 +375,49 @@ export default function ProductionEntry() {
             </div>
           </div>
         </div>
-        <div className="overflow-x-auto overflow-y-auto max-h-[500px]">
+        <div className="overflow-x-auto overflow-y-auto max-h-[500px] p-3">
           <table className="w-full text-left border-collapse">
-            <thead className="sticky top-0 z-10">
-              <tr className="bg-slate-50">
-                <th className="px-6 md:px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Date/Time</th>
-                <th className="px-6 md:px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Input</th>
-                <th className="px-6 md:px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Main Output</th>
-                <th className="px-6 md:px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Status</th>
+            <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-200">
+              <tr className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                <th className="px-3 py-2">Date / Time</th>
+                <th className="px-3 py-2">Input</th>
+                <th className="px-3 py-2">Main Output</th>
+                <th className="px-3 py-2">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-slate-100 bg-white">
               {logs.map((log, index) => (
-                <tr key={log.id || index} className="hover:bg-slate-50/50 transition-colors group">
-                  <td className="px-6 md:px-8 py-4 md:py-5">
-                    <p className="text-[11px] font-semibold text-slate-900">{new Date(log.created_at).toLocaleDateString()}</p>
-                    <p className="text-[9px] font-medium text-slate-400 uppercase">{new Date(log.created_at).toLocaleTimeString()}</p>
+                <tr key={log.id || index} className="hover:bg-slate-50/50 transition-colors group text-xs text-slate-650">
+                  <td className="px-3 py-1.5">
+                    <p className="font-medium text-slate-800">{new Date(log.created_at).toLocaleDateString()}</p>
+                    <p className="text-[9px] text-slate-400 uppercase flex items-center gap-1 mt-0.5"><Scale size={10} className="opacity-40" /> {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                   </td>
-                  <td className="px-6 md:px-8 py-4 md:py-5">
-                    <div className="flex items-center gap-2">
-                      <ArrowDownRight size={14} className="text-red-400" />
-                      <span className="text-sm font-semibold text-slate-900">{log.input_kg.toLocaleString()} <span className="text-[10px] text-slate-300">KG</span></span>
+                  <td className="px-3 py-1.5 font-mono text-slate-650">
+                    <div className="flex items-center gap-1">
+                      <ArrowDownRight size={12} className="text-rose-500 animate-pulse" />
+                      <span>{log.input_kg.toLocaleString()} kg</span>
                     </div>
                   </td>
-                  <td className="px-6 md:px-8 py-4 md:py-5">
-                    <div className="flex items-center gap-2">
-                      <ArrowUpRight size={14} className="text-emerald-400" />
+                  <td className="px-3 py-1.5 font-mono">
+                    <div className="flex items-center gap-1">
+                      <ArrowUpRight size={12} className="text-emerald-500" />
                       <div>
-                        <p className="text-sm font-semibold text-slate-900">{log.main_output_kg.toLocaleString()} <span className="text-[10px] text-slate-300">KG</span></p>
-                        <p className="text-[9px] font-medium text-slate-400 uppercase tracking-tighter">{log.products?.product_code} · {log.products?.name}</p>
+                        <span className="text-slate-800 font-medium">{log.main_output_kg.toLocaleString()} kg</span>
+                        <p className="text-[9px] font-medium text-slate-400 uppercase tracking-tight font-sans mt-0.5">{log.products?.product_code} · {log.products?.name}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 md:px-8 py-4 md:py-5">
-                    <div className="flex items-center gap-2">
+                  <td className="px-3 py-1.5">
+                    <div className="flex items-center gap-1">
                       <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                      <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Synced</span>
+                      <span className="text-[9px] font-medium text-slate-400 uppercase tracking-wider">Synced</span>
                     </div>
                   </td>
                 </tr>
               ))}
               {logs.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-8 py-20 text-center text-slate-300 font-semibold uppercase tracking-widest italic">No production recorded</td>
+                  <td colSpan={4} className="px-6 py-12 text-center text-slate-450 font-medium uppercase tracking-wider text-xs italic">No production recorded</td>
                 </tr>
               )}
             </tbody>

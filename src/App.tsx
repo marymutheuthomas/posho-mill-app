@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, Activity, ShieldCheck, Factory, 
   ShoppingCart, BookOpen, Settings as SettingsIcon, Lock,
-  Wifi, WifiOff, Menu, X,
-  Zap, ShoppingBag, Search, User, ChevronRight
+  Wifi, WifiOff, X,
+  Zap, ShoppingBag, Search, User, ChevronRight, ChevronUp
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useActiveSession } from './hooks/useActiveSession';
@@ -30,6 +30,15 @@ function App() {
   const [activeSessionType, setActiveSessionType] = useState<'Internal' | 'External' | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [showBackToTop, setShowBackToTop] = useState(false);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    setShowBackToTop(e.currentTarget.scrollTop > 400);
+  };
+
+  const scrollToTop = () => {
+    document.getElementById('main-scroll-container')?.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const { data: pendingCount = 0 } = useQuery({
     queryKey: ['pending-tx-count'],
@@ -311,7 +320,7 @@ function App() {
         </div>
 
         {/* CONTENT SCROLL AREA */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 md:p-10 pb-24 md:pb-10 custom-scrollbar">
+        <div id="main-scroll-container" onScroll={handleScroll} className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 md:p-10 pb-24 md:pb-10 custom-scrollbar">
           {activeTab === 'Dashboard'        && <Dashboard onNavigate={setActiveTab} role={user.role} isOnline={isOnline} pendingCount={pendingCount} />}
           {activeTab === 'Session Control'  && <SessionControl onNavigate={setActiveTab} role={user.role} isOnline={isOnline} pendingCount={pendingCount} />}
           {activeTab === 'Insights & Audit' && <MasterDashboard />}
@@ -323,6 +332,17 @@ function App() {
           {activeTab === 'Settings'         && <Settings />}
           {activeTab === 'User Management'  && <UserManagement />}
         </div>
+
+        {/* Floating Back to Top Button */}
+        {showBackToTop && (
+          <button
+            onClick={scrollToTop}
+            className="fixed bottom-20 right-6 z-[60] bg-slate-900 text-white p-3 rounded-full shadow-2xl transition-all duration-300 hover:bg-slate-800 hover:-translate-y-1 active:scale-95 animate-in fade-in zoom-in duration-300 border border-slate-700/30"
+            aria-label="Back to Top"
+          >
+            <ChevronUp size={20} />
+          </button>
+        )}
 
         {/* MOBILE PERSISTENT BOTTOM NAVIGATION BAR */}
         <nav className="md:hidden fixed bottom-0 left-0 right-0 h-14 bg-white/95 backdrop-blur-lg border-t border-slate-200 flex items-center justify-start gap-1.5 overflow-x-auto scrollbar-none z-50 px-4 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] pb-safe">

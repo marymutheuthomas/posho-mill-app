@@ -34,7 +34,7 @@ export default function GlobalDateFilter({ startDate, endDate, onChange }: Globa
   };
 
   return (
-    <div className="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-md border-b border-slate-200 py-3 mb-4 shadow-sm -mt-4 -mx-4 px-4">
+    <div className="static md:sticky md:top-0 z-30 bg-slate-50/95 backdrop-blur-md border-b border-slate-200 py-3 mb-4 shadow-sm -mt-4 -mx-4 px-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
         
         {/* Presets - persistent, wrap gracefully */}

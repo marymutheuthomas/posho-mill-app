@@ -54,6 +54,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
   const [success, setSuccess] = useState('');
   const [showReceipt, setShowReceipt] = useState(false);
   const [auditBlock, setAuditBlock] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -757,120 +758,178 @@ export default function ServicePOS({ role }: ServicePOSProps) {
 
       {/* SALES HISTORY */}
       <div className="bg-white border border-slate-100 shadow-sm rounded-2xl overflow-hidden mt-6">
-        <div className="p-5 md:p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-          <div className="flex items-center gap-3 md:gap-4">
-            <div className="w-11 h-11 bg-white rounded-xl shadow-sm flex items-center justify-center text-slate-700 border border-slate-100">
-              <Calendar size={20} />
+        <div className="p-4 md:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-white rounded-lg shadow-sm flex items-center justify-center text-slate-700 border border-slate-100 shrink-0">
+              <Calendar size={16} />
             </div>
             <div>
-              <h3 className="text-lg font-medium text-slate-950 uppercase tracking-tight">Sales History Log</h3>
-              <p className="text-xs text-slate-400 font-medium uppercase tracking-wider mt-0.5">Registry Audit · Historical Data</p>
+              <h3 className="text-sm font-semibold text-slate-950 uppercase tracking-tight">Sales History Log</h3>
+              <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider mt-0.5">Registry Audit · Historical Data</p>
             </div>
           </div>
           <button 
-            onClick={() => queryClient.invalidateQueries({ queryKey: ['sales_history'] })} 
-            className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-slate-900 transition-all shadow-sm"
+            onClick={() => {
+              queryClient.invalidateQueries({ queryKey: ['sales_history'] });
+              setCurrentPage(1);
+            }} 
+            className="p-1.5 bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-slate-900 transition-all shadow-sm"
             title="Refresh History"
           >
-            <RotateCcw size={18} />
+            <RotateCcw size={15} />
           </button>
         </div>
 
-        <div className="divide-y divide-slate-100">
-          {salesHistory.map(log => {
-            const prod = products.find(p => p.id === log.product_id);
-            const isService = prod && (prod.milling_fee || 0) > 0 && !(prod.selling_price || 0);
-            return (
-              <div 
-                key={log.id} 
-                className="flex flex-wrap items-center justify-between gap-4 p-4 md:p-5 hover:bg-slate-50/30 transition-colors"
-              >
-                {/* Left side: Client and Date/Time */}
-                <div className="flex items-center gap-3 min-w-[200px] flex-1">
-                  <div className="w-11 h-11 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center text-slate-400">
-                    <User size={18} />
-                  </div>
-                  <div className="space-y-0.5">
-                    <h4 className="text-base font-medium text-slate-800 uppercase tracking-tight leading-none">{log.customer_name || 'Walk-in'}</h4>
-                    <span className="text-xs font-normal text-slate-400">
-                      {new Date(log.created_at).toLocaleDateString()} {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Center details: Product info, weights, payment methods */}
-                <div className="flex flex-wrap items-center gap-4 sm:gap-8 min-w-[280px] sm:min-w-fit flex-1 justify-between sm:justify-end text-right">
-                  <div className="space-y-0.5 text-left sm:text-right">
-                    <span className="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Product & Weight</span>
-                    <span className="text-sm font-normal text-slate-600">
-                      {prod?.name || 'Maize'} ({log.weight_kg} kg)
-                    </span>
-                  </div>
-                  <div className="space-y-0.5 text-left sm:text-right">
-                    <span className="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Category</span>
-                    <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-semibold uppercase ${isService ? 'bg-blue-50 text-blue-700 border border-blue-100/50' : 'bg-purple-50 text-purple-700 border border-purple-100/50'}`}>
-                      {isService ? 'Service' : 'Retail'}
-                    </span>
-                  </div>
-                  <div className="space-y-0.5 text-left sm:text-right">
-                    <span className="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Payment Method</span>
-                    {[
-                      (log.amount_cash || 0) > 0 ? `Cash: ${log.amount_cash}` : null,
-                      (log.amount_mpesa || 0) > 0 ? `M-Pesa: ${log.amount_mpesa}` : null,
-                      (log.amount_debt || 0) > 0 ? `Debt: ${log.amount_debt}` : null,
-                    ].filter(Boolean).length > 0 ? (
-                      <span className="block text-xs font-medium text-slate-700">
-                        {[
-                          (log.amount_cash || 0) > 0 ? `Cash: ${log.amount_cash}` : null,
-                          (log.amount_mpesa || 0) > 0 ? `M-Pesa: ${log.amount_mpesa}` : null,
-                          (log.amount_debt || 0) > 0 ? `Debt: ${log.amount_debt}` : null,
-                        ].filter(Boolean).join(' | ')}
-                      </span>
-                    ) : (
-                      <span className={`block text-xs font-medium ${log.payment_method === 'Debt' ? 'text-rose-600' : 'text-emerald-600'}`}>
-                        {log.payment_method}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Right side: Price & Action Touch Targets */}
-                <div className="flex items-center justify-between sm:justify-end gap-6 min-w-[200px] flex-1 sm:flex-initial border-t border-slate-50 pt-2 sm:pt-0 sm:border-0">
-                  <div className="space-y-0.5 text-left sm:text-right">
-                    <span className="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider sm:hidden">Total Price</span>
-                    <span className="text-base font-semibold text-slate-800 font-mono">KSh {log.total_price?.toLocaleString()}</span>
-                  </div>
-
+        <div className="p-3">
+          <div className="overflow-x-auto overflow-y-auto max-h-[500px] border border-slate-100 rounded-lg">
+            <table className="w-full text-left border-collapse min-w-[700px]">
+              <thead className="bg-slate-50 sticky top-0 z-10">
+                <tr className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                  <th className="px-3 py-2">Client / Time</th>
+                  <th className="px-3 py-2">Product & Weight</th>
+                  <th className="px-3 py-2">Category</th>
+                  <th className="px-3 py-2">Payment Split</th>
+                  <th className="px-3 py-2 text-right">Total Price</th>
                   {role === 'ADMIN' && (
-                    <div className="flex items-center gap-2">
-                      <button 
-                        onClick={() => startEdit(log)} 
-                        className="h-11 w-11 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 border border-slate-100 rounded-xl transition-all flex items-center justify-center" 
-                        title="Edit Sale"
-                      >
-                        <Pencil size={15} />
-                      </button>
-                      <button 
-                        onClick={() => setDeletingSale(log)} 
-                        className="h-11 w-11 bg-red-50 hover:bg-red-100 text-red-600 border border-red-100/50 rounded-xl transition-all flex items-center justify-center" 
-                        title="Delete Sale"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
+                    <th className="px-3 py-2 text-center w-24">Actions</th>
                   )}
-                </div>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 bg-white">
+                {(() => {
+                  const itemsPerPage = 10;
+                  const totalPages = Math.ceil(salesHistory.length / itemsPerPage) || 1;
+                  const validCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+                  const startIndex = (validCurrentPage - 1) * itemsPerPage;
+                  const paginatedSales = salesHistory.slice(startIndex, startIndex + itemsPerPage);
 
-              </div>
-            );
-          })}
-
-          {salesHistory.length === 0 && (
-            <div className="p-16 text-center text-slate-400 font-medium uppercase tracking-wider text-xs italic">
-              No transactions recorded today
-            </div>
-          )}
+                  return (
+                    <>
+                      {paginatedSales.map(log => {
+                        const prod = products.find(p => p.id === log.product_id);
+                        const isService = prod && (prod.milling_fee || 0) > 0 && !(prod.selling_price || 0);
+                        return (
+                          <tr key={log.id} className="hover:bg-slate-50/50 transition-colors text-xs text-slate-650">
+                            <td className="px-3 py-2">
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 bg-slate-50 border border-slate-100 rounded-full flex items-center justify-center text-slate-400 shrink-0">
+                                  <User size={12} />
+                                </div>
+                                <div>
+                                  <p className="font-medium text-slate-800 uppercase tracking-tight truncate max-w-[120px]">{log.customer_name || 'Walk-in'}</p>
+                                  <span className="text-[10px] text-slate-400 block mt-0.5 leading-none">
+                                    {new Date(log.created_at).toLocaleDateString()} {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-3 py-2 font-medium text-slate-700">
+                              {prod?.name || 'Maize'} ({log.weight_kg} kg)
+                            </td>
+                            <td className="px-3 py-2">
+                              <span className={`px-2 py-0.5 rounded-full text-[9px] font-semibold uppercase ${isService ? 'bg-blue-50 text-blue-700 border border-blue-100/50' : 'bg-purple-50 text-purple-700 border border-purple-100/50'}`}>
+                                {isService ? 'Service' : 'Retail'}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2 font-medium text-slate-600">
+                              {[
+                                (log.amount_cash || 0) > 0 ? `Cash: ${log.amount_cash}` : null,
+                                (log.amount_mpesa || 0) > 0 ? `M-Pesa: ${log.amount_mpesa}` : null,
+                                (log.amount_debt || 0) > 0 ? `Debt: ${log.amount_debt}` : null,
+                              ].filter(Boolean).length > 0 ? (
+                                <span className="text-[10px] text-slate-600 block leading-tight">
+                                  {[
+                                    (log.amount_cash || 0) > 0 ? `Cash: ${log.amount_cash}` : null,
+                                    (log.amount_mpesa || 0) > 0 ? `M-Pesa: ${log.amount_mpesa}` : null,
+                                    (log.amount_debt || 0) > 0 ? `Debt: ${log.amount_debt}` : null,
+                                  ].filter(Boolean).join(' | ')}
+                                </span>
+                              ) : (
+                                <span className={`text-[10px] font-semibold ${log.payment_method === 'Debt' ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                  {log.payment_method}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-right font-semibold font-mono text-slate-800">
+                              KSh {log.total_price?.toLocaleString()}
+                            </td>
+                            {role === 'ADMIN' && (
+                              <td className="px-3 py-2">
+                                <div className="flex items-center justify-center gap-1.5">
+                                  <button 
+                                    onClick={() => startEdit(log)} 
+                                    className="h-7 w-7 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 border border-slate-100 rounded-lg transition-all flex items-center justify-center" 
+                                    title="Edit Sale"
+                                  >
+                                    <Pencil size={12} />
+                                  </button>
+                                  <button 
+                                    onClick={() => setDeletingSale(log)} 
+                                    className="h-7 w-7 bg-red-50 hover:bg-red-100 text-red-600 border border-red-100/50 rounded-lg transition-all flex items-center justify-center" 
+                                    title="Delete Sale"
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                </div>
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      })}
+                      
+                      {salesHistory.length === 0 && (
+                        <tr>
+                          <td colSpan={role === 'ADMIN' ? 6 : 5} className="p-10 text-center text-slate-450 font-medium uppercase tracking-wider text-xs italic">
+                            No transactions recorded today
+                          </td>
+                        </tr>
+                      )}
+                    </>
+                  );
+                })()}
+              </tbody>
+            </table>
+          </div>
         </div>
+
+        {/* Pagination Control Matrix */}
+        {salesHistory.length > 0 && (
+          <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-4 shrink-0">
+            {(() => {
+              const itemsPerPage = 10;
+              const totalPages = Math.ceil(salesHistory.length / itemsPerPage) || 1;
+              const validCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+              const startIndex = (validCurrentPage - 1) * itemsPerPage;
+
+              return (
+                <>
+                  <span className="text-[11px] text-slate-500 font-medium">
+                    Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, salesHistory.length)} of {salesHistory.length} sales
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      disabled={validCurrentPage === 1}
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      className="px-2 py-1 text-[10px] font-semibold text-slate-600 bg-white border border-slate-200 rounded-md hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    >
+                      Previous
+                    </button>
+                    <span className="text-[10px] text-slate-500 font-semibold px-1">
+                      Page {validCurrentPage} of {totalPages}
+                    </span>
+                    <button
+                      disabled={validCurrentPage === totalPages}
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      className="px-2 py-1 text-[10px] font-semibold text-slate-600 bg-white border border-slate-200 rounded-md hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        )}
       </div>
 
       {/* EDIT SALE MODAL */}

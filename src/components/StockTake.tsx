@@ -259,37 +259,36 @@ export default function StockTake({ role }: StockTakeProps) {
                   <Eye size={12} className="text-amber-500" /> Blind Entry Mode
                </div>
             </div>
-            {/* Desktop Table View (Hidden on Mobile) */}
             <div className="hidden md:block overflow-x-auto whitespace-nowrap">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-slate-50/50">
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Product / Grade</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 text-center">Category</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Measured Physical Count (KG)</th>
+                  <tr className="bg-slate-50/50 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                    <th className="px-3 py-2">Product / Grade</th>
+                    <th className="px-3 py-2 text-center">Category</th>
+                    <th className="px-3 py-2">Measured Physical Count (KG)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filteredProducts.map(p => (
-                    <tr key={p.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-6 py-4">
-                        <p className="text-[10px] font-semibold text-slate-400 uppercase mb-1">{p.product_code}</p>
-                        <p className="text-sm font-bold text-slate-900 uppercase tracking-tighter">{p.name}</p>
+                    <tr key={p.id} className="hover:bg-slate-50/50 transition-colors text-xs text-slate-650">
+                      <td className="px-3 py-1.5">
+                        <p className="text-[9px] font-medium text-slate-400 uppercase mb-0.5">{p.product_code}</p>
+                        <p className="font-semibold text-slate-800 uppercase tracking-tight">{p.name}</p>
                       </td>
-                      <td className="px-6 py-4 text-center">
-                         <span className="px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-[9px] font-semibold uppercase tracking-widest">{p.category}</span>
+                      <td className="px-3 py-1.5 text-center">
+                         <span className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full text-[9px] font-medium uppercase tracking-wider">{p.category}</span>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="relative group max-w-[200px] mx-auto md:ml-0">
+                      <td className="px-3 py-1.5">
+                        <div className="relative group max-w-[140px] md:ml-0">
                           <input 
                             type="number" 
                             step="0.01"
                             value={counts[p.id] || ''}
                             onChange={(e) => handleCountChange(p.id, e.target.value)}
                             placeholder="0.00"
-                            className="mill-input w-full text-lg font-black bg-slate-50 border-slate-200 focus:bg-white focus:border-slate-900 transition-all py-3 text-center"
+                            className="mill-input w-full text-xs font-medium bg-slate-50 border-slate-200 focus:bg-white focus:border-slate-900 transition-all py-1 px-2 text-center h-8"
                           />
-                          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-300">KG</span>
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-semibold text-slate-355">KG</span>
                         </div>
                       </td>
                     </tr>
@@ -301,11 +300,11 @@ export default function StockTake({ role }: StockTakeProps) {
             {/* Mobile Card View (Visible only on Mobile) */}
             <div className="md:hidden divide-y divide-slate-50">
               {filteredProducts.map(p => (
-                <div key={p.id} className="p-5 space-y-4">
+                <div key={p.id} className="p-3 space-y-2">
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="text-[9px] font-semibold text-slate-400 uppercase">{p.product_code}</p>
-                      <p className="text-base font-semibold text-slate-900 uppercase tracking-tight">{p.name}</p>
+                      <p className="text-xs font-semibold text-slate-900 uppercase tracking-tight">{p.name}</p>
                     </div>
                   </div>
                   <div className="relative group w-full">
@@ -315,9 +314,9 @@ export default function StockTake({ role }: StockTakeProps) {
                       value={counts[p.id] || ''}
                       onChange={(e) => handleCountChange(p.id, e.target.value)}
                       placeholder="0.00"
-                      className="mill-input w-full text-2xl font-semibold bg-slate-50 border-slate-100 focus:bg-white focus:border-slate-900 transition-all py-5 text-center text-base"
+                      className="mill-input w-full text-xs font-medium bg-slate-50 border-slate-100 focus:bg-white focus:border-slate-900 transition-all py-1 px-2 text-center h-8"
                     />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-slate-300 uppercase">KG</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-slate-355 uppercase">KG</span>
                   </div>
                 </div>
               ))}
@@ -363,56 +362,50 @@ export default function StockTake({ role }: StockTakeProps) {
                  </div>
               </div>
            </div>
-           <div className="overflow-x-auto whitespace-nowrap">
+            <div className="overflow-x-auto whitespace-nowrap">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Date / Time</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Item Name</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">System Record</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Physical Entry</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Discrepancy</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Actions</th>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    <th className="px-3 py-2">Date / Time</th>
+                    <th className="px-3 py-2">Item Name</th>
+                    <th className="px-3 py-2">System Record</th>
+                    <th className="px-3 py-2">Physical Entry</th>
+                    <th className="px-3 py-2 text-right">Discrepancy</th>
+                    <th className="px-3 py-2 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {history.map(log => (
-                    <tr key={log.id} className="hover:bg-slate-50/50 transition-colors group">
-                      <td className="px-6 py-4">
-                        <p className="text-[11px] font-semibold text-slate-900">{new Date(log.created_at).toLocaleDateString()}</p>
-                        <p className="text-[9px] font-medium text-slate-400 uppercase flex items-center gap-1"><Clock size={10}/> {new Date(log.created_at).toLocaleTimeString()}</p>
+                    <tr key={log.id} className="hover:bg-slate-50/50 transition-colors group text-xs text-slate-650">
+                      <td className="px-3 py-1.5">
+                        <p className="font-medium text-slate-800">{new Date(log.created_at).toLocaleDateString()}</p>
+                        <p className="text-[9px] text-slate-400 uppercase flex items-center gap-1 mt-0.5"><Clock size={10}/> {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                       </td>
-                      <td className="px-6 py-4 font-bold text-slate-900 uppercase text-xs">{log.product_name}</td>
-                      <td className="px-6 py-4">
-                         <p className="text-sm font-semibold text-slate-400">{log.system_stock.toLocaleString()} KG</p>
+                      <td className="px-3 py-1.5 font-medium text-slate-700 uppercase">{log.product_name}</td>
+                      <td className="px-3 py-1.5 font-mono text-slate-600">{log.system_stock.toLocaleString()} kg</td>
+                      <td className="px-3 py-1.5 font-mono text-slate-800">{log.physical_stock.toLocaleString()} kg</td>
+                      <td className="px-3 py-1.5 text-right font-mono">
+                        <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${log.discrepancy < 0 ? 'bg-red-50 text-red-600 border border-red-100/50' : log.discrepancy > 0 ? 'bg-emerald-50 text-emerald-600 border border-emerald-100/50' : 'bg-slate-50 text-slate-400 border border-slate-100/50'}`}>
+                          {log.discrepancy > 0 ? `+${log.discrepancy.toLocaleString()}` : log.discrepancy.toLocaleString()} kg
+                        </span>
                       </td>
-                      <td className="px-6 py-4">
-                         <p className="text-sm font-semibold text-slate-900">{log.physical_stock.toLocaleString()} KG</p>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                         <div className={`flex flex-col items-end gap-1 font-mono font-semibold ${log.discrepancy < 0 ? 'text-red-600' : log.discrepancy > 0 ? 'text-emerald-600' : 'text-slate-400'}`}>
-                            <span className={`px-3 py-1 rounded-lg text-xs border ${log.discrepancy < 0 ? 'bg-red-50 border-red-100' : log.discrepancy > 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-100'}`}>
-                               {log.discrepancy > 0 ? `+${log.discrepancy.toLocaleString()}` : log.discrepancy.toLocaleString()} KG
-                            </span>
-                            <span className="text-[9px] uppercase tracking-widest font-sans font-medium">{log.discrepancy < 0 ? 'Deficit' : log.discrepancy > 0 ? 'Surplus' : 'Balanced'}</span>
-                         </div>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                         <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => { setEditForm({ physical: log.physical_stock }); setEditModal({ open: true, record: log }); }} className="p-2 bg-slate-100 text-slate-400 hover:text-slate-900 rounded-lg transition-all"><Pencil size={14}/></button>
-                            <button onClick={() => setDeleteModal({ open: true, record: log })} className="p-2 bg-red-50 text-red-400 hover:text-red-600 rounded-lg transition-all"><Trash2 size={14}/></button>
+                      <td className="px-3 py-1.5">
+                         <div className="flex justify-center gap-1">
+                            <button onClick={() => { setEditForm({ physical: log.physical_stock }); setEditModal({ open: true, record: log }); }} className="p-1 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 border border-slate-100 rounded-md transition-all"><Pencil size={12}/></button>
+                            <button onClick={() => setDeleteModal({ open: true, record: log })} className="p-1 bg-red-50 hover:bg-red-100 text-red-600 border border-red-100/50 rounded-md transition-all"><Trash2 size={12}/></button>
                          </div>
                       </td>
                     </tr>
                   ))}
                   {history.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="px-10 py-32 text-center text-slate-300 font-black uppercase tracking-widest italic opacity-50">No verified audit logs found in the registry</td>
+                      <td colSpan={6} className="px-6 py-12 text-center text-slate-400 font-medium uppercase tracking-wider text-xs italic">No verified audit logs found in the registry</td>
                     </tr>
                   )}
                 </tbody>
               </table>
            </div>
+
         </div>
       ) : (
         <div className="mill-card p-10 md:p-20 text-center text-slate-400 font-semibold uppercase tracking-widest italic text-xs md:text-sm">
