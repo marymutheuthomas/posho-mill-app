@@ -46,6 +46,13 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
   const [isDayLocked, setIsDayLocked] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Cash Drop Modal State
+  const [isCashDropModalOpen, setIsCashDropModalOpen] = useState(false);
+  const [cashDropForm, setCashDropForm] = useState({ cash: '', mpesa: '' });
+  const [cashDropLoading, setCashDropLoading] = useState(false);
+  const [cashDropSuccess, setCashDropSuccess] = useState('');
+  const [cashDropError, setCashDropError] = useState('');
+
   // 1. Static fetches — run once, NEVER react to the dateRange (Strict Live Snapshot Rule)
   useEffect(() => {
     async function fetchStaticData() {
@@ -139,6 +146,39 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
     fetchFilteredData();
   }, [dateRange]);
 
+  const handleCashDropSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setCashDropLoading(true);
+      setCashDropError('');
+      const cash = parseFloat(cashDropForm.cash) || 0;
+      const mpesa = parseFloat(cashDropForm.mpesa) || 0;
+      const total = cash + mpesa;
+
+      // Get the authenticated user's UUID (FK references auth.users, NOT milling_sessions)
+      const { data: { user } } = await supabase.auth.getUser();
+
+      const { error } = await supabase.from('daily_audits').insert([{
+        audit_date: new Date().toISOString().split('T')[0],
+        actual_cash_collected: total,
+        recorded_by: user?.id || null
+      }]);
+
+      if (error) throw error;
+      setCashDropSuccess('Cash Drop Logged Successfully');
+      setTimeout(() => {
+        setIsCashDropModalOpen(false);
+        setCashDropSuccess('');
+        setCashDropForm({ cash: '', mpesa: '' });
+        window.location.reload();
+      }, 1500);
+    } catch (err: any) {
+      setCashDropError(err.message);
+    } finally {
+      setCashDropLoading(false);
+    }
+  };
+
   // Currency Formatter
   const formatCurrency = (val: number) => `KSh ${Math.round(val || 0).toLocaleString()}`;
 
@@ -179,15 +219,19 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
   const burnEfficiency = totalInputKg > 0 ? serviceRevenue / totalInputKg : 0;
 
   // Power Leakage badges and styling
+  const GHOST_MILLING_STR = '🚨 CRITICAL: GHOST MILLING (Power used, no KGs logged)';
+
   const getLeakageBadge = (alert: string) => {
-    if (alert === 'GHOST MILLING DETECTED') return 'bg-red-500/20 text-red-300 border-red-500/30';
-    if (alert === 'UNRECORDED PRODUCTION') return 'bg-[#F59E0B]/20 text-[#F59E0B] border-[#F59E0B]/30';
+    if (!alert) return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
+    if (alert === GHOST_MILLING_STR || alert.includes('GHOST') || alert.includes('CRITICAL')) return 'bg-red-500/30 text-red-300 border-red-500/40';
+    if (alert.includes('UNRECORDED') || alert.includes('AGING')) return 'bg-[#F59E0B]/20 text-[#F59E0B] border-[#F59E0B]/30';
     return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
   };
 
   const getLeakageBorder = (alert: string) => {
-    if (alert === 'GHOST MILLING DETECTED') return 'border-red-500/40 shadow-red-950/20';
-    if (alert === 'UNRECORDED PRODUCTION') return 'border-[#F59E0B]/40 shadow-amber-950/20';
+    if (!alert) return 'border-emerald-500/30';
+    if (alert === GHOST_MILLING_STR || alert.includes('GHOST') || alert.includes('CRITICAL')) return 'border-red-500/60 shadow-red-950/30';
+    if (alert.includes('UNRECORDED') || alert.includes('AGING')) return 'border-[#F59E0B]/40 shadow-amber-950/20';
     return 'border-emerald-500/30';
   };
 
@@ -195,19 +239,15 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
   const totalRetailCash = retailSalesData.reduce((acc, curr) => acc + (Number(curr.expected_cash) || 0), 0);
   const totalRetailKgSold = retailSalesData.reduce((acc, curr) => acc + (Number(curr.total_kg_sold) || 0), 0);
   
-  // Group quantities by product_name
-  const retailProductSummary = retailSalesData.reduce((acc: { product_name: string; total_kg_sold: number }[], curr) => {
-    const existing = acc.find(item => item.product_name === curr.product_name);
-    if (existing) {
-      existing.total_kg_sold += (Number(curr.total_kg_sold) || 0);
-    } else if (curr.product_name) {
-      acc.push({
-        product_name: curr.product_name,
-        total_kg_sold: Number(curr.total_kg_sold) || 0
-      });
-    }
+
+  // Group retail sales by sales_date for date-level drill-down
+  const retailByDate = retailSalesData.reduce((acc: Record<string, any[]>, curr) => {
+    const date = curr.sales_date || '';
+    if (!acc[date]) acc[date] = [];
+    acc[date].push(curr);
     return acc;
-  }, []);
+  }, {});
+  const retailDateEntries = Object.entries(retailByDate).sort(([a], [b]) => b.localeCompare(a));
 
   // Audit Balance — unified liquid expectation (Cash + M-Pesa combined)
   const auditExpectedLiquid = cashFlowData.reduce((acc, curr) => acc + (Number(curr.expected_liquid_total) || 0), 0);
@@ -225,7 +265,6 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
   // ── Card 3 Calculations: Internal Production & Projected Retail Value ──
   const totalIntNetOutputKg = internalProdData.reduce((acc, curr) => acc + (Number(curr.net_output_kg) || 0), 0);
   const totalIntKwhConsumed = internalProdData.reduce((acc, curr) => acc + (Number(curr.power_consumed_kwh) || 0), 0);
-  const avgIntPowerEfficiency = totalIntNetOutputKg > 0 ? (totalIntKwhConsumed / totalIntNetOutputKg) : 0;
 
   // Projected Retail Value sourced directly from dashboard_internal_production view column
   const projectedRetailValue = internalProdData.reduce((acc, row) => acc + (Number(row.projected_retail_value) || 0), 0);
@@ -435,17 +474,26 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
                 </div>
               </div>
 
-              {/* Product Breakdown List */}
-              <div className="space-y-1.5 mb-4 bg-white p-3.5 rounded-xl border border-slate-100">
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-1 mb-1.5">Product Volume Breakdown</p>
-                {retailProductSummary.slice(0, 4).map((p, idx) => (
-                  <div key={idx} className="flex justify-between items-center text-xs py-1 border-b border-slate-50 last:border-0">
-                    <span className="font-bold text-slate-600 uppercase truncate max-w-[150px]">{p.product_name}</span>
-                    <span className="font-mono font-bold text-[#1E3A8A]">{p.total_kg_sold.toLocaleString()} KG</span>
-                  </div>
-                ))}
-                {retailProductSummary.length === 0 && (
-                  <p className="text-[9px] text-slate-400 italic py-1 uppercase tracking-tight">No retail product sales registered</p>
+              {/* Date-Grouped Sales Drill-Down */}
+              <div className="mb-4 bg-white rounded-xl border border-slate-100 overflow-hidden max-h-[160px] overflow-y-auto custom-scrollbar">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-3.5 pt-3 pb-1.5 border-b border-slate-100 sticky top-0 bg-white z-10">Daily Product Breakdown</p>
+                {retailDateEntries.length === 0 ? (
+                  <p className="text-[9px] text-slate-400 italic p-3.5 uppercase tracking-tight">No retail sales registered</p>
+                ) : (
+                  retailDateEntries.map(([date, rows]) => (
+                    <div key={date} className="border-b border-slate-50 last:border-0">
+                      <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest px-3.5 py-1 bg-slate-50/60">{date || '—'}</p>
+                      {rows.map((r, idx) => (
+                        <div key={idx} className="flex items-center justify-between px-3.5 py-1 text-[10px] border-b border-slate-50/60 last:border-0">
+                          <span className="font-bold text-slate-600 uppercase truncate max-w-[120px]">{r.product_name || '—'}</span>
+                          <div className="flex items-center gap-3 shrink-0">
+                            <span className="font-mono text-slate-500">{Number(r.total_kgs_sold || r.total_kg_sold || 0).toLocaleString()} KG</span>
+                            <span className="font-mono font-bold text-[#1E3A8A]">{formatCurrency(r.cash_worth_collected || r.expected_cash || 0)}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ))
                 )}
               </div>
             </div>
@@ -478,6 +526,13 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
                 ) : (
                   <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest italic">No Closed Audit</span>
                 )}
+                
+                <button 
+                  onClick={() => setIsCashDropModalOpen(true)}
+                  className="mt-3 w-full py-1.5 px-3 bg-[#1E3A8A] text-white rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-blue-800 transition-colors shadow-sm active:scale-95 flex items-center justify-center gap-2"
+                >
+                  <Wallet size={12} /> Log Cash Drop
+                </button>
               </div>
             </div>
 
@@ -506,16 +561,36 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
                 </div>
               </div>
 
-              {/* Power Consumed */}
-              <div className="bg-white p-3.5 rounded-xl border border-slate-100 mb-4 flex items-center justify-between">
-                <div>
-                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Service Energy Draw</p>
-                  <p className="text-xs font-extrabold text-[#1E3A8A] uppercase tracking-tight">Vitals</p>
+              {/* External Session Drill-Down Table */}
+              {externalProdData.length > 0 && (
+                <div className="bg-white rounded-xl border border-slate-100 mb-3 overflow-hidden max-h-[130px] overflow-y-auto custom-scrollbar">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="bg-slate-50 sticky top-0">
+                      <tr>
+                        {['Session', 'KG', 'kWh', 'Cost', 'Eff%'].map(h => (
+                          <th key={h} className="px-2 py-1.5 text-[8px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {externalProdData.map((r, i) => {
+                        const eff = Number(r.efficiency_score);
+                        return (
+                          <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="px-2 py-1 text-[9px] font-bold font-mono text-slate-600 truncate max-w-[60px]">{r.session_code || r.session_id || `S${i+1}`}</td>
+                            <td className="px-2 py-1 text-[9px] font-bold text-slate-700">{Number(r.kgs_processed || r.total_input_kg || 0).toLocaleString()}</td>
+                            <td className="px-2 py-1 text-[9px] font-bold text-slate-700">{Number(r.power_consumed_kwh || 0).toFixed(1)}</td>
+                            <td className="px-2 py-1 text-[9px] font-bold text-slate-700">{Number(r.exact_power_cost_ksh || 0).toLocaleString()}</td>
+                            <td className={`px-2 py-1 text-[9px] font-black ${!isNaN(eff) && eff < 80 ? 'text-orange-600' : 'text-emerald-600'}`}>
+                              {r.efficiency_score != null ? `${eff.toFixed(1)}%` : '—'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
-                <div className="text-right">
-                  <p className="text-lg font-black text-[#1E3A8A] font-mono">{totalExtKwhConsumed.toFixed(2)} <span className="text-xs">kWh</span></p>
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Power Efficiency Indicator */}
@@ -568,16 +643,36 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
                 </div>
               </div>
 
-              {/* Power Efficiency */}
-              <div className="bg-white p-3.5 rounded-xl border border-slate-100 mb-4 flex items-center justify-between">
-                <div>
-                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Yield Power Efficiency</p>
-                  <p className="text-xs font-extrabold text-[#1E3A8A] uppercase tracking-tight">Overall Performance</p>
+              {/* Internal Session Drill-Down Table */}
+              {internalProdData.length > 0 && (
+                <div className="bg-white rounded-xl border border-slate-100 mb-3 overflow-hidden max-h-[130px] overflow-y-auto custom-scrollbar">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="bg-slate-50 sticky top-0">
+                      <tr>
+                        {['Session', 'KG', 'kWh', 'Cost', 'Eff%'].map(h => (
+                          <th key={h} className="px-2 py-1.5 text-[8px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {internalProdData.map((r, i) => {
+                        const eff = Number(r.efficiency_score);
+                        return (
+                          <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="px-2 py-1 text-[9px] font-bold font-mono text-slate-600 truncate max-w-[60px]">{r.session_code || r.session_id || `S${i+1}`}</td>
+                            <td className="px-2 py-1 text-[9px] font-bold text-slate-700">{Number(r.kgs_processed || r.net_output_kg || 0).toLocaleString()}</td>
+                            <td className="px-2 py-1 text-[9px] font-bold text-slate-700">{Number(r.power_consumed_kwh || 0).toFixed(1)}</td>
+                            <td className="px-2 py-1 text-[9px] font-bold text-slate-700">{Number(r.exact_power_cost_ksh || 0).toLocaleString()}</td>
+                            <td className={`px-2 py-1 text-[9px] font-black ${!isNaN(eff) && eff < 80 ? 'text-orange-600' : 'text-emerald-600'}`}>
+                              {r.efficiency_score != null ? `${eff.toFixed(1)}%` : '—'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
-                <div className="text-right">
-                  <p className="text-lg font-black text-[#1E3A8A] font-mono">{avgIntPowerEfficiency.toFixed(3)} <span className="text-xs">kWh/kg</span></p>
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Projected Retail Value Highlight (Champagne Gold Highlight) */}
@@ -789,33 +884,51 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
         {/* Leakage logs grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 relative z-10">
           {leakageData.map((alert, idx) => {
-            const hasThreat = alert.leakage_alert === 'GHOST MILLING DETECTED' || alert.leakage_alert === 'UNRECORDED PRODUCTION';
+            const isGhost = alert.leakage_alert === GHOST_MILLING_STR || (alert.leakage_alert?.includes('GHOST') && alert.leakage_alert?.includes('CRITICAL'));
             return (
-              <div 
-                key={idx} 
-                className={`p-4 rounded-xl border bg-slate-900/60 backdrop-blur-sm space-y-3 flex flex-col justify-between transition-all hover:scale-[1.01] ${getLeakageBorder(alert.leakage_alert)}`}
+              <div
+                key={idx}
+                className={`p-4 rounded-xl border backdrop-blur-sm space-y-3 flex flex-col justify-between transition-all hover:scale-[1.01] ${
+                  isGhost
+                    ? 'bg-red-950/70 border-red-500/60 shadow-lg shadow-red-950/40'
+                    : `bg-slate-900/60 ${getLeakageBorder(alert.leakage_alert)}`
+                }`}
               >
+                {/* Session code + alert badge */}
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[9px] font-bold text-slate-500 font-mono">
-                    {new Date(alert.audit_date || Date.now()).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                  <span className={`text-[9px] font-black font-mono truncate max-w-[100px] ${isGhost ? 'text-red-300' : 'text-slate-400'}`}>
+                    {alert.session_code || alert.session_id || new Date(alert.audit_date || Date.now()).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                   </span>
-                  <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${getLeakageBadge(alert.leakage_alert)}`}>
-                    {alert.leakage_alert || 'Normal'}
-                  </span>
-                </div>
-                
-                <div className="flex justify-between items-baseline pt-2">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Efficiency Score</span>
-                  <span className={`text-base font-black font-mono ${hasThreat ? 'text-red-400' : 'text-emerald-400'}`}>
-                    {Number(alert.kwh_per_kg || 0).toFixed(3)} <span className="text-[9px] font-bold text-slate-500 uppercase">kWh/kg</span>
+                  <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border shrink-0 ${getLeakageBadge(alert.leakage_alert)}`}>
+                    {isGhost ? '🚨 GHOST MILLING' : (alert.leakage_alert || 'Normal')}
                   </span>
                 </div>
 
-                {hasThreat && (
-                  <div className="text-[9px] font-semibold text-red-300 border-t border-slate-800/80 pt-2 leading-relaxed uppercase tracking-tight">
-                    {alert.leakage_alert === 'GHOST MILLING DETECTED' 
-                      ? '⚠️ Ghost Milling alert: Mill registered power use with zero retail or service sales.' 
-                      : '🚨 Unrecorded Log alert: Standard production input registered without correct closed session.'}
+                {/* Metrics grid */}
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <p className="text-[8px] font-bold text-slate-500 uppercase">Power kWh</p>
+                    <p className={`text-sm font-black font-mono ${isGhost ? 'text-red-400' : 'text-emerald-400'}`}>
+                      {Number(alert.total_power_kwh ?? alert.kwh_per_kg ?? 0).toFixed(2)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[8px] font-bold text-slate-500 uppercase">Exp. Cash</p>
+                    <p className="text-sm font-black font-mono text-slate-300">
+                      {Number(alert.expected_money_in ?? 0).toLocaleString()}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[8px] font-bold text-slate-500 uppercase">KGs Proc.</p>
+                    <p className={`text-sm font-black font-mono ${isGhost ? 'text-red-400 animate-pulse' : 'text-slate-300'}`}>
+                      {Number(alert.total_kgs_processed ?? 0).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+
+                {isGhost && (
+                  <div className="text-[9px] font-semibold text-red-300 border-t border-red-700/50 pt-2 leading-relaxed">
+                    🚨 Power consumed with zero production KGs logged. Ghost milling confirmed.
                   </div>
                 )}
               </div>
@@ -902,6 +1015,59 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
         </button>
       </div>
 
+      {/* Cash Drop Modal */}
+      {isCashDropModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl overflow-hidden">
+            <div className="p-6 md:p-8 bg-[#1E3A8A] text-white text-center">
+              <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Wallet size={24} className="text-white" />
+              </div>
+              <h3 className="text-xl font-black uppercase tracking-tight">Log Daily Cash</h3>
+              <p className="text-[10px] font-bold text-white/70 uppercase tracking-widest mt-1">Reconcile Till Balances</p>
+            </div>
+            
+            <form onSubmit={handleCashDropSubmit} className="p-6 md:p-8 space-y-6 bg-white text-left">
+              {cashDropError && <div className="p-3 bg-red-50 text-red-600 text-xs font-bold rounded-xl border border-red-100">{cashDropError}</div>}
+              {cashDropSuccess && <div className="p-3 bg-emerald-50 text-emerald-600 text-xs font-bold rounded-xl border border-emerald-100">{cashDropSuccess}</div>}
+
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Physical Cash (KSh)</label>
+                  <input 
+                    type="number" required min="0" step="1"
+                    value={cashDropForm.cash}
+                    onChange={e => setCashDropForm({...cashDropForm, cash: e.target.value})}
+                    className="w-full text-lg font-bold p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#1E3A8A] focus:border-transparent outline-none transition-all"
+                    placeholder="0"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">M-Pesa Collected (KSh)</label>
+                  <input 
+                    type="number" required min="0" step="1"
+                    value={cashDropForm.mpesa}
+                    onChange={e => setCashDropForm({...cashDropForm, mpesa: e.target.value})}
+                    className="w-full text-lg font-bold p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#1E3A8A] focus:border-transparent outline-none transition-all"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setIsCashDropModalOpen(false)} className="flex-1 py-3 px-4 bg-slate-100 text-slate-600 rounded-xl font-bold text-xs uppercase hover:bg-slate-200 transition-colors">
+                  Cancel
+                </button>
+                <button type="submit" disabled={cashDropLoading} className="flex-[2] py-3 px-4 bg-[#1E3A8A] text-white rounded-xl font-bold text-xs uppercase hover:bg-blue-800 transition-colors shadow-md active:scale-95 flex items-center justify-center gap-2">
+                  {cashDropLoading ? 'Saving...' : 'Submit Audit'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
+

@@ -7,6 +7,15 @@ import { Activity, TrendingUp, AlertTriangle, Wallet, Zap, ShieldAlert } from 'l
 import GlobalDateFilter from './GlobalDateFilter';
 import { subDays } from 'date-fns';
 
+const fmtKsh = (v: number) => "KSh " + Number(v || 0).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+function riskBadgeClass(status: string) {
+  if (status?.includes('OVERDUE')) return 'bg-red-100 text-red-700 border-red-200';
+  if (status?.includes('AGING'))   return 'bg-amber-100 text-amber-700 border-amber-200';
+  if (status?.includes('ACTIVE') || status?.includes('CLEARED')) return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+  return 'bg-slate-100 text-slate-500 border-slate-200';
+}
+
 export default function BIDashboard() {
   const today = new Date();
   const [startDate, setStartDate] = useState<Date>(subDays(today, 29));
@@ -122,9 +131,8 @@ export default function BIDashboard() {
             <Wallet className="text-slate-400" size={18} />
           </div>
           <div className="flex flex-col">
-            <p className="text-3xl font-bold text-slate-900 tracking-tighter font-mono">
-              <span className="text-lg text-slate-300 mr-1">KES</span>
-              {kpis.net_daily_cash_position.toLocaleString()}
+            <p className="text-2xl font-bold text-slate-900 tracking-tighter font-mono">
+              {fmtKsh(kpis.net_daily_cash_position)}
             </p>
           </div>
         </div>
@@ -136,9 +144,8 @@ export default function BIDashboard() {
             <Activity className="text-slate-400" size={18} />
           </div>
           <div className="flex flex-col">
-            <p className="text-3xl font-bold text-slate-900 tracking-tighter font-mono">
-              <span className="text-lg text-slate-300 mr-1">KES</span>
-              {kpis.total_service_revenue.toLocaleString()}
+            <p className="text-2xl font-bold text-slate-900 tracking-tighter font-mono">
+              {fmtKsh(kpis.total_service_revenue)}
             </p>
           </div>
         </div>
@@ -150,9 +157,8 @@ export default function BIDashboard() {
             <TrendingUp className="text-slate-400" size={18} />
           </div>
           <div className="flex flex-col">
-            <p className="text-3xl font-bold text-slate-900 tracking-tighter font-mono">
-              <span className="text-lg text-slate-300 mr-1">KES</span>
-              {kpis.total_retail_sales.toLocaleString()}
+            <p className="text-2xl font-bold text-slate-900 tracking-tighter font-mono">
+              {fmtKsh(kpis.total_retail_sales)}
             </p>
           </div>
         </div>
@@ -189,7 +195,7 @@ export default function BIDashboard() {
                 <BarChart data={cashFlowData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                   <XAxis dataKey="reconciliation_date" tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} tickFormatter={(v) => { const d = new Date(v); return isNaN(d.getTime()) ? v : `${d.getDate()}/${d.getMonth()+1}`; }} />
-                  <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} tickFormatter={(val) => `KES ${val.toLocaleString()}`} />
+                  <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} tickFormatter={(val) => `KSh ${val.toLocaleString()}`} />
                   <Tooltip 
                     contentStyle={{ borderRadius: '12px', border: '1px solid #f1f5f9', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px', fontWeight: 'bold' }} 
                     cursor={{ fill: '#f8fafc' }} 
@@ -330,7 +336,7 @@ export default function BIDashboard() {
                 <tr>
                   <th className="px-4 py-2.5 text-[9px] font-black text-slate-450 uppercase tracking-widest border-b border-slate-100">Customer</th>
                   <th className="px-4 py-2.5 text-[9px] font-black text-slate-450 uppercase tracking-widest border-b border-slate-100 text-right">Balance</th>
-                  <th className="px-4 py-2.5 text-[9px] font-black text-slate-450 uppercase tracking-widest border-b border-slate-100 text-right">Overdue</th>
+                  <th className="px-4 py-2.5 text-[9px] font-black text-slate-450 uppercase tracking-widest border-b border-slate-100 text-right">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -345,12 +351,12 @@ export default function BIDashboard() {
                       </td>
                       <td className="px-4 py-2.5 text-right">
                         <p className={`text-[11px] font-normal font-mono ${isHighRisk ? 'text-red-600' : 'text-slate-600'}`}>
-                          KSh {Number(debtor.outstanding_balance || 0).toLocaleString()}
+                          {fmtKsh(debtor.outstanding_balance)}
                         </p>
                       </td>
                       <td className="px-4 py-2.5 text-right">
-                        <span className={`px-2 py-0.5 rounded text-[9px] font-semibold uppercase tracking-widest ${isHighRisk ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-500'}`}>
-                          {debtor.days_overdue || 0}d
+                        <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${riskBadgeClass(debtor.risk_status)}`}>
+                          {debtor.risk_status?.replace(/^[🔴🟡🟢]\s/, '') || `${debtor.days_overdue || 0}d`}
                         </span>
                       </td>
                     </tr>
@@ -369,43 +375,48 @@ export default function BIDashboard() {
         </div>
 
         {/* 6. Inventory Velocity Leaderboard (Grid Span: 1 Column) */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 md:p-6 flex flex-col h-[400px]">
-          <div className="flex items-center justify-between mb-6 shrink-0">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-100 flex flex-col h-[400px] overflow-hidden">
+          <div className="p-4 md:p-5 border-b border-slate-100 flex items-center justify-between shrink-0">
             <div>
               <h3 className="text-sm font-bold text-slate-900 uppercase tracking-tight">Velocity Leaderboard</h3>
-              <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest mt-1">Lifetime Revenue Generated</p>
+              <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest mt-1">All-Time Inventory Performance</p>
             </div>
             <TrendingUp className="text-slate-400" size={18} />
           </div>
 
-          <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-4">
-            {inventoryVelocity.map((item, idx) => (
-              <div key={idx} className="flex flex-col justify-between pb-4 border-b border-slate-50 last:border-0 last:pb-0">
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black text-slate-400 w-4">{idx + 1}.</span>
-                    <p className="text-xs font-bold text-slate-900 uppercase truncate max-w-[120px]">
-                      {item.product_name}
-                    </p>
-                  </div>
-                  <p className="text-sm font-bold font-mono text-slate-900">
-                    KES {Number(item.lifetime_revenue_generated || 0).toLocaleString()}
-                  </p>
-                </div>
-                {/* Visual Bar indicating scale relative to top product */}
-                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden ml-6">
-                  <div 
-                    className="bg-slate-900 h-full rounded-full" 
-                    style={{ width: inventoryVelocity[0]?.lifetime_revenue_generated ? `${(Number(item.lifetime_revenue_generated) / Number(inventoryVelocity[0].lifetime_revenue_generated)) * 100}%` : '0%' }}
-                  />
-                </div>
-              </div>
-            ))}
-            {inventoryVelocity.length === 0 && (
-              <div className="h-full flex items-center justify-center text-xs font-semibold text-slate-400 uppercase tracking-widest">
-                No Inventory Data
-              </div>
-            )}
+          <div className="flex-1 overflow-y-auto">
+            <table className="w-full text-left border-collapse">
+              <thead className="bg-slate-50 sticky top-0 z-10">
+                <tr>
+                  <th className="px-4 py-2.5 text-[9px] font-black text-slate-450 uppercase tracking-widest border-b border-slate-100">Product (Category)</th>
+                  <th className="px-4 py-2.5 text-[9px] font-black text-slate-450 uppercase tracking-widest border-b border-slate-100 text-right">KGs Sold</th>
+                  <th className="px-4 py-2.5 text-[9px] font-black text-slate-450 uppercase tracking-widest border-b border-slate-100 text-right">Revenue</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {inventoryVelocity.map((item, idx) => (
+                  <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-4 py-2.5">
+                      <p className="text-[11px] font-bold text-slate-900 uppercase">{item.product_name}</p>
+                      <p className="text-[9px] text-slate-400 uppercase font-semibold">{item.product_category}</p>
+                    </td>
+                    <td className="px-4 py-2.5 text-right font-mono text-[11px] font-semibold text-slate-600">
+                      {Number(item.total_lifetime_kg_sold || 0).toLocaleString()} KG
+                    </td>
+                    <td className="px-4 py-2.5 text-right font-mono text-[11px] font-bold text-emerald-600">
+                      {fmtKsh(item.lifetime_revenue_generated || 0)}
+                    </td>
+                  </tr>
+                ))}
+                {inventoryVelocity.length === 0 && (
+                  <tr>
+                    <td colSpan={3} className="px-6 py-12 text-center text-xs font-semibold text-slate-400 uppercase tracking-widest italic">
+                      No Inventory Data
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
 

@@ -70,6 +70,36 @@ function App() {
     };
   }, []);
 
+  // GLOBAL SPEED-MILLING KEYBOARD FOCUS JUMP
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        const target = e.target as HTMLElement;
+        if (target.tagName === 'TEXTAREA' || target.tagName === 'BUTTON') return;
+        
+        const form = target.closest('form');
+        if (!form) return;
+        
+        e.preventDefault();
+        
+        const focusableElements = Array.from(
+          form.querySelectorAll('input:not([disabled]):not([type="hidden"]), select:not([disabled]), button[type="submit"]:not([disabled])')
+        ) as HTMLElement[];
+        
+        const currentIndex = focusableElements.indexOf(target);
+        if (currentIndex > -1 && currentIndex < focusableElements.length - 1) {
+          focusableElements[currentIndex + 1].focus();
+        } else if (currentIndex === focusableElements.length - 1 || target.tagName === 'BUTTON') {
+          form.requestSubmit();
+        }
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown, { capture: true });
+    return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
+  }, []);
+
+
   const { data: activeSession } = useActiveSession();
 
   // BACKGROUND PROFILE SYNC (For Offline Logins)
