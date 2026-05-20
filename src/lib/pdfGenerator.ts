@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { supabase } from './supabase';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 const fmtKsh = (v: number | string | null | undefined): string => {
@@ -11,6 +12,21 @@ const fmtDate = (v: string | null | undefined): string => {
   if (!v) return 'N/A';
   const d = new Date(v);
   return isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString('en-KE', { day: '2-digit', month: 'short', year: 'numeric' });
+};
+
+const getNairobiDateStr = (isoString: string): string => {
+  const d = new Date(isoString);
+  const nairobiTime = new Date(d.getTime() + 3 * 60 * 60 * 1000);
+  return nairobiTime.toISOString().split('T')[0];
+};
+
+const cleanRiskStatus = (v: string | null | undefined): string => {
+  if (!v) return '';
+  let s = v.replace(/<[^>]*>/g, ''); // Strip HTML tags
+  s = s.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDC00-\uDFFF]/g, ''); // Strip standard emojis
+  s = s.replace(/[⚠️✅🚨🔴🟡🟢]/g, ''); // Strip custom status emojis
+  const match = s.match(/[A-Z]+/i);
+  return match ? match[0].toUpperCase() : s.trim().toUpperCase();
 };
 
 // Shared table defaults
@@ -31,7 +47,7 @@ export interface ManagerPDFData {
 }
 
 // ── Main Export ────────────────────────────────────────────────────────────
-export const generateManagerPDF = ({
+export const generateManagerPDF = async ({
   cashFlow, production, extProd, creditRisk, startDate, endDate
 }: ManagerPDFData) => {
 
@@ -74,7 +90,7 @@ export const generateManagerPDF = ({
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(22);
   doc.setTextColor(15, 23, 42);
-  doc.text('BokyVent Posho Mill', margin, 50);
+  doc.text('Sakhai Poshomill', margin, 50);
 
   // Subtitle
   doc.setFont('helvetica', 'normal');
@@ -114,14 +130,67 @@ export const generateManagerPDF = ({
   // SECTION 1 – FINANCIAL AUDIT & REVENUE BREAKDOWN
   // ═══════════════════════════════════════════════════════════════════════════
 
-  // ── Aggregate from cashFlow ──────────────────────────────────────────────
-  const serviceSalesTotal = cashFlow.reduce((s, r) => s + (Number(r.total_service_revenue)  || 0), 0);
-  const retailSalesTotal  = cashFlow.reduce((s, r) => s + (Number(r.total_retail_revenue)   || 0), 0);
+  // ── Aggregate from cashFlow / sales_transactions ──────────────────────────
+  let serviceSalesTotal = 0;
+  let retailSalesTotal = 0;
+  let mpesaTotal = 0;
+  let debtTotal = 0;
+  let actualCollected = 0;
+
+  const hasTxType = cashFlow.some(r => r.transaction_type !== undefined);
+
+  let txs: any[] = [];
+  let auditRows: any[] = [];
+
+  if (hasTxType) {
+    txs = cashFlow;
+    serviceSalesTotal = txs
+      .filter((tx: any) => tx.transaction_type === 'Service')
+      .reduce((sum: number, tx: any) => sum + (Number(tx.total_price) || 0), 0);
+
+    retailSalesTotal = txs
+      .filter((tx: any) => tx.transaction_type === 'Product')
+      .reduce((sum: number, tx: any) => sum + (Number(tx.total_price) || 0), 0);
+
+    mpesaTotal = txs.reduce((sum: number, tx: any) => sum + (Number(tx.amount_mpesa) || 0), 0);
+    debtTotal = txs.reduce((sum: number, tx: any) => sum + (Number(tx.amount_debt) || 0), 0);
+    actualCollected = txs.reduce((sum: number, tx: any) => sum + (Number(tx.amount_cash || tx.actual_cash_collected) || 0), 0);
+  } else {
+    // Strictly enforce midnight bounds in UTC for Supabase
+    const sDate = new Date(startDate);
+    sDate.setHours(0, 0, 0, 0);
+    const startUtc = new Date(sDate.getTime() - (3 * 60 * 60 * 1000)).toISOString();
+
+    const eDate = new Date(endDate);
+    eDate.setHours(23, 59, 59, 999);
+    const endUtc = new Date(eDate.getTime() - (3 * 60 * 60 * 1000)).toISOString();
+
+    try {
+      const [txsRes, auditsRes] = await Promise.all([
+        supabase.from('sales_transactions').select('*').gte('created_at', startUtc).lte('created_at', endUtc),
+        supabase.from('daily_audits').select('*').gte('audit_date', startDate.toISOString().split('T')[0]).lte('audit_date', endDate.toISOString().split('T')[0])
+      ]);
+      txs = txsRes.data || [];
+      auditRows = auditsRes.data || [];
+    } catch (err) {
+      console.error('Failed to fetch transaction/audit data:', err);
+    }
+
+    serviceSalesTotal = txs
+      .filter((tx: any) => tx.transaction_type === 'Service')
+      .reduce((sum: number, tx: any) => sum + (Number(tx.total_price) || 0), 0);
+
+    retailSalesTotal = txs
+      .filter((tx: any) => tx.transaction_type === 'Product')
+      .reduce((sum: number, tx: any) => sum + (Number(tx.total_price) || 0), 0);
+
+    mpesaTotal = txs.reduce((sum: number, tx: any) => sum + (Number(tx.amount_mpesa) || 0), 0);
+    debtTotal = txs.reduce((sum: number, tx: any) => sum + (Number(tx.amount_debt) || 0), 0);
+    actualCollected = auditRows.reduce((sum: number, r: any) => sum + (Number(r.actual_cash_collected) || 0), 0);
+  }
+
   const totalGrossRevenue = serviceSalesTotal + retailSalesTotal;
-  const mpesaTotal        = cashFlow.reduce((s, r) => s + (Number(r.expected_mpesa_intake)  || 0), 0);
-  const debtTotal         = cashFlow.reduce((s, r) => s + (Number(r.total_new_debt_issued)  || 0), 0);
   const expectedPhysical  = totalGrossRevenue - mpesaTotal - debtTotal;
-  const actualCollected   = cashFlow.reduce((s, r) => s + (Number(r.total_cash_collected)   || 0), 0);
   const variance          = actualCollected - expectedPhysical;
 
   y = sectionHeading(y, '1.', 'Financial Audit & Revenue Breakdown');
@@ -207,15 +276,44 @@ export const generateManagerPDF = ({
     startY: y,
     head: [['Date', 'Service Rev', 'Retail Rev', 'M-Pesa', 'Debt Issued', 'Actual Collected', 'Variance']],
     body: cashFlow.length > 0 ? cashFlow.map(row => {
-      const svc  = Number(row.total_service_revenue)  || 0;
-      const ret  = Number(row.total_retail_revenue)   || 0;
-      const mp   = Number(row.expected_mpesa_intake)  || 0;
-      const debt = Number(row.total_new_debt_issued)  || 0;
-      const act  = Number(row.total_cash_collected)   || 0;
+      const dateStr = row.reconciliation_date;
+
+      let svc = 0;
+      let ret = 0;
+      let mp = 0;
+      let debt = 0;
+      let act = 0;
+
+      if (hasTxType) {
+        const dayTxs = txs.filter((tx: any) => getNairobiDateStr(tx.created_at) === dateStr);
+        svc = dayTxs
+          .filter((tx: any) => tx.transaction_type === 'Service')
+          .reduce((sum: number, tx: any) => sum + (Number(tx.total_price) || 0), 0);
+        ret = dayTxs
+          .filter((tx: any) => tx.transaction_type === 'Product')
+          .reduce((sum: number, tx: any) => sum + (Number(tx.total_price) || 0), 0);
+        mp = dayTxs.reduce((sum: number, tx: any) => sum + (Number(tx.amount_mpesa) || 0), 0);
+        debt = dayTxs.reduce((sum: number, tx: any) => sum + (Number(tx.amount_debt) || 0), 0);
+        act = dayTxs.reduce((sum: number, tx: any) => sum + (Number(tx.amount_cash) || 0), 0);
+      } else {
+        const dayTxs = txs.filter((tx: any) => getNairobiDateStr(tx.created_at) === dateStr);
+        svc = dayTxs
+          .filter((tx: any) => tx.transaction_type === 'Service')
+          .reduce((sum: number, tx: any) => sum + (Number(tx.total_price) || 0), 0);
+        ret = dayTxs
+          .filter((tx: any) => tx.transaction_type === 'Product')
+          .reduce((sum: number, tx: any) => sum + (Number(tx.total_price) || 0), 0);
+        mp = dayTxs.reduce((sum: number, tx: any) => sum + (Number(tx.amount_mpesa) || 0), 0);
+        debt = dayTxs.reduce((sum: number, tx: any) => sum + (Number(tx.amount_debt) || 0), 0);
+        const dayAudit = auditRows.find((a: any) => a.audit_date === dateStr);
+        act = dayAudit ? (Number(dayAudit.actual_cash_collected) || 0) : 0;
+      }
+
       const exp  = (svc + ret) - mp - debt;
       const diff = act - exp;
+
       return [
-        fmtDate(row.reconciliation_date),
+        fmtDate(dateStr),
         fmtKsh(svc),
         fmtKsh(ret),
         fmtKsh(mp),
@@ -255,16 +353,23 @@ export const generateManagerPDF = ({
   autoTable(doc, {
     startY: y,
     head: [['Date', 'Session Code', 'Input KG', 'Net Output KG', 'Power (kWh)', 'Power Cost', 'Proj. Value', 'Efficiency']],
+    // Internal Production Table mapping corrections
     body: production.length > 0 ? production.map(row => {
       const eff = Number(row.efficiency_score) || 0;
+      const netOutput = Number(row.total_yield_kg ?? row.net_output_kg ?? 0);
+      const inputKg = Number(row.total_input_kg ?? row.kgs_processed ?? 0);
+      // Projected value: use provided column if exists, otherwise compute if price available; else leave blank
+      const projected = row.projected_retail_value !== undefined && row.projected_retail_value !== null
+        ? Number(row.projected_retail_value)
+        : (netOutput && row.retail_price ? netOutput * Number(row.retail_price) : 0);
       return [
         fmtDate(row.production_date),
         row.session_code || row.session_id || 'N/A',
-        `${Number(row.total_input_kg || row.kgs_processed || 0).toLocaleString()} KG`,
-        `${Number(row.net_output_kg  || 0).toLocaleString()} KG`,
+        `${inputKg.toLocaleString()} KG`,
+        `${netOutput.toLocaleString()} KG`,
         `${Number(row.power_consumed_kwh || 0).toFixed(2)} kWh`,
         fmtKsh(row.exact_power_cost_ksh || 0),
-        fmtKsh(row.projected_retail_value || 0),
+        projected ? fmtKsh(projected) : '',
         {
           content: `${eff.toFixed(1)}%`,
           styles: { textColor: eff < 80 ? [220, 38, 38] : [21, 128, 61], fontStyle: 'bold' as any }
@@ -302,8 +407,8 @@ export const generateManagerPDF = ({
       body: extProd.map(row => [
         fmtDate(row.production_date),
         row.session_code || row.session_id || 'N/A',
-        `${Number(row.total_input_kg || 0).toLocaleString()} KG`,
-        fmtKsh(row.total_service_revenue || 0),
+        `${Number(row.kgs_processed || 0).toLocaleString()} KG`,
+        fmtKsh(row.expected_cash || 0),
         `${Number(row.power_consumed_kwh || 0).toFixed(2)} kWh`,
         fmtKsh(row.exact_power_cost_ksh || 0),
       ]),
@@ -339,16 +444,24 @@ export const generateManagerPDF = ({
     body: creditRisk.length > 0 ? [
       ...creditRisk.map(row => {
         const isHigh = (row.days_overdue || 0) > 14;
+        const cleanStatus = cleanRiskStatus(row.risk_status) || (isHigh ? 'OVERDUE' : 'ACTIVE');
+        const daysText = row.days_overdue !== null && row.days_overdue !== undefined
+          ? `${row.days_overdue} days`
+          : 'N/A';
+
         return [
           row.customer_name || 'Unknown',
           {
             content: fmtKsh(row.outstanding_balance),
             styles: { textColor: isHigh ? [220, 38, 38] : [15, 23, 42], fontStyle: 'bold' as any }
           },
-          { content: `${row.days_overdue || 0} days`, styles: { halign: 'right' as any, textColor: isHigh ? [220, 38, 38] : [15, 23, 42] } },
-          fmtDate(row.last_transaction_date),
+          { 
+            content: daysText, 
+            styles: { halign: 'right' as any, textColor: isHigh ? [220, 38, 38] : [15, 23, 42] } 
+          },
+          fmtDate(row.debt_issued_date || row.last_transaction_date),
           {
-            content: row.risk_status || (isHigh ? 'OVERDUE' : 'ACTIVE'),
+            content: cleanStatus,
             styles: { fontStyle: 'bold' as any, textColor: isHigh ? [220, 38, 38] : [21, 128, 61] }
           }
         ];
@@ -387,12 +500,12 @@ export const generateManagerPDF = ({
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.5);
     doc.setTextColor(255, 255, 255);
-    doc.text(`BokyVent Posho Mill  ·  ${periodLabel}  ·  CONFIDENTIAL`, margin, pageH - 6);
+    doc.text(`Sakhai Poshomill  ·  ${periodLabel}  ·  CONFIDENTIAL`, margin, pageH - 6);
     doc.text(`Page ${i} of ${pageCount}`, pageW - margin, pageH - 6, { align: 'right' });
   }
 
   // ── Save ──────────────────────────────────────────────────────────────────
   const start = startDate.toISOString().split('T')[0];
   const end   = endDate.toISOString().split('T')[0];
-  doc.save(`BokyVent_Manager_Report_${start}_to_${end}.pdf`);
+  doc.save(`Sakhai_Poshomill_Manager_Report_${start}_to_${end}.pdf`);
 };

@@ -36,9 +36,9 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
   const [leakageData, setLeakageData] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [productionLogs, setProductionLogs] = useState<any[]>([]);
-  
-  // Daily Operations Monitor States
-  const [retailSalesData, setRetailSalesData] = useState<any[]>([]);
+  // New live transaction data
+  const [serviceTransactions, setServiceTransactions] = useState<any[]>([]);
+  const [retailTransactions, setRetailTransactions] = useState<any[]>([]);
   const [externalProdData, setExternalProdData] = useState<any[]>([]);
   const [internalProdData, setInternalProdData] = useState<any[]>([]);
   
@@ -97,7 +97,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
         const startLocal = new Date(dateRange.start.getTime() - (dateRange.start.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
         const endLocal = new Date(dateRange.end.getTime() - (dateRange.end.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
 
-        const [plRes, cashFlowRes, leakageRes, productsRes, logsRes, retailSalesRes, extProdRes, intProdRes] = await Promise.all([
+        const [plRes, cashFlowRes, leakageRes, productsRes, logsRes, serviceTransRes, retailTransRes, intProdRes] = await Promise.all([
           // Monthly P&L View
           supabase.from('dashboard_monthly_pl').select('*').gte('month_date', startIso).lte('month_date', endIso).order('month_date', { ascending: true }),
           // Daily Cash Flow View
@@ -108,9 +108,11 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
           supabase.from('products').select('*').order('name'),
           // Production logs within date bounds
           supabase.from('production_logs').select('*').gte('created_at', startUtc).lte('created_at', endUtc),
-          // Daily Operations - Retail Sales
-          supabase.from('dashboard_retail_sales').select('*').gte('sales_date', startLocal).lte('sales_date', endLocal),
-          // Daily Operations - External production
+          // Live Service Transactions
+          supabase.from('sales_transactions').select('*').eq('transaction_type', 'Service').gte('created_at', startUtc).lte('created_at', endUtc),
+          // Live Retail Transactions
+          supabase.from('sales_transactions').select('*, products(name)').eq('transaction_type', 'Product').gte('created_at', startUtc).lte('created_at', endUtc),
+          // Live External Production data
           supabase.from('dashboard_external_production').select('*').gte('production_date', startLocal).lte('production_date', endLocal),
           // Daily Operations - Internal production
           supabase.from('dashboard_internal_production').select('*').gte('production_date', startLocal).lte('production_date', endLocal)
@@ -132,9 +134,11 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
         if (leakageRes.data) setLeakageData(leakageRes.data);
         if (productsRes.data) setProducts(productsRes.data);
         if (logsRes.data) setProductionLogs(logsRes.data);
-        if (retailSalesRes.data) setRetailSalesData(retailSalesRes.data);
-        if (extProdRes.data) setExternalProdData(extProdRes.data);
+        // Set live transaction data
+        if (serviceTransRes.data) setServiceTransactions(serviceTransRes.data);
+        if (retailTransRes.data) setRetailTransactions(retailTransRes.data);
         if (intProdRes.data) setInternalProdData(intProdRes.data);
+        if (externalProdRes && externalProdRes.data) setExternalProdData(externalProdRes.data);
 
       } catch (error) {
         console.error("Error fetching date range dashboard data:", error);
@@ -215,7 +219,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
   const totalOutputKg = productionLogs.reduce((acc, curr) => acc + (Number(curr.main_output_kg) || 0), 0);
   const totalWasteKg = productionLogs.reduce((acc, curr) => acc + (Number(curr.waste_kg) || 0), 0);
   const yieldRate = totalInputKg > 0 ? (totalOutputKg / totalInputKg) * 100 : 0;
-  const serviceRevenue = externalProdData.reduce((acc, curr) => acc + (Number(curr.total_service_revenue) ?? 0), 0);
+  const serviceRevenue = serviceTransactions.reduce((acc, curr) => acc + (Number(curr.total_price) ?? 0), 0);
   const burnEfficiency = totalInputKg > 0 ? serviceRevenue / totalInputKg : 0;
 
   // Power Leakage badges and styling
@@ -236,30 +240,32 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
   };
 
   // ── Card 1 Calculations: Retail Sales ──
-  const totalRetailCash = retailSalesData.reduce((acc, curr) => acc + (Number(curr.expected_cash) || 0), 0);
-  const totalRetailKgSold = retailSalesData.reduce((acc, curr) => acc + (Number(curr.total_kg_sold) || 0), 0);
+  const totalRetailRevenue = retailTransactions.reduce((acc, curr) => acc + (Number(curr.total_price) || 0), 0);
+  const totalRetailKgSold = retailTransactions.reduce((acc, curr) => acc + (Number(curr.weight_kg) || 0), 0);
   
 
   // Group retail sales by sales_date for date-level drill-down
-  const retailByDate = retailSalesData.reduce((acc: Record<string, any[]>, curr) => {
-    const date = curr.sales_date || '';
+  const retailByDate = retailTransactions.reduce((acc: Record<string, any[]>, curr) => {
+    const date = curr.created_at?.split('T')[0] || '';
     if (!acc[date]) acc[date] = [];
     acc[date].push(curr);
     return acc;
   }, {});
   const retailDateEntries = Object.entries(retailByDate).sort(([a], [b]) => b.localeCompare(a));
 
-  // Audit Balance — unified liquid expectation (Cash + M-Pesa combined)
-  const auditExpectedLiquid = cashFlowData.reduce((acc, curr) => acc + (Number(curr.expected_liquid_total) || 0), 0);
-  const auditExpectedPhysicalCash = cashFlowData.reduce((acc, curr) => acc + (Number(curr.expected_physical_cash) || 0), 0);
-  const auditExpectedMpesa = cashFlowData.reduce((acc, curr) => acc + (Number(curr.expected_mpesa_intake) || 0), 0);
-  const auditActualCash = cashFlowData.reduce((acc, curr) => acc + (Number(curr.total_cash_collected) || 0), 0);
+  // Audit Balance — Local date filter
+  const startLocal = new Date(dateRange.start.getTime() - (dateRange.start.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+  const auditRow = cashFlowData.find(r => r.reconciliation_date && r.reconciliation_date.startsWith(startLocal));
+  const auditExpectedLiquid = auditRow ? Number(auditRow.expected_liquid_total) || 0 : 0;
+  const auditExpectedPhysicalCash = auditRow ? Number(auditRow.expected_physical_cash) || 0 : 0;
+  const auditExpectedMpesa = auditRow ? Number(auditRow.expected_mpesa_intake) || 0 : 0;
+  const auditActualCash = auditRow ? Number(auditRow.total_cash_collected) || 0 : 0;
   const auditDiscrepancy = auditActualCash - auditExpectedLiquid;
 
   // ── Card 2 Calculations: External Service ──
-  const totalExtInputKg = externalProdData.reduce((acc, curr) => acc + (Number(curr.total_input_kg) || 0), 0);
-  const totalExtServiceRevenue = externalProdData.reduce((acc, curr) => acc + (Number(curr.total_service_revenue) || 0), 0);
-  const totalExtKwhConsumed = externalProdData.reduce((acc, curr) => acc + (Number(curr.power_consumed_kwh) || 0), 0);
+  const totalExtInputKg = serviceTransactions.reduce((acc, curr) => acc + (Number(curr.weight_kg) || 0), 0);
+  const totalExtServiceRevenue = serviceTransactions.reduce((acc, curr) => acc + (Number(curr.total_price) || 0), 0);
+  const totalExtKwhConsumed = serviceTransactions.reduce((acc, curr) => acc + (Number(curr.power_consumed_kwh) || 0), 0);
   const avgExtPowerEfficiency = totalExtInputKg > 0 ? (totalExtKwhConsumed / totalExtInputKg) : 0;
 
   // ── Card 3 Calculations: Internal Production & Projected Retail Value ──
@@ -465,8 +471,8 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
               {/* Main KPIs */}
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-inner">
-                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Total Retail Cash</p>
-                  <p className="text-xl font-black text-[#1E3A8A] font-mono mt-1">{formatCurrency(totalRetailCash)}</p>
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Total Retail Revenue</p>
+                  <p className="text-xl font-black text-[#1E3A8A] font-mono mt-1">{formatCurrency(totalRetailRevenue)}</p>
                 </div>
                 <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-inner">
                   <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Total Volume Sold</p>
@@ -487,8 +493,8 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
                         <div key={idx} className="flex items-center justify-between px-3.5 py-1 text-[10px] border-b border-slate-50/60 last:border-0">
                           <span className="font-bold text-slate-600 uppercase truncate max-w-[120px]">{r.product_name || '—'}</span>
                           <div className="flex items-center gap-3 shrink-0">
-                            <span className="font-mono text-slate-500">{Number(r.total_kgs_sold || r.total_kg_sold || 0).toLocaleString()} KG</span>
-                            <span className="font-mono font-bold text-[#1E3A8A]">{formatCurrency(r.cash_worth_collected || r.expected_cash || 0)}</span>
+                             <span className="font-mono text-slate-500">{Number(r.weight_kg || 0).toLocaleString()} KG</span>
+                             <span className="font-mono font-bold text-[#1E3A8A]">{formatCurrency(r.total_price || 0)}</span>
                           </div>
                         </div>
                       ))}
