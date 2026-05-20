@@ -81,8 +81,24 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
 
   const lastEndMeter = lastSessionData ? (lastSessionData.end_meter ?? lastSessionData.start_meter) : 0;
 
+  const isClosedAfter7PM = (closedAt: string | null | undefined) => {
+    if (!closedAt) return false;
+    try {
+      const date = new Date(closedAt);
+      const hour = parseInt(new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Africa/Nairobi',
+        hour: 'numeric',
+        hour12: false
+      }).format(date), 10);
+      return hour >= 19;
+    } catch (e) {
+      return false;
+    }
+  };
+
   const isLockedForAudit = () => {
     if (!lastSessionData || !lastSessionData.closed_at) return false;
+    if (!isClosedAfter7PM(lastSessionData.closed_at)) return false;
     if (!latestStockTake) return true;
     return new Date(latestStockTake.created_at) < new Date(lastSessionData.closed_at);
   };

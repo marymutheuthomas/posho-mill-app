@@ -128,9 +128,9 @@ function App() {
     { name: 'Production Hub', icon: Factory },
     { name: 'Point of Sale', icon: ShoppingBag },
     { name: 'Stock Take', icon: ShieldCheck },
-    { name: 'Debt Ledger', icon: BookOpen, adminOnly: true },
-    { name: 'Purchases', icon: ShoppingCart, adminOnly: true },
-    { name: 'Settings', icon: SettingsIcon, adminOnly: true },
+    { name: 'Debt Ledger', icon: BookOpen },
+    { name: 'Purchases', icon: ShoppingCart },
+    { name: 'Settings', icon: SettingsIcon },
     { name: 'User Management', icon: ShieldCheck, adminOnly: true },
   ].filter(item => !item.adminOnly || user?.role === 'ADMIN');
 
@@ -330,10 +330,10 @@ function App() {
           {activeTab === 'Insights & Audit' && <MasterDashboard />}
           {activeTab === 'Production Hub'   && <ProductionEntry />}
           {activeTab === 'Point of Sale'     && <ServicePOS role={user.role} />}
-          {activeTab === 'Debt Ledger'      && <DebtLedger />}
+          {activeTab === 'Debt Ledger'      && <DebtLedger role={user.role} />}
           {activeTab === 'Purchases'        && <Purchases />}
           {activeTab === 'Stock Take'       && <StockTake role={user.role} />}
-          {activeTab === 'Settings'         && <Settings />}
+          {activeTab === 'Settings'         && <Settings role={user.role} />}
           {activeTab === 'User Management'  && <UserManagement />}
         </div>
 

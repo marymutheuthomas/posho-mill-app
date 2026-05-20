@@ -67,6 +67,58 @@ export default function StockTake({ role }: StockTakeProps) {
     }
   });
 
+  const { data: lastSessionData } = useQuery({
+    queryKey: ['last-closed-session'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('milling_sessions')
+        .select('id, closed_at')
+        .eq('is_closed', true)
+        .order('closed_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    refetchInterval: 5000,
+  });
+
+  const { data: latestStockTake } = useQuery({
+    queryKey: ['latest-stock-take'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('stock_take_history')
+        .select('created_at')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    refetchInterval: 5000,
+  });
+
+  const isClosedAfter7PM = (closedAt: string | null | undefined) => {
+    if (!closedAt) return false;
+    try {
+      const date = new Date(closedAt);
+      const hour = parseInt(new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Africa/Nairobi',
+        hour: 'numeric',
+        hour12: false
+      }).format(date), 10);
+      return hour >= 19;
+    } catch (e) {
+      return false;
+    }
+  };
+
+  const isStockTakeUnlocked = !!(
+    lastSessionData?.closed_at &&
+    isClosedAfter7PM(lastSessionData.closed_at) &&
+    (!latestStockTake || new Date(latestStockTake.created_at) < new Date(lastSessionData.closed_at))
+  );
+
   const { data: history = [], isLoading: loadingHistory } = useQuery({
     queryKey: ['audit_history'],
     queryFn: async () => {
@@ -194,6 +246,27 @@ export default function StockTake({ role }: StockTakeProps) {
     deleteAuditMutation.mutate(deleteModal.record.id);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const nextInput = document.querySelector(`[data-index="${index + 1}"]`) as HTMLInputElement | null;
+      if (nextInput) {
+        nextInput.focus();
+        nextInput.select();
+      }
+    }
+  };
+
+  const handleMobileKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const nextInput = document.querySelector(`[data-mobile-index="${index + 1}"]`) as HTMLInputElement | null;
+      if (nextInput) {
+        nextInput.focus();
+        nextInput.select();
+      }
+    }
+  };
 
   const filteredProducts = products.filter(p => 
     p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -246,122 +319,140 @@ export default function StockTake({ role }: StockTakeProps) {
       {success && <div className="bg-emerald-500 text-white p-6 rounded-2xl font-black flex items-center gap-4 shadow-xl"><CheckCircle size={24}/>{success}</div>}
 
       {activeTab === 'Entry' ? (
-        <>
-          <div className="mill-card p-0 overflow-hidden bg-white border-slate-100 shadow-2xl rounded-2xl max-w-4xl mx-auto">
-            <div className="p-4 md:p-8 bg-slate-50 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-               <div className="flex items-center gap-4">
-                 <h3 className="text-[10px] md:text-xs font-semibold text-slate-500 uppercase tracking-widest">Physical Reconciliation</h3>
-                 <input 
-                   type="date" 
-                   value={targetDate} 
-                   onChange={e => setTargetDate(e.target.value)}
-                   className="text-[11px] max-md:text-[10px] font-semibold text-slate-900 bg-white border border-slate-200 px-3 py-1.5 max-md:px-2 max-md:py-1 rounded-lg outline-none cursor-pointer shadow-sm"
-                 />
-               </div>
-               <div className="flex items-center gap-2 text-[9px] font-semibold text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-100 uppercase">
-                  <Eye size={12} className="text-amber-500" /> Blind Entry Mode
-               </div>
+        !isStockTakeUnlocked ? (
+          <div className="flex flex-col items-center justify-center p-8 md:p-16 text-center bg-white border border-slate-100 shadow-2xl rounded-2xl max-w-xl mx-auto space-y-4 my-10 animate-in fade-in duration-300">
+            <div className="w-16 h-16 bg-slate-50 border border-slate-100 rounded-full flex items-center justify-center text-[#1E3A8A] shadow-inner">
+              <Clock size={32} />
             </div>
-            <div className="hidden md:block overflow-x-auto whitespace-nowrap">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50/50 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">
-                    <th className="px-3 py-2">Product / Grade</th>
-                    <th className="px-3 py-2 text-center">Category</th>
-                    <th className="px-3 py-2">Measured Physical Count (KG)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filteredProducts.map(p => (
-                    <tr key={p.id} className="hover:bg-slate-50/50 transition-colors text-xs text-slate-650">
-                      <td className="px-3 py-1.5">
-                        <p className="text-[9px] font-medium text-slate-400 uppercase mb-0.5">{p.product_code}</p>
-                        <p className="font-semibold text-slate-800 uppercase tracking-tight">{p.name}</p>
-                      </td>
-                      <td className="px-3 py-1.5 text-center">
-                         <span className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full text-[9px] font-medium uppercase tracking-wider">{p.category}</span>
-                      </td>
-                      <td className="px-3 py-1.5">
-                        <div className="relative group max-w-[140px] md:ml-0">
-                          <input 
-                            type="number" 
-                            step="0.01"
-                            value={counts[p.id] || ''}
-                            onChange={(e) => handleCountChange(p.id, e.target.value)}
-                            placeholder="0.00"
-                            className="mill-input w-full text-xs font-medium bg-slate-50 border-slate-200 focus:bg-white focus:border-slate-900 transition-all py-1 px-2 text-center h-8 max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
-                          />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-semibold text-slate-355">KG</span>
-                        </div>
-                      </td>
+            <h3 className="text-base font-black text-slate-900 uppercase tracking-tight">Stock Take Form Locked</h3>
+            <p className="text-xs font-semibold text-slate-400 uppercase leading-relaxed max-w-sm">
+              The daily physical stock take form dynamically unlocks only when any milling session is officially closed as from 7:00 PM onwards.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="mill-card p-0 overflow-hidden bg-white border-slate-100 shadow-2xl rounded-2xl max-w-4xl mx-auto">
+              <div className="p-4 md:p-8 bg-slate-50 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                 <div className="flex items-center gap-4">
+                   <h3 className="text-[10px] md:text-xs font-semibold text-slate-500 uppercase tracking-widest">Physical Reconciliation</h3>
+                   <input 
+                     type="date" 
+                     value={targetDate} 
+                     onChange={e => setTargetDate(e.target.value)}
+                     className="text-[11px] max-md:text-[10px] font-semibold text-slate-900 bg-white border border-slate-200 px-3 py-1.5 max-md:px-2 max-md:py-1 rounded-lg outline-none cursor-pointer shadow-sm"
+                   />
+                 </div>
+                 <div className="flex items-center gap-2 text-[9px] font-semibold text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-100 uppercase">
+                    <Eye size={12} className="text-amber-500" /> Blind Entry Mode
+                 </div>
+              </div>
+              <div className="hidden md:block overflow-x-auto whitespace-nowrap">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50/50 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                      <th className="px-3 py-2">Product / Grade</th>
+                      <th className="px-3 py-2 text-center">Category</th>
+                      <th className="px-3 py-2">Measured Physical Count (KG)</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredProducts.map((p, idx) => (
+                      <tr key={p.id} className="hover:bg-slate-50/50 transition-colors text-xs text-slate-650">
+                        <td className="px-3 py-1.5">
+                          <p className="text-[9px] font-medium text-slate-400 uppercase mb-0.5">{p.product_code}</p>
+                          <p className="font-semibold text-slate-800 uppercase tracking-tight">{p.name}</p>
+                        </td>
+                        <td className="px-3 py-1.5 text-center">
+                           <span className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full text-[9px] font-medium uppercase tracking-wider">{p.category}</span>
+                        </td>
+                        <td className="px-3 py-1.5">
+                          <div className="relative group max-w-[140px] md:ml-0">
+                            <input 
+                              type="number" 
+                              step="0.01"
+                              data-index={idx}
+                              enterKeyHint="next"
+                              onKeyDown={(e) => handleKeyDown(e, idx)}
+                              value={counts[p.id] || ''}
+                              onChange={(e) => handleCountChange(p.id, e.target.value)}
+                              placeholder="0.00"
+                              className="mill-input w-full text-xs font-medium bg-slate-50 border-slate-200 focus:bg-white focus:border-slate-900 transition-all py-1 px-2 text-center h-8 max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-semibold text-slate-355">KG</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
-            {/* Mobile Card View (Visible only on Mobile) */}
-            <div className="md:hidden divide-y divide-slate-50">
-              {filteredProducts.map(p => (
-                <div key={p.id} className="p-3 space-y-2">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-[9px] font-semibold text-slate-400 uppercase">{p.product_code}</p>
-                      <p className="text-xs font-semibold text-slate-900 uppercase tracking-tight">{p.name}</p>
+              {/* Mobile Card View (Visible only on Mobile) */}
+              <div className="md:hidden divide-y divide-slate-50">
+                {filteredProducts.map((p, idx) => (
+                  <div key={p.id} className="p-3 space-y-2">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-[9px] font-semibold text-slate-400 uppercase">{p.product_code}</p>
+                        <p className="text-xs font-semibold text-slate-900 uppercase tracking-tight">{p.name}</p>
+                      </div>
+                    </div>
+                    <div className="relative group w-full">
+                      <input 
+                        type="number" 
+                        step="0.01"
+                        data-mobile-index={idx}
+                        enterKeyHint="next"
+                        onKeyDown={(e) => handleMobileKeyDown(e, idx)}
+                        value={counts[p.id] || ''}
+                        onChange={(e) => handleCountChange(p.id, e.target.value)}
+                        placeholder="0.00"
+                        className="mill-input w-full text-xs font-medium bg-slate-50 border-slate-100 focus:bg-white focus:border-slate-900 transition-all py-1 px-2 text-center h-8 max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-slate-355 uppercase">KG</span>
                     </div>
                   </div>
-                  <div className="relative group w-full">
-                    <input 
-                      type="number" 
-                      step="0.01"
-                      value={counts[p.id] || ''}
-                      onChange={(e) => handleCountChange(p.id, e.target.value)}
-                      placeholder="0.00"
-                      className="mill-input w-full text-xs font-medium bg-slate-50 border-slate-100 focus:bg-white focus:border-slate-900 transition-all py-1 px-2 text-center h-8 max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-slate-355 uppercase">KG</span>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
 
-          <div className="mt-4 p-3 border rounded-xl bg-slate-50 flex flex-col md:flex-row items-center justify-between gap-4 max-w-4xl mx-auto">
-            <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-slate-200 rounded-lg flex items-center justify-center">
-                  <Save size={20} className="text-slate-500" />
-                </div>
-                <div>
-                   <h3 className="text-sm font-bold text-slate-900 uppercase">Finalize Reconciliation</h3>
-                   <p className="text-[10px] leading-tight text-slate-500 mb-2">
-                     Physical counts will be verified against system theoretical stock.
-                   </p>
-                </div>
+            <div className="mt-4 p-3 border rounded-xl bg-slate-50 flex flex-col md:flex-row items-center justify-between gap-4 max-w-4xl mx-auto">
+              <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-slate-200 rounded-lg flex items-center justify-center">
+                    <Save size={20} className="text-slate-500" />
+                  </div>
+                  <div>
+                     <h3 className="text-sm font-bold text-slate-900 uppercase">Finalize Reconciliation</h3>
+                     <p className="text-[10px] leading-tight text-slate-500 mb-2">
+                       Physical counts will be verified against system theoretical stock.
+                     </p>
+                  </div>
+              </div>
+              
+              <div className="flex flex-col items-end gap-2 w-full md:w-auto">
+                {activeSession && (
+                  <p className="text-[11px] font-normal text-red-600 bg-red-50 border border-red-100 px-3 py-1.5 rounded-lg w-full text-center">
+                    Cannot perform stock take. Please close all active milling sessions first.
+                  </p>
+                )}
+                <button 
+                  onClick={submitStockTake}
+                  disabled={auditMutation.isPending || !!activeSession}
+                  className={`w-full md:w-auto h-12 md:h-10 px-8 text-sm md:text-xs font-black rounded-lg flex items-center justify-center gap-3 shadow-md transition-all shrink-0 ${
+                    auditMutation.isPending || activeSession
+                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-75 shadow-none' 
+                    : 'bg-emerald-600 text-white hover:bg-emerald-500'
+                  }`}
+                >
+                  <CheckCircle size={20} className="shrink-0" />
+                  <span>
+                    {auditMutation.isPending ? 'SYNCING...' : 'FINALIZE AUDIT'}
+                  </span>
+                </button>
+              </div>
             </div>
-            
-            <div className="flex flex-col items-end gap-2 w-full md:w-auto">
-              {activeSession && (
-                <p className="text-[11px] font-normal text-red-600 bg-red-50 border border-red-100 px-3 py-1.5 rounded-lg w-full text-center">
-                  Cannot perform stock take. Please close all active milling sessions first.
-                </p>
-              )}
-              <button 
-                onClick={submitStockTake}
-                disabled={auditMutation.isPending || !!activeSession}
-                className={`w-full md:w-auto h-12 md:h-10 px-8 text-sm md:text-xs font-black rounded-lg flex items-center justify-center gap-3 shadow-md transition-all shrink-0 ${
-                  auditMutation.isPending || activeSession
-                  ? 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-75 shadow-none' 
-                  : 'bg-emerald-600 text-white hover:bg-emerald-500'
-                }`}
-              >
-                <CheckCircle size={20} className="shrink-0" />
-                <span>
-                  {auditMutation.isPending ? 'SYNCING...' : 'FINALIZE AUDIT'}
-                </span>
-              </button>
-            </div>
-          </div>
-        </>
+          </>
+        )
       ) : isAdmin ? (
         <div className="mill-card p-0 overflow-hidden bg-white border-slate-200 shadow-2xl max-w-5xl mx-auto">
            <div className="p-8 border-b border-slate-200 flex items-center justify-between bg-slate-900">

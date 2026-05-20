@@ -13,7 +13,7 @@ interface Product {
   category: string;
 }
 
-export default function Settings() {
+export default function Settings({ role: _role }: { role?: 'ADMIN' | 'EMPLOYEE' | string | null }) {
   const queryClient = useQueryClient();
   const [editedProducts, setEditedProducts] = useState<Product[]>([]);
   const [success, setSuccess] = useState('');

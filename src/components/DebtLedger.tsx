@@ -18,7 +18,11 @@ interface DebtRecord {
   last_transaction_date: string;
 }
 
-export default function DebtLedger() {
+interface DebtLedgerProps {
+  role?: 'ADMIN' | 'EMPLOYEE' | string | null;
+}
+
+export default function DebtLedger({ role }: DebtLedgerProps) {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -246,12 +250,14 @@ export default function DebtLedger() {
           <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Synchronized with Supabase Ledger Engine</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3">
-          <button 
-            onClick={() => setNewCustomerModal(true)} 
-            className="px-5 py-3 text-sm font-medium uppercase tracking-wide bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-white flex items-center justify-center gap-2 rounded-xl transition-all shadow-sm h-12"
-          >
-            <UserPlus size={18} /> REGISTER CUSTOMER
-          </button>
+          {role === 'ADMIN' && (
+            <button 
+              onClick={() => setNewCustomerModal(true)} 
+              className="px-5 py-3 text-sm font-medium uppercase tracking-wide bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-white flex items-center justify-center gap-2 rounded-xl transition-all shadow-sm h-12"
+            >
+              <UserPlus size={18} /> REGISTER CUSTOMER
+            </button>
+          )}
           <div className="relative w-full sm:w-72">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input 
@@ -330,21 +336,25 @@ export default function DebtLedger() {
 
                           {/* Actions */}
                           <td className="px-2 py-1.5 md:px-4 md:py-3 whitespace-nowrap max-md:text-[11px]">
-                            <div className="flex items-center justify-center gap-1.5">
-                              <button 
-                                onClick={() => openEditModal(d)} 
-                                className="h-7 w-7 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 border border-slate-100 rounded-lg transition-all flex items-center justify-center shrink-0" 
-                                title="Edit Account"
-                              >
-                                <Pencil size={12} />
-                              </button>
-                              <button 
-                                onClick={() => setDeleteModal({ open: true, customer: d })} 
-                                className="h-7 w-7 bg-red-50 hover:bg-red-100 text-red-600 border border-red-100/50 rounded-lg transition-all flex items-center justify-center shrink-0" 
-                                title="Delete Record"
-                              >
-                                <Trash2 size={12} />
-                              </button>
+                             <div className="flex items-center justify-center gap-1.5">
+                               {role === 'ADMIN' && (
+                                 <>
+                                   <button 
+                                     onClick={() => openEditModal(d)} 
+                                     className="h-7 w-7 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 border border-slate-100 rounded-lg transition-all flex items-center justify-center shrink-0" 
+                                     title="Edit Account"
+                                   >
+                                     <Pencil size={12} />
+                                   </button>
+                                   <button 
+                                     onClick={() => setDeleteModal({ open: true, customer: d })} 
+                                     className="h-7 w-7 bg-red-50 hover:bg-red-100 text-red-600 border border-red-100/50 rounded-lg transition-all flex items-center justify-center shrink-0" 
+                                     title="Delete Record"
+                                   >
+                                     <Trash2 size={12} />
+                                   </button>
+                                 </>
+                               )}
                               <button 
                                 onClick={() => { setSelectedCustomerId(d.id); setFormError(null); }} 
                                 className={`px-2.5 h-7 rounded-lg text-[10px] font-semibold uppercase tracking-wider transition-all flex items-center justify-center gap-1 shadow-sm shrink-0 max-md:text-[9px] max-md:font-normal ${isSelected ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'bg-slate-900 hover:bg-emerald-600 text-white'}`}

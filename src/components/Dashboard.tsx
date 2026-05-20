@@ -298,10 +298,10 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
       />
 
       {/* ══ Tier 1: Executive Financial Statements (Balance Sheet & P&L) ══ */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      <div className={`grid grid-cols-1 gap-6 ${role === 'ADMIN' ? 'xl:grid-cols-3' : 'xl:grid-cols-1'}`}>
         
         {/* Left Column (Span 1): Balance Sheet Snapshot */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6 flex flex-col min-h-[480px]">
+        <div className={`bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6 flex flex-col min-h-[480px] ${role === 'ADMIN' ? '' : 'max-w-2xl mx-auto w-full'}`}>
           <div className="flex items-center justify-between mb-6 shrink-0">
             <div>
               <h3 className="text-sm font-black text-[#1E3A8A] uppercase tracking-tight">Statement of Financial Position</h3>
@@ -360,44 +360,46 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
         </div>
 
         {/* Right Column (Span 2): The P&L Trend Composed Chart */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6 flex flex-col min-h-[480px] xl:col-span-2">
-          <div className="flex items-center justify-between mb-6 shrink-0">
-            <div>
-              <h3 className="text-sm font-black text-[#1E3A8A] uppercase tracking-tight">Monthly P&L Trend</h3>
-              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Revenue vs Overhead & Profit</p>
-            </div>
-            <TrendingUp className="text-slate-300" size={18} />
-          </div>
-
-          <div className="flex-1 w-full h-[320px]">
-            {plData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={plData} margin={{ top: 10, right: 0, left: 10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                  <XAxis dataKey="display_month" tick={{ fontSize: 10, fill: '#64748b', fontWeight: 600 }} tickLine={false} axisLine={false} dy={10} />
-                  <YAxis tick={{ fontSize: 10, fill: '#64748b', fontWeight: 600 }} tickLine={false} axisLine={false} tickFormatter={(val) => `KSh ${Math.round(val/1000)}k`} dx={-10} />
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '12px', fontWeight: 'bold' }}
-                    cursor={{ fill: '#f8fafc' }}
-                    formatter={(value: any) => formatCurrency(value)}
-                  />
-                  <Legend wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', paddingTop: '15px' }} iconType="circle" />
-                  
-                  {/* Revenue Stacked Bar */}
-                  <Bar dataKey="gross_revenue" name="Gross Revenue" fill="#1E3A8A" radius={[4, 4, 0, 0]} maxBarSize={36} />
-                  
-                  {/* COGS + Expenses Lines */}
-                  <Line type="monotone" dataKey="total_expenses" name="Overhead Costs" stroke="#e11d48" strokeWidth={2.5} dot={{ r: 3.5, strokeWidth: 2, fill: '#fff' }} />
-                  <Line type="monotone" dataKey="net_profit" name="Net Profit" stroke="#059669" strokeWidth={3.5} dot={{ r: 4.5, strokeWidth: 2, fill: '#fff' }} />
-                </ComposedChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center text-xs font-bold text-slate-400 uppercase tracking-widest italic">
-                No Financial Performance Data in Range
+        {role === 'ADMIN' && (
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6 flex flex-col min-h-[480px] xl:col-span-2">
+            <div className="flex items-center justify-between mb-6 shrink-0">
+              <div>
+                <h3 className="text-sm font-black text-[#1E3A8A] uppercase tracking-tight">Monthly P&L Trend</h3>
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Revenue vs Overhead & Profit</p>
               </div>
-            )}
+              <TrendingUp className="text-slate-300" size={18} />
+            </div>
+
+            <div className="flex-1 w-full h-[320px]">
+              {plData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={plData} margin={{ top: 10, right: 0, left: 10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <XAxis dataKey="display_month" tick={{ fontSize: 10, fill: '#64748b', fontWeight: 600 }} tickLine={false} axisLine={false} dy={10} />
+                    <YAxis tick={{ fontSize: 10, fill: '#64748b', fontWeight: 600 }} tickLine={false} axisLine={false} tickFormatter={(val) => `KSh ${Math.round(val/1000)}k`} dx={-10} />
+                    <Tooltip 
+                      contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '12px', fontWeight: 'bold' }}
+                      cursor={{ fill: '#f8fafc' }}
+                      formatter={(value: any) => formatCurrency(value)}
+                    />
+                    <Legend wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', paddingTop: '15px' }} iconType="circle" />
+                    
+                    {/* Revenue Stacked Bar */}
+                    <Bar dataKey="gross_revenue" name="Gross Revenue" fill="#1E3A8A" radius={[4, 4, 0, 0]} maxBarSize={36} />
+                    
+                    {/* COGS + Expenses Lines */}
+                    <Line type="monotone" dataKey="total_expenses" name="Overhead Costs" stroke="#e11d48" strokeWidth={2.5} dot={{ r: 3.5, strokeWidth: 2, fill: '#fff' }} />
+                    <Line type="monotone" dataKey="net_profit" name="Net Profit" stroke="#059669" strokeWidth={3.5} dot={{ r: 4.5, strokeWidth: 2, fill: '#fff' }} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-xs font-bold text-slate-400 uppercase tracking-widest italic">
+                  No Financial Performance Data in Range
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
       </div>
 

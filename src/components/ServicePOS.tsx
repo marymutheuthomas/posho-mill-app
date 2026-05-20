@@ -4,7 +4,7 @@ import {
   CheckCircle, AlertTriangle, 
   Calendar, ChevronRight, Clock, User, RotateCcw,
   Search, ChevronDown, Lock,
-  Pencil, Trash2, X
+  Pencil, Trash2, X, Eye
 } from 'lucide-react';
 import { checkPreviousStockTake } from '../lib/auditUtils';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -42,6 +42,7 @@ interface TransactionLog {
   amount_cash?: number;
   amount_mpesa?: number;
   amount_debt?: number;
+  customer_id?: string;
   products?: { name: string }; 
 }
 
@@ -782,7 +783,8 @@ export default function ServicePOS({ role }: ServicePOSProps) {
         </div>
 
         <div className="p-3 max-md:p-2">
-          <div className="w-full overflow-x-auto overflow-y-auto max-h-[400px] scrollbar-thin border border-slate-100 rounded-lg">
+          {/* Desktop Table View */}
+          <div className="hidden md:block w-full overflow-x-auto overflow-y-auto max-h-[400px] scrollbar-thin border border-slate-100 rounded-lg">
             <table className="w-full text-left border-collapse min-w-[700px]">
               <thead className="bg-slate-50 sticky top-0 z-10 border-b border-slate-200">
                 <tr className="text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50 max-md:text-[11px] max-md:font-medium max-md:tracking-tight">
@@ -791,9 +793,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                   <th className="px-2 py-1.5 md:px-4 md:py-3 max-md:font-medium">Category</th>
                   <th className="px-2 py-1.5 md:px-4 md:py-3 max-md:font-medium">Payment Split</th>
                   <th className="px-2 py-1.5 md:px-4 md:py-3 text-right max-md:font-medium">Total Price</th>
-                  {role === 'ADMIN' && (
-                    <th className="px-2 py-1.5 md:px-4 md:py-3 text-center w-24 max-md:font-medium">Actions</th>
-                  )}
+                  <th className="px-2 py-1.5 md:px-4 md:py-3 text-center w-28 max-md:font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
@@ -859,33 +859,56 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                             <td className="px-2 py-1.5 md:px-4 md:py-3 whitespace-nowrap text-right font-semibold max-md:font-normal font-mono text-slate-800 max-md:text-[11px]">
                               KSh {log.total_price?.toLocaleString()}
                             </td>
-                            {role === 'ADMIN' && (
-                              <td className="px-2 py-1.5 md:px-4 md:py-3 whitespace-nowrap max-md:text-[11px]">
-                                <div className="flex items-center justify-center gap-1.5">
-                                  <button 
-                                    onClick={() => startEdit(log)} 
-                                    className="h-7 w-7 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 border border-slate-100 rounded-lg transition-all flex items-center justify-center" 
-                                    title="Edit Sale"
-                                  >
-                                    <Pencil size={12} />
-                                  </button>
-                                  <button 
-                                    onClick={() => setDeletingSale(log)} 
-                                    className="h-7 w-7 bg-red-50 hover:bg-red-100 text-red-600 border border-red-100/50 rounded-lg transition-all flex items-center justify-center" 
-                                    title="Delete Sale"
-                                  >
-                                    <Trash2 size={12} />
-                                  </button>
-                                </div>
-                              </td>
-                            )}
+                            <td className="px-2 py-1.5 md:px-4 md:py-3 whitespace-nowrap max-md:text-[11px]">
+                              <div className="flex items-center justify-center gap-1.5">
+                                <button 
+                                  onClick={() => {
+                                    setFormData({
+                                      customerId: log.customer_id || '',
+                                      productId: log.product_id,
+                                      weightKg: log.weight_kg.toString(),
+                                      feeCharged: log.total_price.toString(),
+                                      transactionType: isService ? 'Service' : 'Product',
+                                      paymentMethod: log.payment_method as any,
+                                      amountCash: (log.amount_cash || 0).toString(),
+                                      amountMpesa: (log.amount_mpesa || 0).toString(),
+                                      amountDebt: (log.amount_debt || 0).toString(),
+                                      backdate: new Date(log.created_at).toISOString().split('T')[0]
+                                    });
+                                    setShowReceipt(true);
+                                  }} 
+                                  className="h-7 w-7 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 border border-slate-100 rounded-lg transition-all flex items-center justify-center" 
+                                  title="View Receipt"
+                                >
+                                  <Eye size={12} />
+                                </button>
+                                {role === 'ADMIN' && (
+                                  <>
+                                    <button 
+                                      onClick={() => startEdit(log)} 
+                                      className="h-7 w-7 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 border border-slate-100 rounded-lg transition-all flex items-center justify-center" 
+                                      title="Edit Sale"
+                                    >
+                                      <Pencil size={12} />
+                                    </button>
+                                    <button 
+                                      onClick={() => setDeletingSale(log)} 
+                                      className="h-7 w-7 bg-red-50 hover:bg-red-100 text-red-600 border border-red-100/50 rounded-lg transition-all flex items-center justify-center" 
+                                      title="Delete Sale"
+                                    >
+                                      <Trash2 size={12} />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </td>
                           </tr>
                         );
                       })}
                       
                       {salesHistory.length === 0 && (
                         <tr>
-                          <td colSpan={role === 'ADMIN' ? 6 : 5} className="p-10 text-center text-slate-450 font-medium uppercase tracking-wider text-xs italic max-md:text-[11px]">
+                          <td colSpan={6} className="p-10 text-center text-slate-450 font-medium uppercase tracking-wider text-xs italic max-md:text-[11px]">
                             No transactions recorded today
                           </td>
                         </tr>
@@ -895,6 +918,99 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                 })()}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-3">
+            {(() => {
+              const itemsPerPage = 10;
+              const totalPages = Math.ceil(salesHistory.length / itemsPerPage) || 1;
+              const validCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+              const startIndex = (validCurrentPage - 1) * itemsPerPage;
+              const paginatedSales = salesHistory.slice(startIndex, startIndex + itemsPerPage);
+
+              return (
+                <>
+                  {paginatedSales.map(log => {
+                    const prod = products.find(p => p.id === log.product_id);
+                    const isService = prod && (prod.milling_fee || 0) > 0 && !(prod.selling_price || 0);
+                    return (
+                      <div key={log.id} className="bg-slate-50 border border-slate-150 p-4 rounded-2xl space-y-3 shadow-sm">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-bold text-slate-800 uppercase text-xs truncate max-w-[150px]">{log.customer_name || 'Walk-in'}</p>
+                            <span className="text-[10px] text-slate-400 block mt-0.5">
+                              {new Date(log.created_at).toLocaleDateString()} {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                            {log.receipt_code && (
+                              <span className="text-[10px] text-slate-400 font-mono block mt-0.5 uppercase tracking-wider">
+                                {log.receipt_code}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs font-bold font-mono text-slate-850">KSh {log.total_price?.toLocaleString()}</p>
+                            <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase inline-block mt-1 ${isService ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'bg-purple-50 text-purple-700 border border-purple-100'}`}>
+                              {isService ? 'Service' : 'Retail'}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="text-xs text-slate-600 flex justify-between border-t border-slate-200/50 pt-2">
+                          <span>{prod?.name || 'Maize'} ({log.weight_kg} kg)</span>
+                          <span className="font-medium text-slate-500">{log.payment_method}</span>
+                        </div>
+
+                        <div className="flex justify-end gap-2 pt-2 border-t border-slate-200/50">
+                          <button 
+                            onClick={() => {
+                              setFormData({
+                                customerId: log.customer_id || '',
+                                productId: log.product_id,
+                                weightKg: log.weight_kg.toString(),
+                                feeCharged: log.total_price.toString(),
+                                transactionType: isService ? 'Service' : 'Product',
+                                paymentMethod: log.payment_method as any,
+                                amountCash: (log.amount_cash || 0).toString(),
+                                amountMpesa: (log.amount_mpesa || 0).toString(),
+                                amountDebt: (log.amount_debt || 0).toString(),
+                                backdate: new Date(log.created_at).toISOString().split('T')[0]
+                              });
+                              setShowReceipt(true);
+                            }}
+                            className="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-lg text-[10px] font-semibold uppercase flex items-center gap-1 shadow-sm h-8"
+                          >
+                            <Eye size={12} /> View
+                          </button>
+                          {role === 'ADMIN' && (
+                            <>
+                              <button 
+                                onClick={() => startEdit(log)} 
+                                className="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-lg text-[10px] font-semibold uppercase flex items-center gap-1 shadow-sm h-8"
+                              >
+                                <Pencil size={12} /> Edit
+                              </button>
+                              <button 
+                                onClick={() => setDeletingSale(log)} 
+                                className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 rounded-lg text-[10px] font-semibold uppercase flex items-center gap-1 shadow-sm h-8"
+                              >
+                                <Trash2 size={12} /> Delete
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  
+                  {salesHistory.length === 0 && (
+                    <div className="p-10 text-center text-slate-450 font-medium uppercase tracking-wider text-xs italic">
+                      No transactions recorded today
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
         </div>
 
