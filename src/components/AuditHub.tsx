@@ -57,7 +57,7 @@ export default function AuditHub() {
   const isAdmin = true; // In production, this would come from the 'user' prop or Auth Context
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<AuditStats | null>(null);
-  const [kpis, setKpis] = useState<{ net_daily_cash_position: number; total_service_revenue: number; total_retail_sales: number; active_ghost_milling_alerts: number; }>({ net_daily_cash_position: 0, total_service_revenue: 0, total_retail_sales: 0, active_ghost_milling_alerts: 0 });
+
   const [biStats, setBiStats] = useState<any>(null);
   const [plHistory, setPlHistory] = useState<any[]>([]);
   const getLocalYYYYMMDD = () => {
