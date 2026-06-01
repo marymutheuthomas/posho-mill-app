@@ -70,7 +70,15 @@ export default function Purchases() {
   // Admin Actions
   const [editModal, setEditModal] = useState<{ open: boolean; record: PurchaseRecord | null; mode: PurchaseMode }>({ open: false, record: null, mode: 'restock' });
   const [deleteModal, setDeleteModal] = useState<{ open: boolean; record: PurchaseRecord | null }>({ open: false, record: null });
-  const [editForm, setEditForm] = useState({ product_id: '', expenseDesc: '', expenseCategory: '', qty: 0, price: 0, supplier: '' });
+  const [editForm, setEditForm] = useState({ product_id: '', expenseDesc: '', expenseCategory: '', qty: 0, price: 0, supplier: '', created_at: '' });
+
+  const toDateTimeLocal = (dateString?: string) => {
+    if (!dateString) return '';
+    const d = new Date(dateString);
+    const offset = d.getTimezoneOffset();
+    const localDate = new Date(d.getTime() - offset * 60 * 1000);
+    return localDate.toISOString().slice(0, 16);
+  };
 
   const fetchHistory = async () => {
     setLoadingState('fetching');
@@ -153,7 +161,8 @@ export default function Purchases() {
       expenseCategory: record.category || '',
       qty: record.quantity, 
       price: record.unit_price, 
-      supplier: record.supplier_name || '' 
+      supplier: record.supplier_name || '',
+      created_at: record.created_at || new Date().toISOString()
     });
     setEditModal({ open: true, record, mode: recMode });
   };
@@ -165,8 +174,8 @@ export default function Purchases() {
     try {
       const newQty = editForm.qty;
       const updatePayload = editModal.mode === 'restock'
-        ? { product_id: editForm.product_id, old_item_name: null, category: null, quantity: newQty, unit_price: editForm.price, total_amount: newQty * editForm.price, supplier_name: editForm.supplier }
-        : { product_id: null, old_item_name: editForm.expenseDesc, category: editForm.expenseCategory || 'Others', quantity: newQty, unit_price: editForm.price, total_amount: newQty * editForm.price, supplier_name: editForm.supplier };
+        ? { product_id: editForm.product_id, old_item_name: null, category: null, quantity: newQty, unit_price: editForm.price, total_amount: newQty * editForm.price, supplier_name: editForm.supplier, created_at: editForm.created_at }
+        : { product_id: null, old_item_name: editForm.expenseDesc, category: editForm.expenseCategory || 'Others', quantity: newQty, unit_price: editForm.price, total_amount: newQty * editForm.price, supplier_name: editForm.supplier, created_at: editForm.created_at };
 
       const { error: updErr } = await supabase.from('purchases').update(updatePayload).eq('id', editModal.record.id);
       if (updErr) throw updErr;
@@ -447,6 +456,10 @@ export default function Purchases() {
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Supplier Name</label>
                 <input type="text" value={editForm.supplier} onChange={e => setEditForm({...editForm, supplier: e.target.value})} className="mill-input w-full font-bold uppercase max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Transaction Date & Time</label>
+                <input type="datetime-local" value={toDateTimeLocal(editForm.created_at)} onChange={e => setEditForm({...editForm, created_at: new Date(e.target.value).toISOString()})} className="mill-input w-full font-bold uppercase max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
               </div>
               <button type="submit" disabled={loadingState === 'saving'} className="mill-btn-primary w-full py-4 shadow-xl">
                 {loadingState === 'saving' ? 'UPDATING...' : '✓ SAVE CHANGES'}

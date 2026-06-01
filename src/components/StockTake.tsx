@@ -5,8 +5,8 @@ import {
   CheckCircle, RotateCcw, Save, History, Search, Eye, LayoutList, Clock, Pencil, Trash2, X
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useDataMutation } from '../hooks/useDataMutation';
 import { useActiveSession } from '../hooks/useActiveSession';
+import { useDataMutation } from '../hooks/useDataMutation';
 
 interface StockTakeProps {
   role: 'ADMIN' | 'EMPLOYEE' | null;
@@ -41,7 +41,15 @@ export default function StockTake({ role }: StockTakeProps) {
   
   const [editModal, setEditModal] = useState<{ open: boolean; record: StockLog | null }>({ open: false, record: null });
   const [deleteModal, setDeleteModal] = useState<{ open: boolean; record: StockLog | null }>({ open: false, record: null });
-  const [editForm, setEditForm] = useState({ physical: 0 });
+  const [editForm, setEditForm] = useState({ physical: 0, created_at: '' });
+
+  const toDateTimeLocal = (dateString?: string) => {
+    if (!dateString) return '';
+    const d = new Date(dateString);
+    const offset = d.getTimezoneOffset();
+    const localDate = new Date(d.getTime() - offset * 60 * 1000);
+    return localDate.toISOString().slice(0, 16);
+  };
 
   const { data: activeSession } = useActiveSession();
 
@@ -67,74 +75,40 @@ export default function StockTake({ role }: StockTakeProps) {
     }
   });
 
-  const { data: lastSessionData } = useQuery({
-    queryKey: ['last-closed-session'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('milling_sessions')
-        .select('id, closed_at')
-        .eq('is_closed', true)
-        .order('closed_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-    refetchInterval: 5000,
-  });
 
-  const { data: latestStockTake } = useQuery({
-    queryKey: ['latest-stock-take'],
+
+  // Determine if a stock‑take has already been recorded for today (Africa/Nairobi date).
+  const todayDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Nairobi' }).format(new Date()); // e.g. "2026-06-01"
+  const { data: todayStockTake } = useQuery({
+    queryKey: ['today-stock-take'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('stock_take_history')
-        .select('created_at')
-        .order('created_at', { ascending: false })
-        .limit(1)
+        .select('id, created_at')
+        .gte('created_at', `${todayDate}T00:00:00Z`)
+        .lt('created_at', `${todayDate}T23:59:59Z`)
         .maybeSingle();
       if (error) throw error;
       return data;
     },
-    refetchInterval: 5000,
+    refetchInterval: 30000,
   });
 
-  const isClosedAfter7PM = (closedAt: string | null | undefined) => {
-    if (!closedAt) return false;
-    try {
-      const date = new Date(closedAt);
-      const hour = parseInt(new Intl.DateTimeFormat('en-US', {
-        timeZone: 'Africa/Nairobi',
-        hour: 'numeric',
-        hour12: false
-      }).format(date), 10);
-      return hour >= 19;
-    } catch (e) {
-      return false;
-    }
-  };
+  // Unlock if no record exists for the current day.
+  const isStockTakeUnlocked = !todayStockTake;
 
-  const isStockTakeUnlocked = !!(
-    lastSessionData?.closed_at &&
-    isClosedAfter7PM(lastSessionData.closed_at) &&
-    (!latestStockTake || new Date(latestStockTake.created_at) < new Date(lastSessionData.closed_at))
-  );
 
   const { data: history = [], isLoading: loadingHistory } = useQuery({
     queryKey: ['audit_history'],
     queryFn: async () => {
-      if (!isAdmin) return [];
       const { data, error } = await supabase.from('stock_take_history').select('*').order('created_at', { ascending: false }).limit(50);
       if (error) throw error;
       return data as StockLog[];
     },
-    enabled: activeTab === 'History' && isAdmin,
+    enabled: activeTab === 'History',
     meta: {
       onError: (err: any) => {
-        if (err.code === '42501' || err.code === 'PGRST116') {
-          setError('Access Restricted: Audit History is for Admin eyes only.');
-        } else {
-          setError('Failed to fetch audit history: ' + err.message);
-        }
+        setError('Failed to fetch audit history: ' + err.message);
       }
     }
   });
@@ -236,7 +210,8 @@ export default function StockTake({ role }: StockTakeProps) {
       id: editModal.record.id,
       payload: { 
         physical_stock: editForm.physical,
-        discrepancy: editForm.physical - editModal.record.system_stock
+        discrepancy: editForm.physical - editModal.record.system_stock,
+        created_at: editForm.created_at
       }
     });
   };
@@ -292,7 +267,6 @@ export default function StockTake({ role }: StockTakeProps) {
         </div>
 
         <div className="flex items-center gap-4">
-          {isAdmin && (
             <div className="flex p-1 bg-slate-100 rounded-lg mr-2 shadow-inner">
                <button onClick={() => setActiveTab('Entry')} className={`px-4 py-1.5 rounded-md text-[9px] font-semibold uppercase transition-all ${activeTab === 'Entry' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
                  <LayoutList size={12} className="inline mr-1.5" /> Record
@@ -301,7 +275,6 @@ export default function StockTake({ role }: StockTakeProps) {
                  <History size={12} className="inline mr-1.5" /> Log
                </button>
             </div>
-          )}
           <div className="relative w-56 md:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
             <input 
@@ -326,7 +299,7 @@ export default function StockTake({ role }: StockTakeProps) {
             </div>
             <h3 className="text-base font-black text-slate-900 uppercase tracking-tight">Stock Take Form Locked</h3>
             <p className="text-xs font-semibold text-slate-400 uppercase leading-relaxed max-w-sm">
-              The daily physical stock take form dynamically unlocks only when any milling session is officially closed as from 7:00 PM onwards.
+              The daily stock take form unlocks once per day after any milling session is closed.
             </p>
           </div>
         ) : (
@@ -432,16 +405,16 @@ export default function StockTake({ role }: StockTakeProps) {
               <div className="flex flex-col items-end gap-2 w-full md:w-auto">
                 {activeSession && (
                   <p className="text-[11px] font-normal text-red-600 bg-red-50 border border-red-100 px-3 py-1.5 rounded-lg w-full text-center">
-                    Cannot perform stock take. Please close all active milling sessions first.
+                    (Note) Stock take can be performed even while a session is open.
                   </p>
                 )}
                 <button 
                   onClick={submitStockTake}
-                  disabled={auditMutation.isPending || !!activeSession}
+                  disabled={auditMutation.isPending}
                   className={`w-full md:w-auto h-12 md:h-10 px-8 text-sm md:text-xs font-black rounded-lg flex items-center justify-center gap-3 shadow-md transition-all shrink-0 ${
-                    auditMutation.isPending || activeSession
-                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-75 shadow-none' 
-                    : 'bg-emerald-600 text-white hover:bg-emerald-500'
+                    auditMutation.isPending
+                      ? 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-75 shadow-none' 
+                      : 'bg-emerald-600 text-white hover:bg-emerald-500'
                   }`}
                 >
                   <CheckCircle size={20} className="shrink-0" />
@@ -453,15 +426,12 @@ export default function StockTake({ role }: StockTakeProps) {
             </div>
           </>
         )
-      ) : isAdmin ? (
+      ) : (
         <div className="mill-card p-0 overflow-hidden bg-white border-slate-200 shadow-2xl max-w-5xl mx-auto">
            <div className="p-8 border-b border-slate-200 flex items-center justify-between bg-slate-900">
               <h3 className="text-lg font-black text-white uppercase tracking-tight">Audit Trail & Discrepancy Ledger</h3>
               <div className="flex items-center gap-4">
                  <button onClick={() => queryClient.invalidateQueries({ queryKey: ['audit_history'] })} className="p-2 text-white/40 hover:text-white transition-all"><RotateCcw size={18}/></button>
-                 <div className="text-[10px] font-black text-red-400 bg-white/5 px-4 py-2 rounded-lg border border-white/10 uppercase tracking-widest flex items-center gap-2">
-                    <AlertTriangle size={14} className="text-red-500" /> Restricted Admin Access
-                 </div>
               </div>
            </div>
             <div className="w-full overflow-x-auto whitespace-nowrap scrollbar-thin">
@@ -493,8 +463,8 @@ export default function StockTake({ role }: StockTakeProps) {
                       </td>
                       <td className="px-2 py-1.5 md:px-3 md:py-1.5 whitespace-nowrap">
                          <div className="flex justify-center gap-1">
-                            <button onClick={() => { setEditForm({ physical: log.physical_stock }); setEditModal({ open: true, record: log }); }} className="p-1 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 border border-slate-100 rounded-md transition-all"><Pencil size={10}/></button>
-                            <button onClick={() => setDeleteModal({ open: true, record: log })} className="p-1 bg-red-50 hover:bg-red-100 text-red-600 border border-red-100/50 rounded-md transition-all"><Trash2 size={10}/></button>
+                            <button onClick={() => { setEditForm({ physical: log.physical_stock, created_at: log.created_at || new Date().toISOString() }); setEditModal({ open: true, record: log }); }} className="p-1 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 border border-slate-100 rounded-md transition-all"><Pencil size={10}/></button>
+                            <button onClick={() => setDeleteModal({ open: true, record: log })} className="p-1 bg-red-50 hover:bg-red-100 text-red-655 border border-red-100/50 rounded-md transition-all"><Trash2 size={10}/></button>
                          </div>
                       </td>
                     </tr>
@@ -508,10 +478,6 @@ export default function StockTake({ role }: StockTakeProps) {
               </table>
             </div>
 
-        </div>
-      ) : (
-        <div className="mill-card p-10 md:p-20 text-center text-slate-400 font-semibold uppercase tracking-widest italic text-xs md:text-sm">
-          Restricted: Audit History is Admin only.
         </div>
       )}
 
@@ -533,7 +499,11 @@ export default function StockTake({ role }: StockTakeProps) {
               </div>
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">New Physical Count (KG)</label>
-                <input required type="number" step="0.01" value={editForm.physical} onChange={e => setEditForm({ physical: parseFloat(e.target.value) })} className="mill-input w-full font-bold text-2xl max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
+                <input required type="number" step="0.01" value={editForm.physical} onChange={e => setEditForm({ ...editForm, physical: parseFloat(e.target.value) || 0 })} className="mill-input w-full font-bold text-2xl max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Audit Date & Time</label>
+                <input type="datetime-local" value={toDateTimeLocal(editForm.created_at)} onChange={e => setEditForm({ ...editForm, created_at: new Date(e.target.value).toISOString() })} className="mill-input w-full font-bold uppercase max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
               </div>
               <button type="submit" disabled={editAuditMutation.isPending} className="mill-btn-primary w-full py-4 shadow-xl">
                 {editAuditMutation.isPending ? 'UPDATING...' : '✓ SAVE CHANGES'}

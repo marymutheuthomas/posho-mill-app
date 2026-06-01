@@ -3,7 +3,8 @@ import { supabase } from '../lib/supabase';
 import { 
   Zap, AlertTriangle, Play, 
   CheckCircle, Clock,
-  Activity, RotateCcw, ZapOff, X
+  Activity, RotateCcw, ZapOff, X,
+  Pencil, Trash2
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -44,6 +45,17 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
   const [startModal, setStartModal] = useState<{open: boolean; type: SessionType | null}>({open: false, type: null});
   const [endModal, setEndModal] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [editSessionModal, setEditSessionModal] = useState<{ open: boolean; record: Session | null }>({ open: false, record: null });
+  const [deleteSessionModal, setDeleteSessionModal] = useState<{ open: boolean; record: Session | null }>({ open: false, record: null });
+  const [editSessionForm, setEditSessionForm] = useState({ start_meter: 0, end_meter: 0, created_at: '', closed_at: '' });
+
+  const toDateTimeLocal = (dateString?: string) => {
+    if (!dateString) return '';
+    const d = new Date(dateString);
+    const offset = d.getTimezoneOffset();
+    const localDate = new Date(d.getTime() - offset * 60 * 1000);
+    return localDate.toISOString().slice(0, 16);
+  };
 
   // —— QUERY 1: Last completed session → pre-fills start meter —————————————
   const { data: lastSessionData, isLoading: loadingLastMeter } = useQuery({
@@ -123,6 +135,23 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
     refetchInterval: 5000,
   });
 
+  // —— QUERY 3: Past completed sessions ————————————————————————————————————
+  const { data: pastSessions = [], isLoading: loadingPastSessions } = useQuery({
+    queryKey: ['past-sessions'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('milling_sessions')
+        .select('*')
+        .eq('is_closed', true)
+        .order('closed_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+      return data as Session[];
+    },
+    refetchInterval: 5000,
+  });
+
   // —— MUTATIONS ——————————————————————————————————————————————————————————
   const startMutation = useMutation({
     mutationFn: async (type: SessionType) => {
@@ -180,9 +209,61 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
     onSettled: () => setIsSyncing(false)
   });
 
+  const editSessionMutation = useMutation({
+    mutationFn: async ({ id, payload }: { id: string; payload: any }) => {
+      setIsSyncing(true);
+      const { error } = await supabase.from('milling_sessions').update(payload).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setSuccessMsg('Session updated successfully.');
+      setEditSessionModal({ open: false, record: null });
+      queryClient.invalidateQueries({ queryKey: ['past-sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['active-session'] });
+      queryClient.invalidateQueries({ queryKey: ['last-end-meter'] });
+      setTimeout(() => setSuccessMsg(null), 3000);
+    },
+    onError: (err: any) => setError(err.message),
+    onSettled: () => setIsSyncing(false)
+  });
 
+  const deleteSessionMutation = useMutation({
+    mutationFn: async (id: string) => {
+      setIsSyncing(true);
+      const { error } = await supabase.from('milling_sessions').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setSuccessMsg('Session deleted successfully.');
+      setDeleteSessionModal({ open: false, record: null });
+      queryClient.invalidateQueries({ queryKey: ['past-sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['last-end-meter'] });
+      setTimeout(() => setSuccessMsg(null), 3000);
+    },
+    onError: (err: any) => setError(err.message),
+    onSettled: () => setIsSyncing(false)
+  });
 
-  if (loadingSession || loadingLastMeter || loadingStockTake) {
+  const handleEditSession = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editSessionModal.record) return;
+    editSessionMutation.mutate({
+      id: editSessionModal.record.id,
+      payload: {
+        start_meter: Number(editSessionForm.start_meter) || 0,
+        end_meter: Number(editSessionForm.end_meter) || 0,
+        created_at: editSessionForm.created_at,
+        closed_at: editSessionForm.closed_at,
+      }
+    });
+  };
+
+  const handleDeleteSession = () => {
+    if (!deleteSessionModal.record) return;
+    deleteSessionMutation.mutate(deleteSessionModal.record.id);
+  };
+
+  if (loadingSession || loadingLastMeter || loadingStockTake || loadingPastSessions) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
         <RotateCcw className="w-10 h-10 text-slate-300 animate-spin" />
@@ -389,6 +470,146 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
                   {isSyncing ? 'SYNCING...' : <><ZapOff size={14}/> STOP MILL</>}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. SESSION AUDIT LEDGER */}
+      <div className="mill-card p-0 overflow-hidden bg-white border-slate-200 shadow-2xl mt-10">
+        <div className="p-6 md:p-10 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div className="flex items-center gap-3 md:gap-4">
+            <div className="w-8 h-8 md:w-10 md:h-10 bg-white rounded-lg md:rounded-xl shadow-sm flex items-center justify-center text-slate-900 border border-slate-100">
+              <Zap size={16} />
+            </div>
+            <div>
+              <h3 className="text-sm md:text-lg font-semibold text-slate-900 uppercase tracking-tight">Session History & Audit Ledger</h3>
+              <p className="text-[9px] font-medium text-slate-400 uppercase tracking-widest">Correct Odometer or Session Time Mismatches</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="w-full overflow-auto max-h-[500px] border-t border-slate-100 p-3 max-md:p-2 scrollbar-thin">
+          <table className="w-full text-left border-collapse min-w-[650px]">
+            <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-200">
+              <tr className="text-xs font-semibold text-slate-500 uppercase tracking-wider max-md:text-[11px] max-md:font-medium max-md:tracking-tight bg-slate-50">
+                <th className="px-2 py-1.5 md:px-3 md:py-2 max-md:font-medium">Session Code</th>
+                <th className="px-2 py-1.5 md:px-3 md:py-2 max-md:font-medium">Type</th>
+                <th className="px-2 py-1.5 md:px-3 md:py-2 max-md:font-medium">Opening Odometer</th>
+                <th className="px-2 py-1.5 md:px-3 md:py-2 max-md:font-medium">Closing Odometer</th>
+                <th className="px-2 py-1.5 md:px-3 md:py-2 max-md:font-medium">Consumed</th>
+                <th className="px-2 py-1.5 md:px-3 md:py-2 max-md:font-medium">Duration</th>
+                <th className="px-2 py-1.5 md:px-3 md:py-2 text-right max-md:font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {pastSessions.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="p-20 text-center text-slate-300 font-semibold uppercase tracking-widest italic text-xs max-md:text-[11px]">No closed sessions found</td>
+                </tr>
+              )}
+              {pastSessions.map(s => {
+                const consumed = (s.end_meter !== null ? s.end_meter - s.start_meter : 0).toFixed(2);
+                return (
+                  <tr key={s.id} className="hover:bg-slate-50/50 transition-colors group text-xs text-slate-650 max-md:text-[11px]">
+                    <td className="px-2 py-1.5 md:px-3 md:py-1.5 max-md:text-[11px] whitespace-nowrap">
+                      <p className="font-semibold text-slate-800 uppercase tracking-tight">{s.session_code || '—'}</p>
+                    </td>
+                    <td className="px-2 py-1.5 md:px-3 md:py-1.5 max-md:text-[11px] whitespace-nowrap">
+                      <span className={`px-2 py-0.5 rounded text-[8px] font-semibold uppercase ${
+                        s.session_type === 'Internal' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-purple-50 text-purple-600 border border-purple-100'
+                      }`}>{s.session_type}</span>
+                    </td>
+                    <td className="px-2 py-1.5 md:px-3 md:py-1.5 font-mono text-slate-850 max-md:text-[11px] whitespace-nowrap">{s.start_meter?.toLocaleString()} kWh</td>
+                    <td className="px-2 py-1.5 md:px-3 md:py-1.5 font-mono text-slate-850 max-md:text-[11px] whitespace-nowrap">{s.end_meter?.toLocaleString()} kWh</td>
+                    <td className="px-2 py-1.5 md:px-3 md:py-1.5 font-mono font-semibold text-emerald-600 max-md:text-[11px] whitespace-nowrap">+{consumed} kWh</td>
+                    <td className="px-2 py-1.5 md:px-3 md:py-1.5 max-md:text-[11px] whitespace-nowrap">
+                      <p className="font-medium text-slate-800">{new Date(s.created_at).toLocaleDateString()}</p>
+                      <p className="text-[9px] text-slate-400 uppercase mt-0.5 flex items-center gap-1">
+                        <Clock size={10} /> 
+                        {new Date(s.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                        <span>→</span>
+                        {s.closed_at ? new Date(s.closed_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '—'}
+                      </p>
+                    </td>
+                    <td className="px-2 py-1.5 md:px-3 md:py-1.5 text-right whitespace-nowrap">
+                      <div className="flex justify-end gap-1">
+                        <button onClick={() => {
+                          setEditSessionForm({
+                            start_meter: s.start_meter,
+                            end_meter: s.end_meter || s.start_meter,
+                            created_at: s.created_at,
+                            closed_at: s.closed_at || new Date().toISOString()
+                          });
+                          setEditSessionModal({ open: true, record: s });
+                        }} className="p-1 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 border border-slate-100 rounded-md transition-all"><Pencil size={10}/></button>
+                        <button onClick={() => setDeleteSessionModal({ open: true, record: s })} className="p-1 bg-red-50 hover:bg-red-100 text-red-655 border border-red-100/50 rounded-md transition-all"><Trash2 size={10}/></button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* EDIT SESSION MODAL */}
+      {editSessionModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-8 bg-slate-900 text-white flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-black uppercase tracking-tighter">Edit Session</h3>
+                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">Adjust Session Date or Odometer Readings</p>
+              </div>
+              <button onClick={() => setEditSessionModal({ open: false, record: null })} className="p-2 hover:bg-white/10 rounded-full transition-all"><X size={20}/></button>
+            </div>
+            <form onSubmit={handleEditSession} className="p-8 space-y-6">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Opening Meter (kWh)</label>
+                  <input required type="number" step="0.01" value={editSessionForm.start_meter} onChange={e => setEditSessionForm({...editSessionForm, start_meter: parseFloat(e.target.value) || 0})} className="mill-input w-full font-bold max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Closing Meter (kWh)</label>
+                  <input required type="number" step="0.01" value={editSessionForm.end_meter} onChange={e => setEditSessionForm({...editSessionForm, end_meter: parseFloat(e.target.value) || 0})} className="mill-input w-full font-bold max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Start Date & Time</label>
+                <input required type="datetime-local" value={toDateTimeLocal(editSessionForm.created_at)} onChange={e => setEditSessionForm({...editSessionForm, created_at: new Date(e.target.value).toISOString()})} className="mill-input w-full font-bold uppercase max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Close Date & Time</label>
+                <input required type="datetime-local" value={toDateTimeLocal(editSessionForm.closed_at)} onChange={e => setEditSessionForm({...editSessionForm, closed_at: new Date(e.target.value).toISOString()})} className="mill-input w-full font-bold uppercase max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
+              </div>
+              <button type="submit" disabled={isSyncing} className="mill-btn-primary w-full py-4 shadow-xl">
+                {isSyncing ? 'UPDATING...' : '✓ SAVE CHANGES'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE SESSION MODAL */}
+      {deleteSessionModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-8 bg-red-600 text-white text-center">
+              <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 size={32} />
+              </div>
+              <h3 className="text-xl font-black uppercase tracking-tighter">Delete Session?</h3>
+              <p className="text-xs text-red-100 font-bold uppercase mt-1 leading-relaxed">
+                This action will permanently delete session <span className="font-black text-white">{deleteSessionModal.record?.session_code}</span>.
+              </p>
+            </div>
+            <div className="p-6 grid grid-cols-1 gap-3 md:grid-cols-2">
+              <button onClick={() => setDeleteSessionModal({ open: false, record: null })} className="py-4 rounded-xl bg-slate-100 text-slate-600 font-black text-xs uppercase hover:bg-slate-200 transition-all">Cancel</button>
+              <button onClick={handleDeleteSession} disabled={isSyncing} className="py-4 rounded-xl bg-red-600 text-white font-black text-xs uppercase hover:bg-red-700 transition-all shadow-lg shadow-red-200">
+                {isSyncing ? 'DELETING...' : 'YES, DELETE'}
+              </button>
             </div>
           </div>
         </div>
