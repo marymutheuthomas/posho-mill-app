@@ -33,6 +33,8 @@ function App() {
   // offline: signed in against the local credential hash, so there is no Supabase session for this operator
   const [user, setUser] = useState<{ id: string; role: 'ADMIN' | 'EMPLOYEE'; offline: boolean } | null>(null);
   const [activeTab, setActiveTab] = useState(HOME_TAB);
+  // Full-width till: no sidebar or bottom bar on the POS; the header menu button opens the drawer.
+  const posMode = activeTab === 'Point of Sale';
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [activeSessionType, setActiveSessionType] = useState<'Internal' | 'External' | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
@@ -211,7 +213,7 @@ function App() {
       )}
 
       {/* PERSISTENT SIDEBAR - Tablet & Desktop */}
-      <aside className="hidden md:flex flex-col border-r border-slate-200 bg-white transition-all duration-300 ease-in-out lg:w-64 w-20">
+      <aside className={`${posMode ? 'hidden' : 'hidden md:flex'} flex-col border-r border-slate-200 bg-white transition-all duration-300 ease-in-out lg:w-64 w-20`}>
         <div className="h-20 flex items-center px-6 border-b border-slate-100 gap-3 shrink-0">
           <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-slate-900/20">
             <Zap className="text-white" size={20} />
@@ -240,7 +242,7 @@ function App() {
           <div className="flex items-center gap-3">
             <button 
               onClick={() => setIsDrawerOpen(true)}
-              className="w-8 h-8 bg-slate-900 hover:bg-slate-800 rounded-lg flex items-center justify-center shadow-md md:hidden shrink-0 active:scale-95 transition-all"
+              className={`w-8 h-8 md:w-10 md:h-10 bg-slate-900 hover:bg-slate-800 rounded-lg flex items-center justify-center shadow-md shrink-0 active:scale-95 transition-all ${posMode ? '' : 'md:hidden'}`}
               title="Open Drawer Menu"
             >
               <Zap className="text-white" size={16} />
@@ -352,7 +354,7 @@ function App() {
         </div>
 
         {/* CONTENT SCROLL AREA */}
-        <div id="main-scroll-container" onScroll={handleScroll} className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 md:p-10 pb-24 md:pb-10 custom-scrollbar">
+        <div id="main-scroll-container" onScroll={handleScroll} className={`flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 md:p-10 ${posMode ? 'pb-6' : 'pb-24'} md:pb-10 custom-scrollbar`}>
           {/* A crash in one screen shows its error here; the menu keeps working and switching tabs recovers */}
           <ErrorBoundary resetKey={activeTab} label={activeTab}>
           {activeTab === 'Dashboard'        && <Dashboard onNavigate={setActiveTab} role={user.role} isOnline={isOnline} pendingCount={pendingCount} />}
@@ -379,8 +381,8 @@ function App() {
           </button>
         )}
 
-        {/* MOBILE PERSISTENT BOTTOM NAVIGATION BAR */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 h-14 bg-white/95 backdrop-blur-lg border-t border-slate-200 flex items-center justify-start gap-1.5 overflow-x-auto scrollbar-none z-50 px-4 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] pb-safe">
+        {/* MOBILE PERSISTENT BOTTOM NAVIGATION BAR (hidden on the POS; the header menu button opens the drawer) */}
+        {!posMode && <nav className="md:hidden fixed bottom-0 left-0 right-0 h-14 bg-white/95 backdrop-blur-lg border-t border-slate-200 flex items-center justify-start gap-1.5 overflow-x-auto scrollbar-none z-50 px-4 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] pb-safe">
            {menuItems.map(item => {
              const active = activeTab === item.name;
              return (
@@ -398,7 +400,7 @@ function App() {
                </button>
              );
            })}
-        </nav>
+        </nav>}
       </main>
     </div>
   );
