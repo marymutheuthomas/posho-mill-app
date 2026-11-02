@@ -22,6 +22,7 @@ import StockTake from './components/StockTake';
 import Settings from './components/Settings';
 import OperationalAlert from './components/OperationalAlert';
 import StockTakeReminder from './components/StockTakeReminder';
+import ErrorBoundary from './components/ErrorBoundary';
 import UserManagement from './components/UserManagement';
 import Login from './components/Login';
 
@@ -352,6 +353,8 @@ function App() {
 
         {/* CONTENT SCROLL AREA */}
         <div id="main-scroll-container" onScroll={handleScroll} className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 md:p-10 pb-24 md:pb-10 custom-scrollbar">
+          {/* A crash in one screen shows its error here; the menu keeps working and switching tabs recovers */}
+          <ErrorBoundary resetKey={activeTab} label={activeTab}>
           {activeTab === 'Dashboard'        && <Dashboard onNavigate={setActiveTab} role={user.role} isOnline={isOnline} pendingCount={pendingCount} />}
           {activeTab === 'Session Control'  && <SessionControl onNavigate={setActiveTab} role={user.role} isOnline={isOnline} pendingCount={pendingCount} />}
           {activeTab === 'Insights & Audit' && <MasterDashboard />}
@@ -362,6 +365,7 @@ function App() {
           {activeTab === 'Stock Take'       && <StockTake role={user.role} />}
           {activeTab === 'Settings'         && <Settings role={user.role} />}
           {activeTab === 'User Management'  && <UserManagement />}
+          </ErrorBoundary>
         </div>
 
         {/* Floating Back to Top Button */}
