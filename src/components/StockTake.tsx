@@ -5,7 +5,7 @@ import {
   CheckCircle, RotateCcw, Save, History, Search, Eye, LayoutList, Clock, Pencil, Trash2, X
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useActiveSession } from '../hooks/useActiveSession';
+import { useMillingSession } from '../hooks/useMillingSession';
 import { useDataMutation } from '../hooks/useDataMutation';
 
 interface StockTakeProps {
@@ -51,7 +51,7 @@ export default function StockTake({ role }: StockTakeProps) {
     return localDate.toISOString().slice(0, 16);
   };
 
-  const { data: activeSession } = useActiveSession();
+  const { activeSession } = useMillingSession();
 
   const isAdmin = role === 'ADMIN';
 
@@ -185,12 +185,16 @@ export default function StockTake({ role }: StockTakeProps) {
         const dateObj = new Date(targetDate);
         dateObj.setHours(new Date().getHours(), new Date().getMinutes(), new Date().getSeconds());
 
+        // Round to 2dp before subtracting so discrepancy matches chk_stock_take_discrepancy_math
+        const physicalStock = Number(parseFloat(val).toFixed(2));
+        const systemStock = prod?.current_stock || 0;
+
         return {
           product_id: id,
           product_name: prod?.name || 'Unknown',
-          physical_stock: parseFloat(val),
-          system_stock: prod?.current_stock || 0,
-          discrepancy: parseFloat(val) - (prod?.current_stock || 0),
+          physical_stock: physicalStock,
+          system_stock: systemStock,
+          discrepancy: Number((physicalStock - systemStock).toFixed(2)),
           recorded_by: role || 'Staff',
           created_at: dateObj.toISOString()
         };
@@ -206,11 +210,12 @@ export default function StockTake({ role }: StockTakeProps) {
   const handleEditAudit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editModal.record) return;
+    const physicalStock = Number(editForm.physical.toFixed(2));
     editAuditMutation.mutate({
       id: editModal.record.id,
-      payload: { 
-        physical_stock: editForm.physical,
-        discrepancy: editForm.physical - editModal.record.system_stock,
+      payload: {
+        physical_stock: physicalStock,
+        discrepancy: Number((physicalStock - editModal.record.system_stock).toFixed(2)),
         created_at: editForm.created_at
       }
     });

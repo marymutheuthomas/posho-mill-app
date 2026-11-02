@@ -8,8 +8,9 @@ import {
   Activity, AlertTriangle, Wallet, Zap, Scale 
 } from 'lucide-react';
 import GlobalDateFilter from './GlobalDateFilter';
+import DeadLetterQueue from './DeadLetterQueue';
 import { subDays } from 'date-fns';
-import { useActiveSession } from '../hooks/useActiveSession';
+import { useMillingSession } from '../hooks/useMillingSession';
 
 interface DashboardProps { 
   onNavigate?: (tab: string) => void; 
@@ -19,7 +20,7 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = true, pendingCount = 0 }: DashboardProps = {}) {
-  const { data: activeSession } = useActiveSession();
+  const { activeSession } = useMillingSession();
   
   // Date Range State (default to last 30 days)
   const [dateRange, setDateRange] = useState({
@@ -334,6 +335,9 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
           </div>
         )}
       </div>
+
+      {/* ── Failed Sync Records (Dead-Letter Queue) ── */}
+      {role === 'ADMIN' && <DeadLetterQueue />}
 
       {/* ── Sticky Top Header (Date Filters) ── */}
       <GlobalDateFilter 

@@ -1,29 +1,15 @@
 import { useState } from 'react';
-import { supabase } from '../lib/supabase';
-import { 
+import { useMillingSession, useSessionHistory, type MillingSession, type SessionType } from '../hooks/useMillingSession';
+import {
   Zap, AlertTriangle, Play, 
   CheckCircle, Clock,
   Activity, RotateCcw, ZapOff, X,
   Pencil, Trash2
 } from 'lucide-react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 
 // ——— Types ————————————————————————————————————————————————————————————————
-type SessionType = 'Internal' | 'External';
-
-interface Session {
-  id: string;
-  session_code?: string;
-  session_type: string;
-  status: string;
-  start_meter: number;
-  end_meter: number | null;
-  is_closed: boolean;
-  power_cost?: number;
-  created_at: string;
-  closed_at?: string;
-}
+type Session = MillingSession;
 
 interface SessionControlProps {
   onNavigate?: (tab: string) => void;
@@ -34,8 +20,6 @@ interface SessionControlProps {
 
 // ——— Component ——————————————————————————————————————————————————————————————
 export default function SessionControl({ role, onNavigate }: SessionControlProps) {
-  const queryClient = useQueryClient();
-
   // UI state
 
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +28,6 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
   
   const [startModal, setStartModal] = useState<{open: boolean; type: SessionType | null}>({open: false, type: null});
   const [endModal, setEndModal] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
   const [editSessionModal, setEditSessionModal] = useState<{ open: boolean; record: Session | null }>({ open: false, record: null });
   const [deleteSessionModal, setDeleteSessionModal] = useState<{ open: boolean; record: Session | null }>({ open: false, record: null });
   const [editSessionForm, setEditSessionForm] = useState({ start_meter: 0, end_meter: 0, created_at: '', closed_at: '' });
@@ -57,197 +40,43 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
     return localDate.toISOString().slice(0, 16);
   };
 
-  // —— QUERY 1: Last completed session → pre-fills start meter —————————————
-  const { data: lastSessionData, isLoading: loadingLastMeter } = useQuery({
-    queryKey: ['last-end-meter'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('milling_sessions')
-        .select('end_meter, start_meter, closed_at')
-        .eq('is_closed', true)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+  // —— Shared session state (same source as POS, Production, Dashboard and the nav locks) ——
+  const { activeSession, isLoading: loadingSession, lastEndMeter, requiresStockTake: locked, startSession, closeSession } = useMillingSession();
+  const { pastSessions, isLoading: loadingPastSessions, editSession, deleteSession } = useSessionHistory();
 
-      if (error) throw error;
-      return data;
-    },
-    refetchInterval: 5000,
-  });
+  const isSyncing = startSession.isPending || closeSession.isPending || editSession.isPending || deleteSession.isPending;
 
-  const { data: latestStockTake, isLoading: loadingStockTake } = useQuery({
-    queryKey: ['latest-stock-take'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('stock_take_history')
-        .select('created_at')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (error) throw error;
-      return data;
-    },
-    refetchInterval: 5000,
-  });
-
-  const lastEndMeter = lastSessionData ? (lastSessionData.end_meter ?? lastSessionData.start_meter) : 0;
-
-  const isClosedAfter7PM = (closedAt: string | null | undefined) => {
-    if (!closedAt) return false;
-    try {
-      const date = new Date(closedAt);
-      const hour = parseInt(new Intl.DateTimeFormat('en-US', {
-        timeZone: 'Africa/Nairobi',
-        hour: 'numeric',
-        hour12: false
-      }).format(date), 10);
-      return hour >= 19;
-    } catch (e) {
-      return false;
-    }
+  const flash = (msg: string) => {
+    setError(null);
+    setSuccessMsg(msg);
+    setTimeout(() => setSuccessMsg(null), 3000);
   };
 
-  const isLockedForAudit = () => {
-    if (!lastSessionData || !lastSessionData.closed_at) return false;
-    if (!isClosedAfter7PM(lastSessionData.closed_at)) return false;
-    if (!latestStockTake) return true;
-    return new Date(latestStockTake.created_at) < new Date(lastSessionData.closed_at);
+  const handleStart = (type: SessionType) => {
+    startSession.mutate(type, {
+      onSuccess: ({ offline }) => {
+        flash(offline ? 'Session started offline. It will sync when the connection returns.' : 'Session Started');
+        setStartModal({ open: false, type: null });
+      },
+      onError: (err: any) => setError(err.message),
+    });
   };
 
-  const locked = isLockedForAudit();
-
-  // —— QUERY 2: Active session ————————————————————————————————————————————
-  const { data: activeSession, isLoading: loadingSession } = useQuery({
-    queryKey: ['active-session'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('milling_sessions')
-        .select('*')
-        .eq('is_closed', false)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (error) throw error;
-      return data as Session | null;
-    },
-    refetchInterval: 5000,
-  });
-
-  // —— QUERY 3: Past completed sessions ————————————————————————————————————
-  const { data: pastSessions = [], isLoading: loadingPastSessions } = useQuery({
-    queryKey: ['past-sessions'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('milling_sessions')
-        .select('*')
-        .eq('is_closed', true)
-        .order('closed_at', { ascending: false })
-        .limit(50);
-
-      if (error) throw error;
-      return data as Session[];
-    },
-    refetchInterval: 5000,
-  });
-
-  // —— MUTATIONS ——————————————————————————————————————————————————————————
-  const startMutation = useMutation({
-    mutationFn: async (type: SessionType) => {
-      setIsSyncing(true);
-      const startMeter = lastEndMeter;
-      const { data, error } = await supabase
-        .from('milling_sessions')
-        .insert([{
-          start_meter: startMeter,
-          session_type: type,
-          status: 'Started',
-          is_closed: false,
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['active-session'] });
-      setSuccessMsg('Session Started');
-      setStartModal({open: false, type: null});
-      setTimeout(() => setSuccessMsg(null), 3000);
-    },
-    onError: (err: any) => setError(err.message),
-    onSettled: () => setIsSyncing(false)
-  });
-
-  const endMutation = useMutation({
-    mutationFn: async (meter: number) => {
-      setIsSyncing(true);
-      if (!activeSession) return;
-      const { error } = await supabase
-        .from('milling_sessions')
-        .update({ 
-          end_meter: meter, 
-          is_closed: true, 
-          status: 'Completed',
-          closed_at: new Date().toISOString()
-        })
-        .eq('id', activeSession.id);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['active-session'] });
-      queryClient.invalidateQueries({ queryKey: ['last-end-meter'] });
-      setSuccessMsg('Session Closed');
-      setEndModal(false);
-      setClosingMeter('');
-      setTimeout(() => setSuccessMsg(null), 3000);
-    },
-    onError: (err: any) => setError(err.message),
-    onSettled: () => setIsSyncing(false)
-  });
-
-  const editSessionMutation = useMutation({
-    mutationFn: async ({ id, payload }: { id: string; payload: any }) => {
-      setIsSyncing(true);
-      const { error } = await supabase.from('milling_sessions').update(payload).eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      setSuccessMsg('Session updated successfully.');
-      setEditSessionModal({ open: false, record: null });
-      queryClient.invalidateQueries({ queryKey: ['past-sessions'] });
-      queryClient.invalidateQueries({ queryKey: ['active-session'] });
-      queryClient.invalidateQueries({ queryKey: ['last-end-meter'] });
-      setTimeout(() => setSuccessMsg(null), 3000);
-    },
-    onError: (err: any) => setError(err.message),
-    onSettled: () => setIsSyncing(false)
-  });
-
-  const deleteSessionMutation = useMutation({
-    mutationFn: async (id: string) => {
-      setIsSyncing(true);
-      const { error } = await supabase.from('milling_sessions').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      setSuccessMsg('Session deleted successfully.');
-      setDeleteSessionModal({ open: false, record: null });
-      queryClient.invalidateQueries({ queryKey: ['past-sessions'] });
-      queryClient.invalidateQueries({ queryKey: ['last-end-meter'] });
-      setTimeout(() => setSuccessMsg(null), 3000);
-    },
-    onError: (err: any) => setError(err.message),
-    onSettled: () => setIsSyncing(false)
-  });
+  const handleEnd = () => {
+    closeSession.mutate(parseFloat(closingMeter), {
+      onSuccess: ({ offline }) => {
+        flash(offline ? 'Session closed offline. It will sync when the connection returns.' : 'Session Closed');
+        setEndModal(false);
+        setClosingMeter('');
+      },
+      onError: (err: any) => setError(err.message),
+    });
+  };
 
   const handleEditSession = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editSessionModal.record) return;
-    editSessionMutation.mutate({
+    editSession.mutate({
       id: editSessionModal.record.id,
       payload: {
         start_meter: Number(editSessionForm.start_meter) || 0,
@@ -255,15 +84,27 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
         created_at: editSessionForm.created_at,
         closed_at: editSessionForm.closed_at,
       }
+    }, {
+      onSuccess: () => {
+        flash('Session updated successfully.');
+        setEditSessionModal({ open: false, record: null });
+      },
+      onError: (err: any) => setError(err.message),
     });
   };
 
   const handleDeleteSession = () => {
     if (!deleteSessionModal.record) return;
-    deleteSessionMutation.mutate(deleteSessionModal.record.id);
+    deleteSession.mutate(deleteSessionModal.record.id, {
+      onSuccess: () => {
+        flash('Session deleted successfully.');
+        setDeleteSessionModal({ open: false, record: null });
+      },
+      onError: (err: any) => setError(err.message),
+    });
   };
 
-  if (loadingSession || loadingLastMeter || loadingStockTake || loadingPastSessions) {
+  if (loadingSession || loadingPastSessions) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
         <RotateCcw className="w-10 h-10 text-slate-300 animate-spin" />
@@ -418,7 +259,7 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
                 </div>
               </div>
               <button 
-                onClick={() => startMutation.mutate(startModal.type!)} 
+                onClick={() => handleStart(startModal.type!)}
                 disabled={isSyncing}
                 className="w-full py-4 md:py-6 bg-slate-900 text-white rounded-2xl font-semibold uppercase text-sm tracking-widest shadow-xl hover:bg-slate-800 active:scale-95 transition-all flex items-center justify-center gap-3"
               >
@@ -466,7 +307,7 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
               </div>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <button type="button" onClick={() => setEndModal(false)} className="py-4 md:py-5 rounded-2xl bg-slate-50 text-slate-400 font-semibold text-xs uppercase hover:bg-slate-100 transition-all">Cancel</button>
-                <button onClick={() => endMutation.mutate(parseFloat(closingMeter))} disabled={isSyncing} className="py-4 md:py-5 rounded-2xl bg-red-600 text-white font-semibold text-xs uppercase hover:bg-red-700 shadow-xl shadow-red-200 transition-all flex items-center justify-center gap-2">
+                <button onClick={handleEnd} disabled={isSyncing} className="py-4 md:py-5 rounded-2xl bg-red-600 text-white font-semibold text-xs uppercase hover:bg-red-700 shadow-xl shadow-red-200 transition-all flex items-center justify-center gap-2">
                   {isSyncing ? 'SYNCING...' : <><ZapOff size={14}/> STOP MILL</>}
                 </button>
               </div>

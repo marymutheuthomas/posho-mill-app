@@ -74,6 +74,7 @@ export default function UserManagement() {
   const createUserMutation = useDataMutation({
     type: 'user_creation',
     queryKey: ['profiles'],
+    requiresOnline: true,
     mutationFn: async (payload: any) => {
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: payload.email,
@@ -99,7 +100,8 @@ export default function UserManagement() {
         setSuccess('User registered and synced.');
       }
       setEmail(''); setUsername(''); setPassword(''); setRole('EMPLOYEE');
-    }
+    },
+    onError: (err: any) => setError(err.message || 'User registration failed.')
   });
 
   const updateProfileMutation = useDataMutation({
@@ -120,7 +122,7 @@ export default function UserManagement() {
   const deleteProfileMutation = useDataMutation({
     type: 'user_delete',
     queryKey: ['profiles'],
-    mutationFn: async (id) => {
+    mutationFn: async ({ id }) => {
       const { error } = await supabase.from('profiles').delete().eq('id', id);
       if (error) throw error;
     },
@@ -265,7 +267,7 @@ export default function UserManagement() {
                           ) : (
                             <>
                               <button onClick={() => startEdit(p)} className="p-2 text-slate-400 hover:bg-slate-50 rounded-lg transition-colors"><Pencil size={16} /></button>
-                              <button onClick={() => deleteProfileMutation.mutate(p.id)} className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                              <button onClick={() => deleteProfileMutation.mutate({ id: p.id })} className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16} /></button>
                             </>
                           )}
                         </div>

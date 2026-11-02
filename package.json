@@ -16,6 +16,7 @@
     "chart.js": "^4.5.1",
     "date-fns": "^4.1.0",
     "dexie": "^4.4.2",
+    "dexie-react-hooks": "^4.4.0",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
     "lucide-react": "^0.477.0",

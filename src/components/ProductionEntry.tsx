@@ -4,7 +4,7 @@ import { checkPreviousStockTake } from '../lib/auditUtils';
 import { Scale, AlertTriangle, CheckCircle, Save, Activity, Calendar, ArrowUpRight, ArrowDownRight, Lock, RotateCcw } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useDataMutation } from '../hooks/useDataMutation';
-import { useActiveSession } from '../hooks/useActiveSession';
+import { useMillingSession } from '../hooks/useMillingSession';
 import ActiveSessionOverlay from './ActiveSessionOverlay';
 
 const PRODUCT_CODES = {
@@ -52,7 +52,7 @@ export default function ProductionEntry() {
     }
   });
 
-  const { data: activeSession } = useActiveSession();
+  const { activeSession } = useMillingSession();
 
   const { data: logs = [], isLoading: loadingLogs } = useQuery({
     queryKey: ['production-logs'],
@@ -99,8 +99,7 @@ export default function ProductionEntry() {
       // Invalidate queries so React pulls the newly triggered stock calculations straight from the DB
       queryClient.invalidateQueries({ queryKey: ['production-logs'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
-      queryClient.invalidateQueries({ queryKey: ['active-session'] });
-      queryClient.invalidateQueries({ queryKey: ['last-end-meter'] });
+      queryClient.invalidateQueries({ queryKey: ['milling-sessions'] });
     },
     onError: (err: any) => {
       if (err.code === '42501' || err.code === 'PGRST116') {
@@ -124,11 +123,13 @@ export default function ProductionEntry() {
   const mainOutputProducts = useMemo(() => allProducts.filter(p => PRODUCT_CODES.MAIN_OUTPUTS.includes(p.product_code)), [allProducts]);
   const byProductOptions = useMemo(() => allProducts.filter(p => PRODUCT_CODES.BY_PRODUCTS.includes(p.product_code)), [allProducts]);
 
-  const inputVal = parseFloat(inputKg) || 0;
-  const mainVal = parseFloat(mainOutputKg) || 0;
-  const byVal = parseFloat(byProductKg) || 0;
-  const wasteVal = parseFloat(manualWasteKg) || 0;
-  const kukuFeedVal = Math.max(0, inputVal - mainVal - byVal - wasteVal);
+  // All weights rounded to 2dp so they match the numeric(10,2) columns and chk_production_mass_balance
+  const round2 = (n: number) => Number(n.toFixed(2));
+  const inputVal = round2(parseFloat(inputKg) || 0);
+  const mainVal = round2(parseFloat(mainOutputKg) || 0);
+  const byVal = round2(parseFloat(byProductKg) || 0);
+  const wasteVal = round2(parseFloat(manualWasteKg) || 0);
+  const kukuFeedVal = Math.max(0, round2(inputVal - mainVal - byVal - wasteVal));
   
   const hasEnoughStock = inputProduct && inputVal <= inputProduct.current_stock;
   const isInputValid = inputVal > 0 && mainVal > 0 && (mainVal + byVal + wasteVal) <= inputVal && hasEnoughStock;
@@ -161,12 +162,13 @@ export default function ProductionEntry() {
     const payload = {
       session_id: activeSession.id,
       input_product_id: inputProduct.id || null,
-      input_kg: Number(inputKg) || 0,
+      input_kg: inputVal,
       output_product_id: mainProductId === "" ? null : mainProductId,
-      main_output_kg: Number(mainOutputKg) || 0,
+      main_output_kg: mainVal,
       byproduct_id: byProductId === "" ? null : byProductId,
-      byproduct_kg: byProductKg === "" ? 0 : Number(byProductKg),
-      waste_kg: Number(kukuFeedVal) || 0,
+      byproduct_kg: byVal,
+      // No separate column for kuku feed vs processing loss: waste_kg carries both so the row balances
+      waste_kg: round2(kukuFeedVal + wasteVal),
       created_at: dateObj.toISOString()
     };
 
@@ -224,7 +226,7 @@ export default function ProductionEntry() {
       {successMsg && <div className="bg-emerald-50 border-2 border-emerald-200 text-emerald-900 p-4 rounded-xl font-semibold flex items-center gap-3 mb-6"><CheckCircle size={20}/>{successMsg}</div>}
       
       {/* ACTIVE SESSION SMART HEADER */}
-      <ActiveSessionOverlay activeSession={activeSession} />
+      <ActiveSessionOverlay />
 
       {!activeSession ? (
         <div className="mill-card p-8 md:p-16 text-center max-w-lg mx-auto border-dashed rounded-2xl">

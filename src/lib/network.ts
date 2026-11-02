@@ -59,3 +59,16 @@ export async function withRetry<T>(
 
   return { data: null, error: new Error('Max retries exceeded') };
 }
+
+// True when a failure means "Supabase was unreachable" (retry later) rather than
+// "Supabase rejected the data" (RLS, constraint, validation).
+export function isNetworkError(err: any): boolean {
+  if (!navigator.onLine) return true;
+  const msg = String(err?.message || '').toLowerCase();
+  return (
+    msg.includes('failed to fetch') ||  // Chrome / Edge
+    msg.includes('load failed') ||      // Safari
+    msg.includes('networkerror') ||     // Firefox
+    err?.code === 'PGRST301'            // Supabase unreachable / JWT refresh pending
+  );
+}

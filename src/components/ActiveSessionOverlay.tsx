@@ -1,94 +1,26 @@
 import { useState } from 'react';
-import { supabase } from '../lib/supabase';
 import { Zap, Square, RotateCcw, AlertTriangle, CheckCircle } from 'lucide-react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { db } from '../lib/db';
+import { useMillingSession } from '../hooks/useMillingSession';
 
-interface ActiveSessionOverlayProps {
-  activeSession: any;
-}
-
-export default function ActiveSessionOverlay({ activeSession }: ActiveSessionOverlayProps) {
-  const queryClient = useQueryClient();
+export default function ActiveSessionOverlay() {
+  const { activeSession, closeSession: closeMutation } = useMillingSession();
   const [endMeter, setEndMeter] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // ── MUTATION: Close Session (STRICT UPDATE on existing row by ID) ────────────
-  const closeMutation = useMutation({
-    mutationFn: async () => {
-      const endMeterValue = parseFloat(endMeter);
-
-      // Client-side validation before touching the DB
-      if (!endMeter || isNaN(endMeterValue)) {
-        throw new Error('End meter reading is required.');
-      }
-      if (endMeterValue < parseFloat(activeSession.start_meter)) {
-        throw new Error(`Invalid meter: must be ≥ ${activeSession.start_meter} kWh.`);
-      }
-      if (!activeSession.id) {
-        throw new Error('CRITICAL: Session ID is missing. Cannot close session.');
-      }
-
-      // CLEAN CLOSE PAYLOAD — only the fields we are updating, never the PK
-      const updatePayload = {
-        end_meter: endMeterValue,
-        is_closed: true,
-        status: 'Completed',         // Exact case required by DB constraint
-        closed_at: new Date().toISOString(),
-      };
-
-      console.log('[closeMutation] UPDATE payload for session', activeSession.id, ':', updatePayload);
-
-      // OFFLINE PATH — queue the update for replay when back online
-      if (!navigator.onLine) {
-        await db.pendingTransactions.add({
-          type: 'milling_session_update',
-          payload: { id: activeSession.id, ...updatePayload },
-          timestamp: Date.now(),
-          retryCount: 0,
-        });
-        return { offline: true };
-      }
-
-      // ONLINE PATH — strict UPDATE on the specific session row
-      const { error } = await supabase
-        .from('milling_sessions')
-        .update(updatePayload)
-        .eq('id', activeSession.id);
-
-      if (error) {
-        console.error('[closeMutation] DB error:', error);
-        throw error;
-      }
-
-      console.log('[closeMutation] Session closed successfully.');
-      return { offline: false };
-    },
-    onSuccess: (result) => {
-      setError(null);
-      setEndMeter('');
-      setSuccess(result.offline ? 'Shutdown saved locally.' : 'Session closed successfully.');
-
-      // Invalidate ALL relevant queries so UI updates everywhere
-      queryClient.invalidateQueries({ queryKey: ['active-session'] });
-      queryClient.invalidateQueries({ queryKey: ['last-end-meter'] });
-      queryClient.invalidateQueries({ queryKey: ['milling_sessions'] });
-
-      setTimeout(() => setSuccess(null), 4000);
-    },
-    onError: (err: any) => {
-      // Surface the EXACT error from the DB (trigger messages, RLS errors, etc.)
-      const message = err?.message || err?.details || 'An unknown error occurred.';
-      console.error('[closeMutation] Error:', message);
-      setError(message);
-    },
-  });
-
   const handleClose = () => {
     setError(null);
+    if (!endMeter) { setError('End meter reading is required.'); return; }
     if (window.confirm("ARE YOU SURE? This will PERMANENTLY CLOSE the current milling session and finalize meter readings. You cannot undo this action.")) {
-      closeMutation.mutate();
+      closeMutation.mutate(parseFloat(endMeter), {
+        onSuccess: (result) => {
+          setEndMeter('');
+          setSuccess(result.offline ? 'Shutdown saved locally.' : 'Session closed successfully.');
+          setTimeout(() => setSuccess(null), 4000);
+        },
+        // Surface the EXACT error from the DB (trigger messages, RLS errors, etc.)
+        onError: (err: any) => setError(err?.message || err?.details || 'An unknown error occurred.'),
+      });
     }
   };
 

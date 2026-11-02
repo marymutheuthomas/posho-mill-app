@@ -69,7 +69,7 @@ export default function DebtLedger({ role }: DebtLedgerProps) {
 
   // 2. Offline-First Registry & Repay Mutations
   const addCustomerMutation = useDataMutation({
-    type: 'repayment' as any, // queued correctly in pendings
+    type: 'customer_creation',
     queryKey: ['debts'],
     mutationFn: async (payload: any) => {
       const { recorded_by, ...cleanPayload } = payload;

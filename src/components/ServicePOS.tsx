@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { checkPreviousStockTake } from '../lib/auditUtils';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useActiveSession } from '../hooks/useActiveSession';
+import { useMillingSession } from '../hooks/useMillingSession';
 import { useDataMutation } from '../hooks/useDataMutation';
 import ActiveSessionOverlay from './ActiveSessionOverlay';
 
@@ -164,7 +164,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
     staleTime: 1000 * 60 * 5, // 5 mins
   });
 
-  const { data: activeSession } = useActiveSession();
+  const { activeSession } = useMillingSession();
 
   const { data: salesHistory = [], isLoading: loadingHistory } = useQuery({
     queryKey: ['sales_history'],
@@ -208,7 +208,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
       setShowReceipt(false);
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
-      queryClient.invalidateQueries({ queryKey: ['active-session'] });
+      queryClient.invalidateQueries({ queryKey: ['milling-sessions'] });
       queryClient.invalidateQueries({ queryKey: ['sales_history'] });
     },
     onError: (err: any) => {
@@ -222,7 +222,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
   });
 
   const deleteSaleMutation = useDataMutation({
-    type: 'sale_delete' as any, // We'll handle delete in sync as well
+    type: 'sale_delete',
     queryKey: ['sales_history'],
     mutationFn: async (sale) => {
       const { error } = await supabase.from('sales_transactions').delete().eq('id', sale.id);
@@ -245,7 +245,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
   });
 
   const editSaleMutation = useDataMutation({
-    type: 'sale_update' as any,
+    type: 'sale_update',
     queryKey: ['sales_history'],
     mutationFn: async ({ id, ...updates }) => {
       const { error } = await supabase.from('sales_transactions').update(updates).eq('id', id);
@@ -271,15 +271,16 @@ export default function ServicePOS({ role }: ServicePOSProps) {
   useEffect(() => {
     const p = products.find(x => x.id === formData.productId);
     const w = parseFloat(formData.weightKg) || 0;
+    let fee = '0.00';
     if (p && w > 0) {
       const rate = formData.transactionType === 'Service' ? (p.milling_fee || 0) : (p.selling_price || 0);
       const exactCharge = w * rate;
       // Round up to the nearest 5 KES (Kenya's smallest common coin)
-      const roundedCharge = Math.ceil(exactCharge / 5) * 5;
-      setFormData(prev => ({ ...prev, feeCharged: roundedCharge.toFixed(2) }));
-    } else {
-      setFormData(prev => ({ ...prev, feeCharged: '0.00' }));
+      fee = (Math.ceil(exactCharge / 5) * 5).toFixed(2);
     }
+    // Bail out when unchanged: `products` is a fresh [] each render until the query has data
+    // (e.g. POS opened offline), and an unconditional setState here loops until React aborts.
+    setFormData(prev => (prev.feeCharged === fee ? prev : { ...prev, feeCharged: fee }));
   }, [formData.productId, formData.weightKg, formData.transactionType, products]);
   
   useEffect(() => {
@@ -469,7 +470,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
       {success && <div className="bg-emerald-500 text-white p-4 rounded-xl font-semibold flex items-center gap-3 text-sm mb-4 md:mb-6"><CheckCircle size={20}/>{success}</div>}
       
       {/* ACTIVE SESSION SMART HEADER */}
-      <ActiveSessionOverlay activeSession={activeSession} />
+      <ActiveSessionOverlay />
       
       {!activeSession && !auditBlock && (
         <div className="bg-amber-50 border-2 border-amber-200 p-4 md:p-6 rounded-2xl md:rounded-[2rem] flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 mb-6 md:mb-8 animate-pulse">
@@ -1214,7 +1215,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
         </div>
       )}
       {/* ACTIVE SESSION SMART OVERLAY */}
-      <ActiveSessionOverlay activeSession={activeSession} />
+      <ActiveSessionOverlay />
     </div>
   );
 }

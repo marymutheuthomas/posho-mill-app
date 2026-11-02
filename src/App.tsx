@@ -3,10 +3,10 @@ import {
   LayoutDashboard, Activity, ShieldCheck, Factory, 
   ShoppingCart, BookOpen, Settings as SettingsIcon, Lock,
   Wifi, WifiOff, X,
-  Zap, ShoppingBag, Search, User, ChevronRight, ChevronUp
+  Zap, ShoppingBag, Search, User, ChevronRight, ChevronUp, AlertTriangle
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { useActiveSession } from './hooks/useActiveSession';
+import { useMillingSession } from './hooks/useMillingSession';
 import { supabase } from './lib/supabase';
 import { db } from './lib/db';
 import Dashboard from './components/Dashboard';
@@ -43,6 +43,12 @@ function App() {
   const { data: pendingCount = 0 } = useQuery({
     queryKey: ['pending-tx-count'],
     queryFn: async () => await db.pendingTransactions.count(),
+    refetchInterval: 5000,
+  });
+
+  const { data: deadLetterCount = 0 } = useQuery({
+    queryKey: ['dead-letter-count'],
+    queryFn: async () => await db.dead_letter_queue.count(),
     refetchInterval: 5000,
   });
 
@@ -100,7 +106,7 @@ function App() {
   }, []);
 
 
-  const { data: activeSession } = useActiveSession();
+  const { activeSession } = useMillingSession();
 
   // BACKGROUND PROFILE SYNC (For Offline Logins)
   useEffect(() => {
@@ -128,20 +134,6 @@ function App() {
   useEffect(() => {
     setActiveSessionType(activeSession?.session_type as any || null);
   }, [activeSession]);
-
-  useQuery({
-    queryKey: ['unclosed-prev-session'],
-    queryFn: async () => {
-      const today = new Date();
-      today.setHours(0,0,0,0);
-      const { data } = await supabase.from('milling_sessions')
-        .select('id, created_at')
-        .eq('is_closed', false)
-        .lt('created_at', today.toISOString())
-        .maybeSingle();
-      return data;
-    }
-  });
 
   // Temporarily disable the morning recovery banner
   const showMorningRecovery = false;
@@ -316,6 +308,16 @@ function App() {
                   </span>
                 </div>
               </div>
+              {user.role === 'ADMIN' && deadLetterCount > 0 && (
+                <button
+                  onClick={() => setActiveTab('Dashboard')}
+                  title="Records that failed to sync. Review them on the Dashboard."
+                  className="flex items-center gap-1.5 px-2 md:px-3 py-1 md:py-2 rounded-full border border-red-200 bg-red-50 text-red-700 shadow-sm hover:bg-red-100 transition-all"
+                >
+                  <AlertTriangle size={12} />
+                  <span className="text-[8px] md:text-[10px] font-semibold uppercase tracking-widest">{deadLetterCount} FAILED</span>
+                </button>
+              )}
               <div className={`p-1.5 rounded-lg ${isOnline ? 'bg-emerald-50' : 'bg-red-50'}`}>
                 {isOnline ? <Wifi className="text-emerald-500" size={14}/> : <WifiOff className="text-red-500" size={14}/>}
               </div>
