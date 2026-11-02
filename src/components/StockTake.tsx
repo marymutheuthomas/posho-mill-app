@@ -53,7 +53,6 @@ export default function StockTake({ role }: StockTakeProps) {
 
   const { activeSession } = useMillingSession();
 
-  const isAdmin = role === 'ADMIN';
 
   // 1. Data Fetching
   const { data: products = [], isLoading: loadingProducts } = useQuery({

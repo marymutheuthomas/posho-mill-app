@@ -98,7 +98,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
         const startLocal = new Date(dateRange.start.getTime() - (dateRange.start.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
         const endLocal = new Date(dateRange.end.getTime() - (dateRange.end.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
 
-        const [plRes, cashFlowRes, leakageRes, productsRes, logsRes, serviceTransRes, retailTransRes, intProdRes] = await Promise.all([
+        const [plRes, cashFlowRes, leakageRes, productsRes, logsRes, serviceTransRes, retailTransRes, externalProdRes, intProdRes] = await Promise.all([
           // Monthly P&L View
           supabase.from('dashboard_monthly_pl').select('*').gte('month_date', startIso).lte('month_date', endIso).order('month_date', { ascending: true }),
           // Daily Cash Flow View
@@ -139,7 +139,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
         if (serviceTransRes.data) setServiceTransactions(serviceTransRes.data);
         if (retailTransRes.data) setRetailTransactions(retailTransRes.data);
         if (intProdRes.data) setInternalProdData(intProdRes.data);
-        if (externalProdRes && externalProdRes.data) setExternalProdData(externalProdRes.data);
+        if (externalProdRes.data) setExternalProdData(externalProdRes.data);
 
       } catch (error) {
         console.error("Error fetching date range dashboard data:", error);
