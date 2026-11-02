@@ -71,9 +71,9 @@ export default function StockReconciliation({ start, end }: { start: Date; end: 
     <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
       <div className="p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Scale className="text-[#1E3A8A] shrink-0" size={18} />
+          <Scale className="text-brand shrink-0" size={18} />
           <div>
-            <h3 className="text-sm font-black text-[#1E3A8A] uppercase tracking-tight">Stock Reconciliation</h3>
+            <h3 className="text-sm font-black text-brand uppercase tracking-tight">Stock Reconciliation</h3>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Inventory ledger vs product stock vs physical counts</p>
           </div>
         </div>
@@ -84,7 +84,7 @@ export default function StockReconciliation({ start, end }: { start: Date; end: 
             </span>
           ))}
           <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest cursor-pointer ml-1">
-            <input type="checkbox" checked={issuesOnly} onChange={e => setIssuesOnly(e.target.checked)} className="accent-[#1E3A8A]" />
+            <input type="checkbox" checked={issuesOnly} onChange={e => setIssuesOnly(e.target.checked)} className="accent-brand" />
             Issues only
           </label>
         </div>
@@ -109,7 +109,7 @@ export default function StockReconciliation({ start, end }: { start: Date; end: 
                 <th className="px-3 py-3 border-b border-slate-100 text-right">Sales</th>
                 <th className="px-3 py-3 border-b border-slate-100 text-right">Adjust.</th>
                 {showOther && <th className="px-3 py-3 border-b border-slate-100 text-right">Other</th>}
-                <th className="px-3 py-3 border-b border-slate-100 text-right text-[#1E3A8A]">Expected</th>
+                <th className="px-3 py-3 border-b border-slate-100 text-right text-brand">Expected</th>
                 <th className="px-3 py-3 border-b border-slate-100 text-right">On System</th>
                 <th className="px-3 py-3 border-b border-slate-100 text-right">Drift</th>
                 <th className="px-3 py-3 border-b border-slate-100 text-right">Last Count</th>
@@ -131,7 +131,7 @@ export default function StockReconciliation({ start, end }: { start: Date; end: 
                   {num(r.sales, 'text-slate-600')}
                   <td className={`px-3 py-2.5 text-right text-[11px] font-mono whitespace-nowrap ${r.adjustments === 0 ? 'text-slate-300' : 'text-amber-600'}`}>{signed(r.adjustments)}</td>
                   {showOther && <td className={`px-3 py-2.5 text-right text-[11px] font-mono ${r.other === 0 ? 'text-slate-300' : 'text-amber-600'}`}>{signed(r.other)}</td>}
-                  <td className="px-3 py-2.5 text-right text-[11px] font-mono font-bold text-[#1E3A8A] whitespace-nowrap">{kg(r.expected)}</td>
+                  <td className="px-3 py-2.5 text-right text-[11px] font-mono font-bold text-brand whitespace-nowrap">{kg(r.expected)}</td>
                   {num(r.currentStock)}
                   <td className={`px-3 py-2.5 text-right text-[11px] font-mono whitespace-nowrap ${r.status === 'drift' ? 'font-bold text-red-600' : 'text-slate-300'}`}>{signed(r.drift)}</td>
                   <td className="px-3 py-2.5 text-right whitespace-nowrap">

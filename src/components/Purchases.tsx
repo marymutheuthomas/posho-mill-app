@@ -366,7 +366,7 @@ export default function Purchases() {
                   <td className="px-2 py-1.5 md:px-3 md:py-1.5 max-md:text-[11px] whitespace-nowrap">
                     <div className="flex items-center gap-1.5">
                       {p.product_id 
-                        ? <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-100 text-[8px] font-semibold max-md:font-normal uppercase">Stock</span>
+                        ? <span className="px-1.5 py-0.5 rounded bg-blue-50 text-brand border border-blue-100 text-[8px] font-semibold max-md:font-normal uppercase">Stock</span>
                         : <span className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 border border-amber-100 text-[8px] font-semibold max-md:font-normal uppercase">Expense</span>
                       }
                       <span className="font-semibold max-md:font-normal text-slate-700 uppercase max-md:text-[11px]">

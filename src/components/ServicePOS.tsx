@@ -799,7 +799,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                               {prod?.name || 'Maize'} ({log.weight_kg} kg)
                             </td>
                             <td className="px-2 py-1.5 md:px-4 md:py-3 whitespace-nowrap max-md:text-[11px]">
-                              <span className={`px-2 py-0.5 rounded text-[9px] font-semibold max-md:font-normal uppercase ${isService ? 'bg-blue-50 text-blue-700 border border-blue-100/50' : 'bg-purple-50 text-purple-700 border border-purple-100/50'} max-md:text-[9px]`}>
+                              <span className={`px-2 py-0.5 rounded text-[9px] font-semibold max-md:font-normal uppercase ${isService ? 'bg-blue-50 text-brand border border-blue-100/50' : 'bg-amber-50 text-amber-700 border border-amber-100/50'} max-md:text-[9px]`}>
                                 {isService ? 'Service' : 'Retail'}
                               </span>
                             </td>
@@ -817,7 +817,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                                   ].filter(Boolean).join(' | ')}
                                 </span>
                               ) : (
-                                <span className={`text-[10px] max-md:text-[11px] font-semibold max-md:font-normal ${log.payment_method === 'Debt' ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                <span className={`text-[10px] max-md:text-[11px] font-semibold max-md:font-normal ${log.payment_method === 'Debt' ? 'text-red-600' : 'text-emerald-600'}`}>
                                   {log.payment_method}
                                 </span>
                               )}
@@ -916,7 +916,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                           </div>
                           <div className="text-right">
                             <p className="text-xs font-bold font-mono text-slate-850">KSh {log.total_price?.toLocaleString()}</p>
-                            <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase inline-block mt-1 ${isService ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'bg-purple-50 text-purple-700 border border-purple-100'}`}>
+                            <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase inline-block mt-1 ${isService ? 'bg-blue-50 text-brand border border-blue-100' : 'bg-amber-50 text-amber-700 border border-amber-100'}`}>
                               {isService ? 'Service' : 'Retail'}
                             </span>
                           </div>
@@ -1043,7 +1043,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                   step="0.01" 
                   value={editForm.weightKg} 
                   onChange={e => setEditForm({...editForm, weightKg: e.target.value})} 
-                  className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" 
+                  className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" 
                 />
               </div>
               <div className="space-y-1.5">
@@ -1098,7 +1098,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                       placeholder="0.00"
                       value={editForm.amountCash}
                       onChange={e => setEditForm({ ...editForm, amountCash: e.target.value })}
-                      className="w-full px-2 h-12 rounded-xl border border-slate-200 text-base font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder-slate-300 text-center max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
+                      className="w-full px-2 h-12 rounded-xl border border-slate-200 text-base font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all placeholder-slate-300 text-center max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
                     />
                   </div>
                   <div className="space-y-1">
@@ -1109,7 +1109,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                       placeholder="0.00"
                       value={editForm.amountMpesa}
                       onChange={e => setEditForm({ ...editForm, amountMpesa: e.target.value })}
-                      className="w-full px-2 h-12 rounded-xl border border-slate-200 text-base font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder-slate-300 text-center max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
+                      className="w-full px-2 h-12 rounded-xl border border-slate-200 text-base font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all placeholder-slate-300 text-center max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
                     />
                   </div>
                   <div className="space-y-1">
@@ -1120,7 +1120,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                       placeholder="0.00"
                       value={editForm.amountDebt}
                       onChange={e => setEditForm({ ...editForm, amountDebt: e.target.value })}
-                      className="w-full px-2 h-12 rounded-xl border border-slate-200 text-base font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder-slate-300 text-center max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
+                      className="w-full px-2 h-12 rounded-xl border border-slate-200 text-base font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all placeholder-slate-300 text-center max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
                     />
                   </div>
                 </div>
@@ -1133,8 +1133,8 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                 const isBalanced = Math.abs(totalAllocated - totalPriceTarget) < 0.01;
                 if (!isBalanced) {
                   return (
-                    <div className="p-3 bg-rose-50 text-rose-900 border border-rose-200 rounded-xl text-[10px] font-bold leading-relaxed flex items-start gap-2 shadow-sm animate-in slide-in-from-top-2 duration-200">
-                      <AlertTriangle size={16} className="text-rose-600 flex-shrink-0 mt-0.5" />
+                    <div className="p-3 bg-red-50 text-red-900 border border-red-200 rounded-xl text-[10px] font-bold leading-relaxed flex items-start gap-2 shadow-sm animate-in slide-in-from-top-2 duration-200">
+                      <AlertTriangle size={16} className="text-red-600 flex-shrink-0 mt-0.5" />
                       <span>
                         Allocations (KSh {totalAllocated.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}) must balance exactly to the transaction total price (KSh {totalPriceTarget.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}).
                       </span>
@@ -1147,7 +1147,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
               <button
                 type="submit"
                 disabled={editSaleMutation.isPending || (editForm.isSplit && Math.abs((Number(editForm.amountCash || 0) + Number(editForm.amountMpesa || 0) + Number(editForm.amountDebt || 0)) - Number(editForm.totalPrice || 0)) >= 0.01)}
-                className="w-full bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-white font-medium h-12 rounded-xl transition-all shadow-sm text-xs uppercase tracking-wider disabled:bg-slate-200 disabled:text-slate-400"
+                className="w-full bg-brand hover:bg-brand/90 text-white font-medium h-12 rounded-xl transition-all shadow-sm text-xs uppercase tracking-wider disabled:bg-slate-200 disabled:text-slate-400"
               >
                 {editSaleMutation.isPending ? 'UPDATING...' : '✓ SAVE CHANGES'}
               </button>

@@ -167,7 +167,7 @@ function App() {
         }}
         className={`w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-sm font-black transition-all group ${
           active
-          ? 'bg-slate-900 text-white shadow-xl shadow-slate-900/20'
+          ? 'bg-brand text-white shadow-xl shadow-brand/20'
           : 'text-slate-400 hover:bg-slate-50 hover:text-slate-900'
         }`}
       >
@@ -180,7 +180,7 @@ function App() {
   };
 
   return (
-    <div className="flex h-screen bg-[#F8FAFC] font-sans overflow-hidden">
+    <div className="flex h-screen bg-canvas font-sans overflow-hidden">
       
       {/* MOBILE DRAWER (OFF-CANVAS MENU) */}
       {isDrawerOpen && (
@@ -396,7 +396,7 @@ function App() {
                  onClick={() => setActiveTab(item.name)}
                  className={`flex items-center gap-1.5 px-3 h-9 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
                    active
-                   ? 'bg-[#1E3A8A] text-white shadow-sm'
+                   ? 'bg-brand text-white shadow-sm'
                    : 'text-slate-500 hover:bg-slate-50'
                  }`}
                >

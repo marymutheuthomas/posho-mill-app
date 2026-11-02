@@ -189,8 +189,8 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
         <div className="text-sm font-semibold text-slate-400 uppercase tracking-widest animate-pulse">
           Building God Mode Control Terminal...
         </div>
-        <div className="w-16 h-1 bg-[#1E3A8A] rounded-full overflow-hidden">
-          <div className="w-1/2 h-full bg-[#F59E0B] animate-infinite-scroll" />
+        <div className="w-16 h-1 bg-brand rounded-full overflow-hidden">
+          <div className="w-1/2 h-full bg-accent animate-infinite-scroll" />
         </div>
       </div>
     );
@@ -225,14 +225,14 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
   const getLeakageBadge = (alert: string) => {
     if (!alert) return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
     if (alert === GHOST_MILLING_STR || alert.includes('GHOST') || alert.includes('CRITICAL')) return 'bg-red-500/30 text-red-300 border-red-500/40';
-    if (alert.includes('UNRECORDED') || alert.includes('AGING')) return 'bg-[#F59E0B]/20 text-[#F59E0B] border-[#F59E0B]/30';
+    if (alert.includes('UNRECORDED') || alert.includes('AGING')) return 'bg-accent/20 text-accent border-accent/30';
     return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
   };
 
   const getLeakageBorder = (alert: string) => {
     if (!alert) return 'border-emerald-500/30';
     if (alert === GHOST_MILLING_STR || alert.includes('GHOST') || alert.includes('CRITICAL')) return 'border-red-500/60 shadow-red-950/30';
-    if (alert.includes('UNRECORDED') || alert.includes('AGING')) return 'border-[#F59E0B]/40 shadow-amber-950/20';
+    if (alert.includes('UNRECORDED') || alert.includes('AGING')) return 'border-accent/40 shadow-amber-950/20';
     return 'border-emerald-500/30';
   };
 
@@ -273,10 +273,10 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
   const projectedRetailValue = internalProdData.reduce((acc, row) => acc + (Number(row.projected_retail_value) || 0), 0);
 
   return (
-    <div className="max-w-[1400px] mx-auto p-4 md:p-8 space-y-8 min-h-screen bg-[#F8FAFC]">
+    <div className="max-w-[1400px] mx-auto p-4 md:p-8 space-y-8 min-h-screen bg-canvas">
       
       {/* ── Welcome & Status Top Bar ── */}
-      <div className="bg-[#1E3A8A] rounded-[2rem] p-6 md:p-8 text-white relative overflow-hidden shadow-2xl shadow-blue-900/10 border border-white/10">
+      <div className="bg-brand rounded-[2rem] p-6 md:p-8 text-white relative overflow-hidden shadow-2xl shadow-blue-900/10 border border-white/10">
         <div className="absolute top-0 right-0 w-[30%] h-full bg-gradient-to-l from-white/5 to-transparent pointer-events-none" />
         <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-white/5 rounded-full blur-3xl pointer-events-none" />
         
@@ -289,7 +289,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
               <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Nairobi Master Node</p>
             </div>
             <h1 className="text-3xl md:text-4xl font-black tracking-tighter uppercase leading-none">
-              Welcome back, <span className="text-[#F59E0B]">{role === 'ADMIN' ? 'Commander' : 'Operator'}</span>
+              Welcome back, <span className="text-accent">{role === 'ADMIN' ? 'Commander' : 'Operator'}</span>
             </h1>
             <p className="text-xs font-semibold text-blue-200 uppercase tracking-widest">
               {role === 'ADMIN' ? 'Executive Master Control Terminal Active' : 'Milling Operational Console Active'}
@@ -299,10 +299,10 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
           <div className="flex flex-col sm:flex-row gap-4">
             <div className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl border backdrop-blur-md transition-all shadow-sm ${
               !isOnline ? 'bg-red-500/20 border-red-500/50 text-red-200' :
-              pendingCount > 0 ? 'bg-[#F59E0B]/20 border-[#F59E0B]/50 text-[#F59E0B]' :
-              'bg-[#1E3A8A]/40 border-white/20 text-blue-100'
+              pendingCount > 0 ? 'bg-accent/20 border-accent/50 text-accent' :
+              'bg-brand/40 border-white/20 text-blue-100'
             }`}>
-              <div className={`w-2 h-2 rounded-full ${!isOnline ? 'bg-red-500 animate-pulse' : pendingCount > 0 ? 'bg-[#F59E0B] animate-bounce' : 'bg-emerald-500'}`} />
+              <div className={`w-2 h-2 rounded-full ${!isOnline ? 'bg-red-500 animate-pulse' : pendingCount > 0 ? 'bg-accent animate-bounce' : 'bg-emerald-500'}`} />
               <span className="text-[10px] font-black uppercase tracking-widest">
                 {!isOnline ? 'Offline Terminal' : pendingCount > 0 ? `${pendingCount} Sync Pending` : 'Cloud Synced'}
               </span>
@@ -329,10 +329,10 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
         <div className={`bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6 flex flex-col min-h-[480px] ${role === 'ADMIN' ? '' : 'max-w-2xl mx-auto w-full'}`}>
           <div className="flex items-center justify-between mb-6 shrink-0">
             <div>
-              <h3 className="text-sm font-black text-[#1E3A8A] uppercase tracking-tight">Statement of Financial Position</h3>
+              <h3 className="text-sm font-black text-brand uppercase tracking-tight">Statement of Financial Position</h3>
               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Corporate Net Worth</p>
             </div>
-            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 border border-blue-100 rounded-full text-[9px] font-bold text-blue-600 uppercase tracking-widest">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 border border-blue-100 rounded-full text-[9px] font-bold text-brand uppercase tracking-widest">
               <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
               Live Snapshot
             </div>
@@ -374,7 +374,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
               <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-white hover:shadow-md transition-shadow">
                 <div className="flex items-center gap-2.5">
                   <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
-                    <Users size={14} className="text-blue-600" />
+                    <Users size={14} className="text-brand" />
                   </div>
                   <p className="text-xs font-bold text-slate-700">Debt Receivables</p>
                 </div>
@@ -389,7 +389,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6 flex flex-col min-h-[480px] xl:col-span-2">
             <div className="flex items-center justify-between mb-6 shrink-0">
               <div>
-                <h3 className="text-sm font-black text-[#1E3A8A] uppercase tracking-tight">Monthly P&L Trend</h3>
+                <h3 className="text-sm font-black text-brand uppercase tracking-tight">Monthly P&L Trend</h3>
                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Revenue vs Overhead & Profit</p>
               </div>
               <TrendingUp className="text-slate-300" size={18} />
@@ -438,25 +438,25 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
           
           {/* Card 1: Retail Sales Card */}
-          <div className="bg-[#F8FAFC] rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6 flex flex-col justify-between min-h-[360px] hover:shadow-md transition-shadow">
+          <div className="bg-canvas rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6 flex flex-col justify-between min-h-[360px] hover:shadow-md transition-shadow">
             <div>
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h3 className="text-sm font-black text-[#1E3A8A] uppercase tracking-tight">Retail Sales Monitor</h3>
+                  <h3 className="text-sm font-black text-brand uppercase tracking-tight">Retail Sales Monitor</h3>
                   <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Cash Receipts & Inventory</p>
                 </div>
-                <TrendingUp className="text-[#1E3A8A]" size={18} />
+                <TrendingUp className="text-brand" size={18} />
               </div>
 
               {/* Main KPIs */}
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-inner">
                   <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Total Retail Revenue</p>
-                  <p className="text-xl font-black text-[#1E3A8A] font-mono mt-1">{formatCurrency(totalRetailRevenue)}</p>
+                  <p className="text-xl font-black text-brand font-mono mt-1">{formatCurrency(totalRetailRevenue)}</p>
                 </div>
                 <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-inner">
                   <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Total Volume Sold</p>
-                  <p className="text-xl font-black text-[#1E3A8A] font-mono mt-1">{totalRetailKgSold.toLocaleString()} <span className="text-xs">KG</span></p>
+                  <p className="text-xl font-black text-brand font-mono mt-1">{totalRetailKgSold.toLocaleString()} <span className="text-xs">KG</span></p>
                 </div>
               </div>
 
@@ -474,7 +474,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
                           <span className="font-bold text-slate-600 uppercase truncate max-w-[120px]">{r.product_name || '—'}</span>
                           <div className="flex items-center gap-3 shrink-0">
                              <span className="font-mono text-slate-500">{Number(r.weight_kg || 0).toLocaleString()} KG</span>
-                             <span className="font-mono font-bold text-[#1E3A8A]">{formatCurrency(r.total_price || 0)}</span>
+                             <span className="font-mono font-bold text-brand">{formatCurrency(r.total_price || 0)}</span>
                           </div>
                         </div>
                       ))}
@@ -488,12 +488,12 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
             <div className="bg-white p-3.5 rounded-xl border border-slate-100 flex items-center justify-between text-xs mt-auto">
               <div>
                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Audit Balance</p>
-                <p className="text-xs font-extrabold text-[#1E3A8A] uppercase tracking-tight">Expected vs Collected</p>
+                <p className="text-xs font-extrabold text-brand uppercase tracking-tight">Expected vs Collected</p>
               </div>
               <div className="text-right">
                 {cashFlowData.length > 0 ? (
                   <>
-                    <p className="font-mono font-bold text-[#1E3A8A]">
+                    <p className="font-mono font-bold text-brand">
                       {formatCurrency(auditExpectedLiquid)}
                     </p>
                     <p className="text-[11px] font-normal text-slate-500 mt-0.5">
@@ -501,7 +501,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
                     </p>
                     <p className={`text-[9px] font-black uppercase mt-0.5 ${
                       auditDiscrepancy === 0 ? 'text-emerald-600' :
-                      auditDiscrepancy < 0 ? 'text-[#F59E0B] font-bold animate-pulse' :
+                      auditDiscrepancy < 0 ? 'text-accent font-bold animate-pulse' :
                       'text-emerald-600 font-bold'
                     }`}>
                       {auditDiscrepancy === 0 ? '✓ Reconciled' :
@@ -515,7 +515,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
                 
                 <button 
                   onClick={() => setIsCashDropModalOpen(true)}
-                  className="mt-3 w-full py-1.5 px-3 bg-[#1E3A8A] text-white rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-blue-800 transition-colors shadow-sm active:scale-95 flex items-center justify-center gap-2"
+                  className="mt-3 w-full py-1.5 px-3 bg-brand text-white rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-blue-800 transition-colors shadow-sm active:scale-95 flex items-center justify-center gap-2"
                 >
                   <Wallet size={12} /> Log Cash Drop
                 </button>
@@ -525,25 +525,25 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
           </div>
 
           {/* Card 2: External Service Card */}
-          <div className="bg-[#F8FAFC] rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6 flex flex-col justify-between min-h-[360px] hover:shadow-md transition-shadow">
+          <div className="bg-canvas rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6 flex flex-col justify-between min-h-[360px] hover:shadow-md transition-shadow">
             <div>
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h3 className="text-sm font-black text-[#1E3A8A] uppercase tracking-tight">External Service Monitor</h3>
+                  <h3 className="text-sm font-black text-brand uppercase tracking-tight">External Service Monitor</h3>
                   <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Custom Customer Milling</p>
                 </div>
-                <Activity className="text-[#1E3A8A]" size={18} />
+                <Activity className="text-brand" size={18} />
               </div>
 
               {/* Main KPIs */}
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-inner">
                   <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Service Revenue</p>
-                  <p className="text-xl font-black text-[#1E3A8A] font-mono mt-1">{formatCurrency(totalExtServiceRevenue)}</p>
+                  <p className="text-xl font-black text-brand font-mono mt-1">{formatCurrency(totalExtServiceRevenue)}</p>
                 </div>
                 <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-inner">
                   <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Total Grain Processed</p>
-                  <p className="text-xl font-black text-[#1E3A8A] font-mono mt-1">{totalExtInputKg.toLocaleString()} <span className="text-xs">KG</span></p>
+                  <p className="text-xl font-black text-brand font-mono mt-1">{totalExtInputKg.toLocaleString()} <span className="text-xs">KG</span></p>
                 </div>
               </div>
 
@@ -567,7 +567,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
                             <td className="px-2 py-1 text-[9px] font-bold text-slate-700">{Number(r.kgs_processed || r.total_input_kg || 0).toLocaleString()}</td>
                             <td className="px-2 py-1 text-[9px] font-bold text-slate-700">{Number(r.power_consumed_kwh || 0).toFixed(1)}</td>
                             <td className="px-2 py-1 text-[9px] font-bold text-slate-700">{Number(r.exact_power_cost_ksh || 0).toLocaleString()}</td>
-                            <td className={`px-2 py-1 text-[9px] font-black ${!isNaN(eff) && eff < 80 ? 'text-orange-600' : 'text-emerald-600'}`}>
+                            <td className={`px-2 py-1 text-[9px] font-black ${!isNaN(eff) && eff < 80 ? 'text-amber-600' : 'text-emerald-600'}`}>
                               {r.efficiency_score != null ? `${eff.toFixed(1)}%` : '—'}
                             </td>
                           </tr>
@@ -583,7 +583,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
             <div className="bg-white p-3.5 rounded-xl border border-slate-100 flex items-center justify-between mt-auto">
               <div>
                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Power Efficiency</p>
-                <p className="text-xs font-black text-[#1E3A8A] font-mono mt-0.5">{avgExtPowerEfficiency.toFixed(3)} <span className="text-[9px] font-bold text-slate-400">kWh/kg</span></p>
+                <p className="text-xs font-black text-brand font-mono mt-0.5">{avgExtPowerEfficiency.toFixed(3)} <span className="text-[9px] font-bold text-slate-400">kWh/kg</span></p>
               </div>
               <div>
                 {totalExtInputKg > 0 ? (
@@ -592,7 +592,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
                       Optimal
                     </span>
                   ) : (
-                    <span className="px-3 py-1 bg-amber-100 text-[#F59E0B] rounded-full text-[9px] font-black uppercase tracking-widest border border-amber-200 animate-pulse">
+                    <span className="px-3 py-1 bg-amber-100 text-accent rounded-full text-[9px] font-black uppercase tracking-widest border border-amber-200 animate-pulse">
                       Warning
                     </span>
                   )
@@ -607,25 +607,25 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
           </div>
 
           {/* Card 3: Internal Production Card */}
-          <div className="bg-[#F8FAFC] rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6 flex flex-col justify-between min-h-[360px] hover:shadow-md transition-shadow">
+          <div className="bg-canvas rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6 flex flex-col justify-between min-h-[360px] hover:shadow-md transition-shadow">
             <div>
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h3 className="text-sm font-black text-[#1E3A8A] uppercase tracking-tight">Internal Production Monitor</h3>
+                  <h3 className="text-sm font-black text-brand uppercase tracking-tight">Internal Production Monitor</h3>
                   <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Grain Milling Yield</p>
                 </div>
-                <Scale className="text-[#1E3A8A]" size={18} />
+                <Scale className="text-brand" size={18} />
               </div>
 
               {/* Main KPIs */}
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-inner">
                   <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Total Net Yield</p>
-                  <p className="text-xl font-black text-[#1E3A8A] font-mono mt-1">{totalIntNetOutputKg.toLocaleString()} <span className="text-xs">KG</span></p>
+                  <p className="text-xl font-black text-brand font-mono mt-1">{totalIntNetOutputKg.toLocaleString()} <span className="text-xs">KG</span></p>
                 </div>
                 <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-inner">
                   <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Power Consumed</p>
-                  <p className="text-xl font-black text-[#1E3A8A] font-mono mt-1">{totalIntKwhConsumed.toFixed(2)} <span className="text-xs">kWh</span></p>
+                  <p className="text-xl font-black text-brand font-mono mt-1">{totalIntKwhConsumed.toFixed(2)} <span className="text-xs">kWh</span></p>
                 </div>
               </div>
 
@@ -649,7 +649,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
                             <td className="px-2 py-1 text-[9px] font-bold text-slate-700">{Number(r.kgs_processed || r.net_output_kg || 0).toLocaleString()}</td>
                             <td className="px-2 py-1 text-[9px] font-bold text-slate-700">{Number(r.power_consumed_kwh || 0).toFixed(1)}</td>
                             <td className="px-2 py-1 text-[9px] font-bold text-slate-700">{Number(r.exact_power_cost_ksh || 0).toLocaleString()}</td>
-                            <td className={`px-2 py-1 text-[9px] font-black ${!isNaN(eff) && eff < 80 ? 'text-orange-600' : 'text-emerald-600'}`}>
+                            <td className={`px-2 py-1 text-[9px] font-black ${!isNaN(eff) && eff < 80 ? 'text-amber-600' : 'text-emerald-600'}`}>
                               {r.efficiency_score != null ? `${eff.toFixed(1)}%` : '—'}
                             </td>
                           </tr>
@@ -663,10 +663,10 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
 
             {/* Projected Retail Value Highlight (Champagne Gold Highlight) */}
             <div className="bg-amber-50/60 p-4 rounded-xl border border-amber-200 flex flex-col justify-between mt-auto">
-              <p className="text-[9px] font-black text-[#F59E0B] uppercase tracking-widest">Projected Retail Value</p>
+              <p className="text-[9px] font-black text-accent uppercase tracking-widest">Projected Retail Value</p>
               <div className="flex items-baseline justify-between mt-1.5">
-                <span className="text-2xl font-black text-[#1E3A8A] font-mono">{formatCurrency(projectedRetailValue)}</span>
-                <span className="px-2 py-0.5 bg-amber-100 text-[#F59E0B] rounded text-[8px] font-black uppercase tracking-widest border border-amber-200">
+                <span className="text-2xl font-black text-brand font-mono">{formatCurrency(projectedRetailValue)}</span>
+                <span className="px-2 py-0.5 bg-amber-100 text-accent rounded text-[8px] font-black uppercase tracking-widest border border-amber-200">
                   Valued
                 </span>
               </div>
@@ -720,7 +720,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
         }`}>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Stock Alerts</h3>
-            <AlertTriangle className={lowStockAlerts > 0 ? 'text-[#F59E0B] animate-pulse' : 'text-slate-400'} size={18} />
+            <AlertTriangle className={lowStockAlerts > 0 ? 'text-accent animate-pulse' : 'text-slate-400'} size={18} />
           </div>
           <div className="space-y-1">
             <p className={`text-3xl font-black font-mono ${lowStockAlerts > 0 ? 'text-amber-700' : 'text-slate-900'}`}>
@@ -734,7 +734,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6 flex flex-col justify-between min-h-[140px] hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Maize Reserve</h3>
-            <Box className="text-blue-600" size={18} />
+            <Box className="text-brand" size={18} />
           </div>
           <div className="space-y-1">
             <p className="text-3xl font-black text-slate-900 tracking-tighter font-mono">
@@ -753,7 +753,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6 flex flex-col min-h-[400px] xl:col-span-2">
           <div className="flex items-center justify-between mb-6 shrink-0">
             <div>
-              <h3 className="text-sm font-black text-[#1E3A8A] uppercase tracking-tight">Live Inventory Monitor</h3>
+              <h3 className="text-sm font-black text-brand uppercase tracking-tight">Live Inventory Monitor</h3>
               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Product Grain Shelf Reserves</p>
             </div>
             <Box className="text-slate-300" size={18} />
@@ -796,7 +796,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6 flex flex-col justify-between min-h-[400px]">
           <div className="flex items-center justify-between mb-6 shrink-0">
             <div>
-              <h3 className="text-sm font-black text-[#1E3A8A] uppercase tracking-tight">Production & Yield</h3>
+              <h3 className="text-sm font-black text-brand uppercase tracking-tight">Production & Yield</h3>
               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Milling Efficiency Stats</p>
             </div>
             <Scale className="text-slate-300" size={18} />
@@ -844,18 +844,18 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
       </div>
 
       {/* ══ Tier 4: Risk & Audit Power Leakage Radar Terminal (Dark Futuristic Aesthetics) ══ */}
-      <div className="bg-[#0F172A] rounded-[2.5rem] border border-slate-800 p-6 md:p-8 text-white shadow-2xl relative overflow-hidden">
+      <div className="bg-slate-900 rounded-[2.5rem] border border-slate-800 p-6 md:p-8 text-white shadow-2xl relative overflow-hidden">
         {/* Glassmorphic lighting background */}
         <div className="absolute top-0 right-0 w-48 h-48 bg-blue-900/10 rounded-full -mr-16 -mt-16 blur-3xl pointer-events-none" />
         
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-8 shrink-0">
           <div className="space-y-3">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center text-[#F59E0B] shadow-inner">
+              <div className="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center text-accent shadow-inner">
                 <Zap size={20} className="animate-pulse" />
               </div>
               <div>
-                <h3 className="text-base font-black uppercase tracking-widest text-[#F59E0B]">Power Audit Terminal</h3>
+                <h3 className="text-base font-black uppercase tracking-widest text-accent">Power Audit Terminal</h3>
                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Ghost Milling & Integrity Anomaly Radar</p>
               </div>
             </div>
@@ -934,7 +934,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="p-6 border-b border-slate-100 flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-black text-[#1E3A8A] uppercase tracking-tight">Income Statement Ledger</h3>
+              <h3 className="text-sm font-black text-brand uppercase tracking-tight">Income Statement Ledger</h3>
               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Detailed Monthly Bookkeeping Reports</p>
             </div>
             <Landmark size={18} className="text-slate-300" />
@@ -959,11 +959,11 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
                     <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-6 py-3 text-xs font-medium text-slate-700">{row.display_month}</td>
                       <td className="px-6 py-3 text-xs font-normal font-mono text-emerald-600 text-right">{formatCurrency(row.gross_revenue)}</td>
-                      <td className="px-6 py-3 text-xs font-normal font-mono text-rose-500 text-right">{formatCurrency(row.cogs)}</td>
-                      <td className="px-6 py-3 text-xs font-normal font-mono text-rose-500 text-right">{formatCurrency(row.other_operating_expenses || 0)}</td>
-                      <td className="px-6 py-3 text-xs font-normal font-mono text-rose-500 text-right">{formatCurrency(row.direct_power_costs || 0)}</td>
+                      <td className="px-6 py-3 text-xs font-normal font-mono text-red-500 text-right">{formatCurrency(row.cogs)}</td>
+                      <td className="px-6 py-3 text-xs font-normal font-mono text-red-500 text-right">{formatCurrency(row.other_operating_expenses || 0)}</td>
+                      <td className="px-6 py-3 text-xs font-normal font-mono text-red-500 text-right">{formatCurrency(row.direct_power_costs || 0)}</td>
                       <td className="px-6 py-3 text-xs font-semibold font-mono text-right bg-slate-50/80">
-                        <span className={isLoss ? 'text-rose-600 animate-pulse' : 'text-emerald-600'}>
+                        <span className={isLoss ? 'text-red-600 animate-pulse' : 'text-emerald-600'}>
                           {formatCurrency(row.net_profit)}
                         </span>
                       </td>
@@ -984,9 +984,9 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
         >
           <div className="space-y-1">
             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Motor Control</p>
-            <h3 className="text-lg font-black text-[#1E3A8A] uppercase">Session Hub</h3>
+            <h3 className="text-lg font-black text-brand uppercase">Session Hub</h3>
           </div>
-          <Activity size={24} className="text-slate-200 group-hover:text-[#1E3A8A] transition-all" />
+          <Activity size={24} className="text-slate-200 group-hover:text-brand transition-all" />
         </button>
         
         <button 
@@ -995,9 +995,9 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
         >
           <div className="space-y-1">
             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">BI deep-dives</p>
-            <h3 className="text-lg font-black text-[#1E3A8A] uppercase">Yield Audit</h3>
+            <h3 className="text-lg font-black text-brand uppercase">Yield Audit</h3>
           </div>
-          <Scale size={24} className="text-slate-200 group-hover:text-[#1E3A8A] transition-all" />
+          <Scale size={24} className="text-slate-200 group-hover:text-brand transition-all" />
         </button>
       </div>
 
@@ -1005,7 +1005,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
       {isCashDropModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl overflow-hidden">
-            <div className="p-6 md:p-8 bg-[#1E3A8A] text-white text-center">
+            <div className="p-6 md:p-8 bg-brand text-white text-center">
               <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Wallet size={24} className="text-white" />
               </div>
@@ -1024,7 +1024,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
                     type="number" required min="0" step="1"
                     value={cashDropForm.cash}
                     onChange={e => setCashDropForm({...cashDropForm, cash: e.target.value})}
-                    className="w-full text-lg font-bold p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#1E3A8A] focus:border-transparent outline-none transition-all"
+                    className="w-full text-lg font-bold p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand focus:border-transparent outline-none transition-all"
                     placeholder="0"
                   />
                 </div>
@@ -1034,7 +1034,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
                     type="number" required min="0" step="1"
                     value={cashDropForm.mpesa}
                     onChange={e => setCashDropForm({...cashDropForm, mpesa: e.target.value})}
-                    className="w-full text-lg font-bold p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#1E3A8A] focus:border-transparent outline-none transition-all"
+                    className="w-full text-lg font-bold p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand focus:border-transparent outline-none transition-all"
                     placeholder="0"
                   />
                 </div>
@@ -1044,7 +1044,7 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
                 <button type="button" onClick={() => setIsCashDropModalOpen(false)} className="flex-1 py-3 px-4 bg-slate-100 text-slate-600 rounded-xl font-bold text-xs uppercase hover:bg-slate-200 transition-colors">
                   Cancel
                 </button>
-                <button type="submit" disabled={cashDropLoading} className="flex-[2] py-3 px-4 bg-[#1E3A8A] text-white rounded-xl font-bold text-xs uppercase hover:bg-blue-800 transition-colors shadow-md active:scale-95 flex items-center justify-center gap-2">
+                <button type="submit" disabled={cashDropLoading} className="flex-[2] py-3 px-4 bg-brand text-white rounded-xl font-bold text-xs uppercase hover:bg-blue-800 transition-colors shadow-md active:scale-95 flex items-center justify-center gap-2">
                   {cashDropLoading ? 'Saving...' : 'Submit Audit'}
                 </button>
               </div>

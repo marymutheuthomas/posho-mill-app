@@ -224,8 +224,8 @@ export default function ProductionEntry() {
                         />
                       </div>
                       <div className="relative group">
-                        <input type="number" step="0.01" required value={inputKg} onChange={e => setInputKg(e.target.value)} placeholder="0.00" className="mill-input w-full text-2xl md:text-4xl font-semibold pr-16 md:pr-20 py-4 md:py-6 border-slate-200 focus:border-blue-600 text-base md:text-4xl max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
-                        <span className="absolute right-6 top-1/2 -translate-y-1/2 font-semibold text-slate-300 uppercase text-lg group-focus-within:text-blue-600 transition-colors">KG</span>
+                        <input type="number" step="0.01" required value={inputKg} onChange={e => setInputKg(e.target.value)} placeholder="0.00" className="mill-input w-full text-2xl md:text-4xl font-semibold pr-16 md:pr-20 py-4 md:py-6 border-slate-200 focus:border-brand text-base md:text-4xl max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
+                        <span className="absolute right-6 top-1/2 -translate-y-1/2 font-semibold text-slate-300 uppercase text-lg group-focus-within:text-brand transition-colors">KG</span>
                       </div>
                       <div className="mt-3 flex justify-between px-2">
                         <span className="text-[10px] font-medium text-slate-400 uppercase">Available Bulk</span>
@@ -297,7 +297,7 @@ export default function ProductionEntry() {
           <div className="space-y-6 md:space-y-8">
             <div className="mill-card p-4 md:p-6 bg-white border-slate-100 shadow-lg rounded-2xl">
               <h3 className="text-[10px] md:text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-4 md:mb-6 flex items-center gap-2">
-                <Scale size={16} className="text-blue-600" /> Stock Monitor
+                <Scale size={16} className="text-brand" /> Stock Monitor
               </h3>
               <div className="space-y-4">
                 {allProducts.filter(p => (p.category || '').toLowerCase() !== 'service' && (p.category || '').toLowerCase() !== 'milling').map(p => {
@@ -326,7 +326,7 @@ export default function ProductionEntry() {
         <div className="p-4 md:p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center">
-              <Calendar size={20} className="text-blue-600" />
+              <Calendar size={20} className="text-brand" />
             </div>
             <div>
               <h3 className="text-base md:text-lg font-semibold text-slate-900 uppercase tracking-tight">Monthly Ledger</h3>
@@ -360,7 +360,7 @@ export default function ProductionEntry() {
                   </td>
                   <td className="px-2 py-1.5 md:px-3 md:py-1.5 font-mono text-slate-650 max-md:text-[11px] whitespace-nowrap">
                     <div className="flex items-center gap-1">
-                      <ArrowDownRight size={12} className="text-rose-500 animate-pulse" />
+                      <ArrowDownRight size={12} className="text-red-500 animate-pulse" />
                       <span>{log.input_kg.toLocaleString()} kg</span>
                     </div>
                   </td>

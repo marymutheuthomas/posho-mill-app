@@ -184,7 +184,7 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
          {/* Start Odometer Display */}
          <div className="mill-card p-6 md:p-10 bg-white border-slate-100 shadow-xl rounded-2xl">
             <div className="flex items-center gap-3 mb-6 md:mb-8">
-               <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
+               <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-brand">
                   <Activity size={20} />
                </div>
                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Opening Reading</p>
@@ -284,7 +284,7 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
               <div className="space-y-4">
                 <div className="flex items-center justify-between text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">
                    <span>Final Meter Reading (kWh)</span>
-                   <span className="text-blue-600">Min: {activeSession?.start_meter}</span>
+                   <span className="text-brand">Min: {activeSession?.start_meter}</span>
                 </div>
                 <div className="relative group">
                   <input 
@@ -353,7 +353,7 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
                     </td>
                     <td className="px-2 py-1.5 md:px-3 md:py-1.5 max-md:text-[11px] whitespace-nowrap">
                       <span className={`px-2 py-0.5 rounded text-[8px] font-semibold uppercase ${
-                        s.session_type === 'Internal' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-purple-50 text-purple-600 border border-purple-100'
+                        s.session_type === 'Internal' ? 'bg-blue-50 text-brand border border-blue-100' : 'bg-amber-50 text-amber-700 border border-amber-100'
                       }`}>{s.session_type}</span>
                     </td>
                     <td className="px-2 py-1.5 md:px-3 md:py-1.5 font-mono text-slate-850 max-md:text-[11px] whitespace-nowrap">{s.start_meter?.toLocaleString()} kWh</td>

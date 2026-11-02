@@ -1,11 +1,38 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap');
 @import "tailwindcss";
 
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap');
+/*
+  Design tokens: the ONE place fonts and colours are defined.
+  Tailwind v4 reads these (it ignores tailwind.config.js), so `font-sans`,
+  `font-mono`, `bg-brand`, `text-accent`, `bg-canvas`, etc. all resolve here.
+  Palette: navy brand, amber accent, slate neutrals, emerald = good, red = bad.
+*/
+@theme {
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-brand: #1E3A8A;        /* navy: primary actions, active nav, headings */
+  --color-brand-hover: #1E40AF;
+  --color-brand-soft: #EFF6FF;   /* navy tint for badges/selected rows */
+  --color-accent: #F59E0B;       /* amber: highlights, warnings, secondary CTA */
+  --color-accent-hover: #D97706;
+  --color-ink: #0F172A;          /* darkest text/surfaces (= slate-900) */
+  --color-canvas: #F8FAFC;       /* page background (= slate-50) */
+
+  /* Legacy names kept working, mapped onto the palette above */
+  --color-mill-bg: #F8FAFC;
+  --color-mill-surface: #FFFFFF;
+  --color-mill-text: #0F172A;
+  --color-mill-border: #E2E8F0;
+  --color-mill-primary: #1E3A8A;
+  --color-mill-success: #10B981;
+  --color-mill-warning: #F59E0B;
+}
 
 body {
-  background-color: #F1F5F9;
-  color: #020617;
-  font-family: 'Geist', system-ui, sans-serif;
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -15,29 +42,29 @@ h1, .text-4xl, .text-5xl, .text-6xl {
 
 .mill-card {
   background-color: #FFFFFF;
-  border: 1px solid #CBD5E1;
+  border: 1px solid var(--color-mill-border);
   border-radius: 0.75rem;
   box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
 }
 
 .mill-input {
   background-color: #FFFFFF;
-  border: 1px solid #CBD5E1;
+  border: 1px solid var(--color-mill-border);
   border-radius: 0.5rem;
   padding: 0.5rem 0.75rem;
-  color: #020617;
+  color: var(--color-ink);
   font-weight: 600;
   min-height: 38px;
 }
 
 .mill-input:focus {
   outline: none;
-  border-color: #4F46E5;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 3px rgb(30 58 138 / 0.12);
 }
 
 .mill-btn-primary {
-  background-color: #4F46E5;
+  background-color: var(--color-brand);
   color: #FFFFFF;
   font-weight: 700;
   padding: 0.5rem 1rem;
@@ -47,7 +74,7 @@ h1, .text-4xl, .text-5xl, .text-6xl {
 }
 
 .mill-btn-primary:hover {
-  background-color: #4338CA;
+  background-color: var(--color-brand-hover);
 }
 
 .mill-btn-success {
@@ -78,4 +105,3 @@ h1, .text-4xl, .text-5xl, .text-6xl {
     margin-right: auto;
   }
 }
-

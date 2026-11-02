@@ -62,7 +62,7 @@ export default function GlobalDateFilter({ startDate, endDate, onChange }: Globa
               type="date" 
               value={format(startDate, 'yyyy-MM-dd')}
               onChange={handleStartChange}
-              className="text-[11px] max-md:text-[10px] font-semibold text-slate-700 bg-slate-50 border border-slate-100 rounded-lg px-2 py-1 max-md:px-1 max-md:py-0.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer min-w-0 flex-1 sm:flex-initial"
+              className="text-[11px] max-md:text-[10px] font-semibold text-slate-700 bg-slate-50 border border-slate-100 rounded-lg px-2 py-1 max-md:px-1 max-md:py-0.5 outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all cursor-pointer min-w-0 flex-1 sm:flex-initial"
             />
             <span className="text-slate-300 font-bold text-xs max-md:text-[10px]">-</span>
             <input 
@@ -70,7 +70,7 @@ export default function GlobalDateFilter({ startDate, endDate, onChange }: Globa
               value={format(endDate, 'yyyy-MM-dd')}
               onChange={handleEndChange}
               min={format(startDate, 'yyyy-MM-dd')}
-              className="text-[11px] max-md:text-[10px] font-semibold text-slate-700 bg-slate-50 border border-slate-100 rounded-lg px-2 py-1 max-md:px-1 max-md:py-0.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer min-w-0 flex-1 sm:flex-initial"
+              className="text-[11px] max-md:text-[10px] font-semibold text-slate-700 bg-slate-50 border border-slate-100 rounded-lg px-2 py-1 max-md:px-1 max-md:py-0.5 outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all cursor-pointer min-w-0 flex-1 sm:flex-initial"
             />
           </div>
         </div>

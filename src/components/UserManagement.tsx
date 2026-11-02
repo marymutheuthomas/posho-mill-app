@@ -231,7 +231,7 @@ export default function UserManagement() {
                             <option value="ADMIN">ADMIN</option>
                           </select>
                         ) : (
-                          <span className={`inline-block px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${p.role === 'ADMIN' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'}`}>
+                          <span className={`inline-block px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${p.role === 'ADMIN' ? 'bg-brand-soft text-brand' : 'bg-slate-100 text-slate-600'}`}>
                             {p.role}
                           </span>
                         )}

@@ -253,7 +253,7 @@ export default function DebtLedger({ role }: DebtLedgerProps) {
           {role === 'ADMIN' && (
             <button 
               onClick={() => setNewCustomerModal(true)} 
-              className="px-5 py-3 text-sm font-medium uppercase tracking-wide bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-white flex items-center justify-center gap-2 rounded-xl transition-all shadow-sm h-12"
+              className="px-5 py-3 text-sm font-medium uppercase tracking-wide bg-brand hover:bg-brand/90 text-white flex items-center justify-center gap-2 rounded-xl transition-all shadow-sm h-12"
             >
               <UserPlus size={18} /> REGISTER CUSTOMER
             </button>
@@ -267,7 +267,7 @@ export default function DebtLedger({ role }: DebtLedgerProps) {
               onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
               autoComplete="off" 
               autoCorrect="off"
-              className="w-full pl-12 pr-4 h-12 rounded-xl border border-slate-200 bg-slate-50/50 text-base font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder-slate-400 max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" 
+              className="w-full pl-12 pr-4 h-12 rounded-xl border border-slate-200 bg-slate-50/50 text-base font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all placeholder-slate-400 max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" 
             />
           </div>
         </div>
@@ -330,7 +330,7 @@ export default function DebtLedger({ role }: DebtLedgerProps) {
                           </td>
 
                           {/* Balance */}
-                          <td className="px-2 py-1.5 md:px-4 md:py-3 whitespace-nowrap text-right font-medium max-md:font-normal text-rose-600 font-mono max-md:text-[11px]">
+                          <td className="px-2 py-1.5 md:px-4 md:py-3 whitespace-nowrap text-right font-medium max-md:font-normal text-red-600 font-mono max-md:text-[11px]">
                             KSh {(d.current_balance || 0).toLocaleString()}
                           </td>
 
@@ -429,7 +429,7 @@ export default function DebtLedger({ role }: DebtLedgerProps) {
                   <h4 className="text-base font-semibold text-slate-900 uppercase tracking-tight">{activeCustomer.customer_name}</h4>
                   <div className="flex justify-between pt-2 border-t border-slate-100">
                     <span className="text-[10px] font-medium text-slate-400 uppercase">Outstanding Balance</span>
-                    <span className="text-sm font-semibold text-rose-600">KSh {(activeCustomer.current_balance || 0).toLocaleString()}</span>
+                    <span className="text-sm font-semibold text-red-600">KSh {(activeCustomer.current_balance || 0).toLocaleString()}</span>
                   </div>
                   <div className="text-[9px] font-medium text-slate-400 uppercase pt-0.5">
                     Last Transaction: {activeCustomer.last_transaction_date ? new Date(activeCustomer.last_transaction_date).toLocaleDateString() : 'No Recent Records'}
@@ -445,7 +445,7 @@ export default function DebtLedger({ role }: DebtLedgerProps) {
                     placeholder="0.00"
                     value={paymentAmount}
                     onChange={(e) => setPaymentAmount(e.target.value)}
-                    className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder-slate-300 max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
+                    className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all placeholder-slate-300 max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
                     required
                   />
                 </div>
@@ -457,7 +457,7 @@ export default function DebtLedger({ role }: DebtLedgerProps) {
                     placeholder="Reference, receipt no, details..."
                     value={paymentNotes}
                     onChange={(e) => setPaymentNotes(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 text-base font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder-slate-300 h-20 resize-none max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 text-base font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all placeholder-slate-300 h-20 resize-none max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
                   />
                 </div>
 
@@ -471,7 +471,7 @@ export default function DebtLedger({ role }: DebtLedgerProps) {
                 <button
                   type="submit"
                   disabled={repayMutation.isPending}
-                  className="w-full bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-white font-medium h-12 rounded-xl transition-all shadow-sm text-xs uppercase tracking-wider disabled:bg-slate-200 disabled:text-slate-400"
+                  className="w-full bg-brand hover:bg-brand/90 text-white font-medium h-12 rounded-xl transition-all shadow-sm text-xs uppercase tracking-wider disabled:bg-slate-200 disabled:text-slate-400"
                 >
                   {repayMutation.isPending ? 'Syncing Ledger Records...' : 'Post Secure Payment'}
                 </button>
@@ -524,7 +524,7 @@ export default function DebtLedger({ role }: DebtLedgerProps) {
                     value={newCustomer.name} 
                     onChange={e => setNewCustomer({...newCustomer, name: e.target.value})} 
                     placeholder="e.g. MAMA SARAH"
-                    className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder-slate-300 max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" 
+                    className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all placeholder-slate-300 max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" 
                     autoFocus 
                   />
                 </div>
@@ -536,12 +536,12 @@ export default function DebtLedger({ role }: DebtLedgerProps) {
                     value={newCustomer.phone} 
                     onChange={e => setNewCustomer({...newCustomer, phone: e.target.value})} 
                     placeholder="e.g. 0712345678"
-                    className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder-slate-300 max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" 
+                    className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all placeholder-slate-300 max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" 
                   />
                 </div>
                 <div className="flex gap-4 pt-3">
                   <button type="button" onClick={() => setNewCustomerModal(false)} className="flex-1 h-12 font-medium text-xs uppercase text-slate-400 hover:text-slate-600 transition-colors">CANCEL</button>
-                  <button type="submit" disabled={addCustomerMutation.isPending} className="flex-1 bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-white font-medium h-12 rounded-xl text-xs uppercase tracking-wider transition-all">
+                  <button type="submit" disabled={addCustomerMutation.isPending} className="flex-1 bg-brand hover:bg-brand/90 text-white font-medium h-12 rounded-xl text-xs uppercase tracking-wider transition-all">
                     {addCustomerMutation.isPending ? 'REGISTERING...' : 'REGISTER'}
                   </button>
                 </div>
@@ -570,7 +570,7 @@ export default function DebtLedger({ role }: DebtLedgerProps) {
                   type="text" 
                   value={editForm.name} 
                   onChange={e => setEditForm({...editForm, name: e.target.value})} 
-                  className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all uppercase max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" 
+                  className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all uppercase max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" 
                 />
               </div>
               <div className="space-y-1.5">
@@ -580,7 +580,7 @@ export default function DebtLedger({ role }: DebtLedgerProps) {
                   type="text" 
                   value={editForm.phone} 
                   onChange={e => setEditForm({...editForm, phone: e.target.value})} 
-                  className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" 
+                  className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" 
                 />
               </div>
               <div className="space-y-1.5">
@@ -590,10 +590,10 @@ export default function DebtLedger({ role }: DebtLedgerProps) {
                   type="number" 
                   value={editForm.debt} 
                   onChange={e => setEditForm({...editForm, debt: parseFloat(e.target.value)})} 
-                  className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" 
+                  className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" 
                 />
               </div>
-              <button type="submit" disabled={editMutation.isPending} className="w-full bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-white font-medium h-12 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md mt-2">
+              <button type="submit" disabled={editMutation.isPending} className="w-full bg-brand hover:bg-brand/90 text-white font-medium h-12 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md mt-2">
                 {editMutation.isPending ? 'SAVING CHANGES...' : '✓ SAVE UPDATES'}
               </button>
             </form>

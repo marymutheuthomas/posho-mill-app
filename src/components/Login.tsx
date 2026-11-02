@@ -79,10 +79,10 @@ export default function Login({ onLogin }: LoginProps) {
   };
 
   return (
-    <div className="min-h-screen bg-[#020617] flex items-center justify-center p-6 relative overflow-hidden">
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 relative overflow-hidden">
       {/* Background Decorations */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[120px]" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#F59E0B]/5 rounded-full blur-[120px]" />
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-brand/10 rounded-full blur-[120px]" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-accent/5 rounded-full blur-[120px]" />
 
       <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-10">
@@ -90,14 +90,14 @@ export default function Login({ onLogin }: LoginProps) {
             <Factory className="text-slate-900" size={40} />
           </div>
           <h1 className="text-4xl text-white font-light tracking-tighter uppercase mb-2">Sakhai Posho Mill ERP</h1>
-          <p className="text-[#F59E0B] font-black uppercase tracking-[0.2em] text-[10px]">Secure Enterprise Access Hub</p>
+          <p className="text-accent font-black uppercase tracking-[0.2em] text-[10px]">Secure Enterprise Access Hub</p>
         </div>
 
         <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-8 md:p-10 rounded-[2.5rem] shadow-2xl relative overflow-hidden group">
           {/* Progress bar for loading state */}
           {loading && (
             <div className="absolute top-0 left-0 right-0 h-1 bg-slate-800 overflow-hidden">
-              <div className="h-full bg-[#F59E0B] animate-pulse w-full" />
+              <div className="h-full bg-accent animate-pulse w-full" />
             </div>
           )}
 
@@ -105,14 +105,14 @@ export default function Login({ onLogin }: LoginProps) {
             <div className="space-y-2">
               <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Corporate Email</label>
               <div className="relative group/input">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within/input:text-[#F59E0B] transition-colors">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within/input:text-accent transition-colors">
                   <Mail size={18} />
                 </div>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white font-bold placeholder:text-slate-600 focus:outline-none focus:border-[#F59E0B]/50 focus:ring-4 focus:ring-[#F59E0B]/10 transition-all text-base max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white font-bold placeholder:text-slate-600 focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/10 transition-all text-base max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
                   placeholder="admin@mill.com"
                   required
                 />
@@ -122,14 +122,14 @@ export default function Login({ onLogin }: LoginProps) {
             <div className="space-y-2">
               <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Secure Key</label>
               <div className="relative group/input">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within/input:text-[#F59E0B] transition-colors">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within/input:text-accent transition-colors">
                   <Lock size={18} />
                 </div>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white font-bold placeholder:text-slate-600 focus:outline-none focus:border-[#F59E0B]/50 focus:ring-4 focus:ring-[#F59E0B]/10 transition-all text-base max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white font-bold placeholder:text-slate-600 focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/10 transition-all text-base max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
                   placeholder="••••••••"
                   required
                 />
@@ -148,7 +148,7 @@ export default function Login({ onLogin }: LoginProps) {
               disabled={loading}
               className={`w-full py-5 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all duration-300 ${loading
                   ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                  : 'bg-[#1E3A8A] hover:bg-blue-900 text-white shadow-xl hover:shadow-[#1E3A8A]/20'
+                  : 'bg-brand hover:bg-blue-900 text-white shadow-xl hover:shadow-brand/20'
                 }`}
             >
               {loading ? (
@@ -163,7 +163,7 @@ export default function Login({ onLogin }: LoginProps) {
 
           <div className="mt-8 pt-8 border-t border-white/5 grid grid-cols-2 gap-4">
             <div className="text-center">
-              <div className="flex items-center justify-center gap-2 mb-1 text-[#F59E0B]">
+              <div className="flex items-center justify-center gap-2 mb-1 text-accent">
                 <Shield size={12} />
                 <span className="text-[10px] font-black uppercase tracking-widest">Master Admin</span>
               </div>

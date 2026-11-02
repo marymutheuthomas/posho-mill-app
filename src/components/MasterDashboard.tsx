@@ -12,12 +12,12 @@ const GHOST_MILLING_ALERT = '🚨 CRITICAL: GHOST MILLING (Power used, no KGs lo
 
 function KpiCard({ label, value, icon: Icon, accent = false, alert = false }: any) {
   return (
-    <div className={`bg-white rounded-xl border p-5 flex flex-col justify-between min-h-[120px] shadow-sm ${alert ? 'border-[#F59E0B]/40' : 'border-slate-100'}`}>
+    <div className={`bg-white rounded-xl border p-5 flex flex-col justify-between min-h-[120px] shadow-sm ${alert ? 'border-accent/40' : 'border-slate-100'}`}>
       <div className="flex items-center justify-between mb-3">
         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{label}</p>
-        <Icon size={16} className={alert ? 'text-[#F59E0B]' : 'text-slate-300'} />
+        <Icon size={16} className={alert ? 'text-accent' : 'text-slate-300'} />
       </div>
-      <p className={`text-2xl font-black font-mono tracking-tighter ${accent ? 'text-emerald-600' : alert ? 'text-[#F59E0B]' : 'text-[#1E3A8A]'}`}>{value}</p>
+      <p className={`text-2xl font-black font-mono tracking-tighter ${accent ? 'text-emerald-600' : alert ? 'text-accent' : 'text-brand'}`}>{value}</p>
     </div>
   );
 }
@@ -119,7 +119,7 @@ export default function MasterDashboard() {
   const effColor = (score: any) => {
     const n = Number(score);
     if (isNaN(n)) return 'text-slate-400';
-    if (n < 80) return 'text-orange-600 font-black';
+    if (n < 80) return 'text-amber-600 font-black';
     return 'text-emerald-600';
   };
 
@@ -143,7 +143,7 @@ export default function MasterDashboard() {
 
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-canvas">
 
       {/* ── Ghost Milling Security Banner ── */}
       {ghostMillingDetected && (
@@ -162,7 +162,7 @@ export default function MasterDashboard() {
       )}
 
       {/* ── Sticky Date Bar ── */}
-      <div className="static max-md:transform-none md:sticky md:top-0 z-30 bg-[#F8FAFC]/95 backdrop-blur border-b border-slate-200 px-4 md:px-8 py-3 max-md:p-2 flex flex-wrap items-center gap-3">
+      <div className="static max-md:transform-none md:sticky md:top-0 z-30 bg-canvas/95 backdrop-blur border-b border-slate-200 px-4 md:px-8 py-3 max-md:p-2 flex flex-wrap items-center gap-3">
 
         {/* Print Manager Report — prominent champagne gold button */}
         <button
@@ -174,7 +174,7 @@ export default function MasterDashboard() {
             transition-all duration-200 shadow-md shrink-0
             ${pdfLoading
               ? 'bg-amber-200 border-amber-300 text-amber-700 cursor-wait'
-              : 'bg-[#D4AF37] border-[#B8960C] text-[#1E3A8A] hover:bg-[#C9A227] hover:shadow-lg hover:shadow-amber-400/30 hover:-translate-y-0.5 active:scale-95'
+              : 'bg-accent border-accent-hover text-brand hover:bg-accent-hover hover:shadow-lg hover:shadow-amber-400/30 hover:-translate-y-0.5 active:scale-95'
             }
           `}
           title="Download Manager Report as PDF"
@@ -187,7 +187,7 @@ export default function MasterDashboard() {
         <div className="flex items-center gap-1.5">
           {presets.map(p => (
             <button key={p.label} onClick={p.fn}
-              className="px-3 py-1.5 text-[10px] max-md:text-[10px] font-black uppercase tracking-widest bg-white border border-slate-200 text-slate-500 rounded-lg hover:bg-[#1E3A8A] hover:text-white hover:border-[#1E3A8A] transition-all shadow-sm">
+              className="px-3 py-1.5 text-[10px] max-md:text-[10px] font-black uppercase tracking-widest bg-white border border-slate-200 text-slate-500 rounded-lg hover:bg-brand hover:text-white hover:border-brand transition-all shadow-sm">
               {p.label}
             </button>
           ))}
@@ -202,18 +202,18 @@ export default function MasterDashboard() {
             onChange={e => { const d = new Date(e.target.value); if (!isNaN(d.getTime())) setEnd(d); }}
             className="text-xs max-md:text-[10px] font-bold text-slate-700 bg-transparent outline-none cursor-pointer" />
         </div>
-        {loading && <span className="text-[10px] max-md:text-[10px] font-bold text-[#F59E0B] uppercase tracking-widest animate-pulse">Syncing...</span>}
+        {loading && <span className="text-[10px] max-md:text-[10px] font-bold text-accent uppercase tracking-widest animate-pulse">Syncing...</span>}
       </div>
 
       <div className="max-w-[1440px] mx-auto px-4 md:px-8 py-6 space-y-6">
 
         {/* ── Page Title ── */}
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 bg-[#1E3A8A] rounded-xl flex items-center justify-center shadow-lg shadow-[#1E3A8A]/20">
+          <div className="w-10 h-10 bg-brand rounded-xl flex items-center justify-center shadow-lg shadow-brand/20">
             <Landmark className="text-white" size={20} />
           </div>
           <div>
-            <h1 className="text-xl md:text-2xl font-black text-[#1E3A8A] tracking-tight uppercase">Master Control Center</h1>
+            <h1 className="text-xl md:text-2xl font-black text-brand tracking-tight uppercase">Master Control Center</h1>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Enterprise Intelligence · Financial &amp; Operational</p>
           </div>
           <div className="ml-auto flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg shadow-sm">
@@ -242,7 +242,7 @@ export default function MasterDashboard() {
             <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 flex flex-col h-[380px]">
               <div className="flex items-center justify-between mb-4 shrink-0">
                 <div>
-                  <h3 className="text-sm font-black text-[#1E3A8A] uppercase tracking-tight">P&L Visualizer</h3>
+                  <h3 className="text-sm font-black text-brand uppercase tracking-tight">P&L Visualizer</h3>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Profit &amp; Loss Trend</p>
                 </div>
                 <TrendingUp className="text-slate-200" size={20} />
@@ -269,7 +269,7 @@ export default function MasterDashboard() {
             <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 flex flex-col h-[380px]">
               <div className="flex items-center justify-between mb-4 shrink-0">
                 <div>
-                  <h3 className="text-sm font-black text-[#1E3A8A] uppercase tracking-tight">Cash Flow</h3>
+                  <h3 className="text-sm font-black text-brand uppercase tracking-tight">Cash Flow</h3>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Daily Reconciliation</p>
                 </div>
                 <Wallet className="text-slate-200" size={20} />
@@ -303,10 +303,10 @@ export default function MasterDashboard() {
             <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 flex flex-col h-[420px]">
               <div className="flex items-center justify-between mb-4 shrink-0">
                 <div>
-                  <h3 className="text-sm font-black text-[#1E3A8A] uppercase tracking-tight">Anomaly Radar</h3>
+                  <h3 className="text-sm font-black text-brand uppercase tracking-tight">Anomaly Radar</h3>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Power Leakage · Session Drill-Down</p>
                 </div>
-                <Zap className="text-[#F59E0B]" size={18} />
+                <Zap className="text-accent" size={18} />
               </div>
               <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
                 {leakage.length > 0 ? leakage.map((a, i) => {
@@ -362,7 +362,7 @@ export default function MasterDashboard() {
             <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 flex flex-col h-[420px]">
               <div className="flex items-center justify-between mb-4 shrink-0">
                 <div>
-                  <h3 className="text-sm font-black text-[#1E3A8A] uppercase tracking-tight">Production Yield</h3>
+                  <h3 className="text-sm font-black text-brand uppercase tracking-tight">Production Yield</h3>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Session Drill-Down · Date Filtered</p>
                 </div>
                 <Activity className="text-slate-200" size={18} />
@@ -433,10 +433,10 @@ export default function MasterDashboard() {
             <div className="bg-white rounded-xl border border-slate-100 shadow-sm flex flex-col h-[420px] overflow-hidden">
               <div className="p-5 border-b border-slate-100 flex items-center justify-between shrink-0">
                 <div>
-                  <h3 className="text-sm font-black text-[#1E3A8A] uppercase tracking-tight">High-Risk Debtors</h3>
+                  <h3 className="text-sm font-black text-brand uppercase tracking-tight">High-Risk Debtors</h3>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Lifetime · Not date filtered</p>
                 </div>
-                <ShieldAlert className="text-[#F59E0B]" size={18} />
+                <ShieldAlert className="text-accent" size={18} />
               </div>
               <div className="flex-1 overflow-y-auto">
                 <table className="w-full text-left border-collapse">
@@ -504,11 +504,11 @@ export default function MasterDashboard() {
                       <tr key={i} className="hover:bg-slate-50/50 transition-colors">
                         <td className="px-6 py-3 text-xs font-medium text-slate-700">{r.display_month}</td>
                         <td className="px-6 py-3 text-xs font-normal font-mono text-emerald-600 text-right">{fmt(r.gross_revenue)}</td>
-                        <td className="px-6 py-3 text-xs font-normal font-mono text-rose-500 text-right">{fmt(r.cogs || r.total_purchases || 0)}</td>
-                        <td className="px-6 py-3 text-xs font-normal font-mono text-rose-500 text-right">{fmt(r.other_operating_expenses || 0)}</td>
-                        <td className="px-6 py-3 text-xs font-normal font-mono text-rose-500 text-right">{fmt(r.direct_power_costs || 0)}</td>
+                        <td className="px-6 py-3 text-xs font-normal font-mono text-red-500 text-right">{fmt(r.cogs || r.total_purchases || 0)}</td>
+                        <td className="px-6 py-3 text-xs font-normal font-mono text-red-500 text-right">{fmt(r.other_operating_expenses || 0)}</td>
+                        <td className="px-6 py-3 text-xs font-normal font-mono text-red-500 text-right">{fmt(r.direct_power_costs || 0)}</td>
                         <td className="px-6 py-3 text-xs font-semibold font-mono text-right bg-slate-50">
-                          <span className={r.net_profit < 0 ? 'text-rose-600' : 'text-emerald-600'}>{fmt(r.net_profit)}</span>
+                          <span className={r.net_profit < 0 ? 'text-red-600' : 'text-emerald-600'}>{fmt(r.net_profit)}</span>
                         </td>
                       </tr>
                     ))}
