@@ -1,7 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
-import { checkPreviousStockTake } from '../lib/auditUtils';
-import { Scale, AlertTriangle, CheckCircle, Save, Activity, Calendar, ArrowUpRight, ArrowDownRight, Lock, RotateCcw } from 'lucide-react';
+import { Scale, AlertTriangle, CheckCircle, Save, Activity, Calendar, ArrowUpRight, ArrowDownRight, RotateCcw } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useDataMutation } from '../hooks/useDataMutation';
 import { useMillingSession } from '../hooks/useMillingSession';
@@ -32,7 +31,6 @@ export default function ProductionEntry() {
   const queryClient = useQueryClient();
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
-  const [auditBlock, setAuditBlock] = useState(false);
 
   // Form State
   const [inputKg, setInputKg] = useState('');
@@ -110,14 +108,6 @@ export default function ProductionEntry() {
     }
   });
 
-  useEffect(() => {
-    const runAuditCheck = async () => {
-      await checkPreviousStockTake();
-      // Temporarily disabled to allow backdating
-      setAuditBlock(false); 
-    };
-    runAuditCheck();
-  }, []);
 
   const inputProduct = useMemo(() => allProducts.find(p => p.product_code === PRODUCT_CODES.INPUT), [allProducts]);
   const mainOutputProducts = useMemo(() => allProducts.filter(p => PRODUCT_CODES.MAIN_OUTPUTS.includes(p.product_code)), [allProducts]);
@@ -192,31 +182,6 @@ export default function ProductionEntry() {
     console.log('SANITIZED PRODUCTION LOG PAYLOAD:', payload);
     productionMutation.mutate(payload);
   };
-
-  if (auditBlock) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6 max-w-2xl mx-auto text-center px-4 md:px-6">
-        <div className="w-20 h-20 md:w-24 md:h-24 bg-orange-50 rounded-2xl md:rounded-[2rem] flex items-center justify-center shadow-xl shadow-orange-100">
-           <Lock size={40} className="text-orange-500" />
-        </div>
-        <div className="space-y-3">
-          <h2 className="text-2xl md:text-4xl font-semibold text-slate-900 uppercase tracking-tight">Stock Take Required</h2>
-          <p className="text-sm font-medium text-slate-500 uppercase leading-relaxed">
-            Production is restricted. Our records indicate that the **Previous Day's Stock Take** has not been completed. 
-            Please perform a stock take to reconcile inventory before starting today's production.
-          </p>
-        </div>
-        <div className="flex gap-4">
-          <button 
-            onClick={() => window.location.reload()} 
-            className="w-full md:w-auto px-8 py-4 bg-slate-900 text-white rounded-xl font-semibold uppercase text-xs tracking-widest shadow-xl active:scale-95 transition-transform"
-          >
-            Refresh Status
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   if (loadingLogs && logs.length === 0) return <div className="p-20 text-center font-semibold text-slate-300 uppercase tracking-widest animate-pulse">Synchronizing...</div>;
 

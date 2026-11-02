@@ -37,13 +37,17 @@ const OFFLINE_FIRST = 'always' as const;
 const SESSION_OPS = ['milling_session', 'milling_session_update'] as const;
 const NO_OPS: PendingTransaction[] = []; // stable default so memos don't recompute while Dexie loads
 
-// After this hour (Nairobi), closing a session means the day is over and a stock take is due.
-const END_OF_DAY_HOUR = 19;
+// A session closed at or after this hour (Nairobi) ends the trading day, so a stock take is
+// recommended. Override per deployment with VITE_STOCK_TAKE_DUE_AFTER_HOUR (0-23).
+const configuredHour = Number(import.meta.env.VITE_STOCK_TAKE_DUE_AFTER_HOUR);
+export const STOCK_TAKE_DUE_AFTER_HOUR = Number.isInteger(configuredHour) && configuredHour >= 0 && configuredHour <= 23 ? configuredHour : 21;
+// Closures in the small hours (e.g. 00:30) are still the previous night's close.
+const NIGHT_ENDS_HOUR = 5;
 
-const closedAfterEndOfDay = (closedAt?: string | null) => {
+const closedAfterHours = (closedAt?: string | null) => {
   if (!closedAt) return false;
-  const hour = parseInt(new Intl.DateTimeFormat('en-US', { timeZone: 'Africa/Nairobi', hour: 'numeric', hour12: false }).format(new Date(closedAt)), 10);
-  return hour >= END_OF_DAY_HOUR;
+  const hour = parseInt(new Intl.DateTimeFormat('en-US', { timeZone: 'Africa/Nairobi', hour: 'numeric', hourCycle: 'h23' }).format(new Date(closedAt)), 10);
+  return hour >= STOCK_TAKE_DUE_AFTER_HOUR || hour < NIGHT_ENDS_HOUR;
 };
 
 // Session writes are queued in Dexie whenever Supabase is unreachable; the live query
@@ -164,21 +168,20 @@ export function useMillingSession() {
 
   const lastEndMeter = lastClosed ? Number(lastClosed.end_meter ?? lastClosed.start_meter ?? 0) : 0;
 
-  // Start-of-day gate: a session closed after hours needs a stock take before the next one opens.
+  // Advisory only: after a late close a stock take is recommended until one is recorded
+  // (queued offline counts too). Nothing is blocked on it.
   const latestStockTakeAt = Math.max(
     serverStockTake.data ? new Date(serverStockTake.data).getTime() : 0,
     pendingStockTakeAt ?? 0
   );
-  const requiresStockTake = !activeSession
-    && !!lastClosed?.closed_at
-    && closedAfterEndOfDay(lastClosed.closed_at)
+  const stockTakeDue = !!lastClosed?.closed_at
+    && closedAfterHours(lastClosed.closed_at)
     && latestStockTakeAt < new Date(lastClosed.closed_at).getTime();
 
   const startSession = useMutation({
     networkMode: OFFLINE_FIRST,
     mutationFn: async (type: SessionType) => {
       if (activeSession) throw new Error(`A ${activeSession.session_type} session is already running.`);
-      if (requiresStockTake) throw new Error('A stock take is required before opening the next session.');
       const userId = getActiveOperatorId() ?? (await supabase.auth.getSession()).data.session?.user?.id;
       const row = {
         id: generateUUID(),
@@ -226,7 +229,8 @@ export function useMillingSession() {
     isLoading: serverActive.isLoading || serverLastClosed.isLoading,
     hasPendingChanges,
     lastEndMeter,
-    requiresStockTake,
+    stockTakeDue,
+    stockTakeDueSince: stockTakeDue ? lastClosed?.closed_at ?? null : null,
     startSession,
     closeSession,
   };

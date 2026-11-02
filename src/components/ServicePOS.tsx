@@ -3,10 +3,9 @@ import { supabase } from '../lib/supabase';
 import { 
   CheckCircle, AlertTriangle, 
   Calendar, ChevronRight, Clock, User, RotateCcw,
-  Search, ChevronDown, Lock,
+  Search, ChevronDown,
   Pencil, Trash2, X, Eye
 } from 'lucide-react';
-import { checkPreviousStockTake } from '../lib/auditUtils';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMillingSession } from '../hooks/useMillingSession';
 import { useDataMutation } from '../hooks/useDataMutation';
@@ -55,7 +54,6 @@ export default function ServicePOS({ role }: ServicePOSProps) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showReceipt, setShowReceipt] = useState(false);
-  const [auditBlock, setAuditBlock] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
   // Form State
@@ -323,14 +321,6 @@ export default function ServicePOS({ role }: ServicePOSProps) {
     }
   }, [editForm.weightKg, editingSale, products, editForm.paymentMethod, editForm.isSplit]);
   
-  useEffect(() => {
-    const runAuditCheck = async () => {
-      await checkPreviousStockTake();
-      // Temporarily disabled to allow backdating
-      setAuditBlock(false);
-    };
-    runAuditCheck();
-  }, []);
 
   const handleInitialSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -442,26 +432,6 @@ export default function ServicePOS({ role }: ServicePOSProps) {
     });
   };
 
-  if (auditBlock) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6 max-w-2xl mx-auto text-center px-4 md:px-6">
-        <div className="w-20 h-20 md:w-24 md:h-24 bg-orange-50 rounded-2xl md:rounded-[2rem] flex items-center justify-center shadow-xl shadow-orange-100">
-           <Lock size={40} className="text-orange-500" />
-        </div>
-        <div className="space-y-3">
-          <h2 className="text-2xl md:text-4xl font-semibold text-slate-900 uppercase tracking-tight">Stock Take Missing</h2>
-          <p className="text-sm font-medium text-slate-500 uppercase leading-relaxed">
-            Point of Sale terminal is **Locked**. Our security audit shows that the **Previous Day's Stock Take** was not recorded. 
-            Please reconcile the inventory in the "Stock Take" module to resume sales.
-          </p>
-        </div>
-        <button onClick={() => window.location.reload()} className="w-full md:w-auto px-8 py-4 bg-slate-900 text-white rounded-xl font-semibold uppercase text-xs tracking-widest shadow-xl active:scale-95 transition-transform">
-          Refresh System
-        </button>
-      </div>
-    );
-  }
-
   if ((loadingProducts || loadingHistory) && salesHistory.length === 0) return <div className="p-20 text-center font-semibold text-slate-400 uppercase tracking-widest italic animate-pulse">Initializing Terminal...</div>;
 
   return (
@@ -472,7 +442,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
       {/* ACTIVE SESSION SMART HEADER */}
       <ActiveSessionOverlay />
       
-      {!activeSession && !auditBlock && (
+      {!activeSession && (
         <div className="bg-amber-50 border-2 border-amber-200 p-4 md:p-6 rounded-2xl md:rounded-[2rem] flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 mb-6 md:mb-8 animate-pulse">
           <div className="flex items-center gap-4">
              <div className="w-10 h-10 md:w-12 md:h-12 bg-amber-100 rounded-xl md:rounded-2xl flex items-center justify-center text-amber-600">

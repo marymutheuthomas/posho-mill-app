@@ -21,6 +21,7 @@ import DebtLedger from './components/DebtLedger';
 import StockTake from './components/StockTake';
 import Settings from './components/Settings';
 import OperationalAlert from './components/OperationalAlert';
+import StockTakeReminder from './components/StockTakeReminder';
 import UserManagement from './components/UserManagement';
 import Login from './components/Login';
 
@@ -112,7 +113,9 @@ function App() {
   }, []);
 
 
-  const { activeSession } = useMillingSession();
+  const { activeSession, stockTakeDueSince } = useMillingSession();
+  // Dismissal is per late close: a later late close shows the reminder again.
+  const [dismissedReminderFor, setDismissedReminderFor] = useState<string | null>(null);
 
   useEffect(() => {
     setActiveSessionType(activeSession?.session_type as any || null);
@@ -120,11 +123,6 @@ function App() {
 
   // Temporarily disable the morning recovery banner
   const showMorningRecovery = false;
-
-  const showNotification = (msg: string) => {
-    setNotification(msg);
-    setTimeout(() => setNotification(null), 4000);
-  };
 
   const menuItems = [
     { name: 'Dashboard', icon: LayoutDashboard },
@@ -151,31 +149,22 @@ function App() {
 
   const NavButton = ({ item, isMobile = false }: { item: any, isMobile?: boolean }) => {
     const active = activeTab === item.name;
-    const isLocked = (activeSessionType === 'Internal' && item.name === 'Point of Sale') || 
-                     (activeSessionType === 'External' && item.name === 'Production Hub');
-    
+
+    // Every screen is always reachable; POS and Production explain on-screen if no session is open.
     return (
       <button
         onClick={() => {
-          if (isLocked) {
-            showNotification(`Access Locked: Active ${activeSessionType} session prevents access to ${item.name}.`);
-          } else if (!activeSessionType && (item.name === 'Production Hub' || item.name === 'Point of Sale')) {
-            showNotification(`⚠️ No Active Session: Please start an Internal or External production session before recording data.`);
-          } else {
-            setActiveTab(item.name);
-            if (isMobile) setIsDrawerOpen(false);
-          }
+          setActiveTab(item.name);
+          if (isMobile) setIsDrawerOpen(false);
         }}
         className={`w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-sm font-black transition-all group ${
-          active 
-          ? 'bg-slate-900 text-white shadow-xl shadow-slate-900/20' 
-          : isLocked 
-            ? 'text-slate-200 opacity-50 cursor-not-allowed' 
-            : 'text-slate-400 hover:bg-slate-50 hover:text-slate-900'
+          active
+          ? 'bg-slate-900 text-white shadow-xl shadow-slate-900/20'
+          : 'text-slate-400 hover:bg-slate-50 hover:text-slate-900'
         }`}
       >
         <div className="shrink-0">
-          {isLocked ? <Lock size={20} /> : <item.icon size={22} className={active ? 'text-white' : 'group-hover:scale-110 transition-transform'} />}
+          <item.icon size={22} className={active ? 'text-white' : 'group-hover:scale-110 transition-transform'} />
         </div>
         <span className={`${isMobile ? 'block' : 'hidden lg:block'} whitespace-nowrap truncate`}>{item.name}</span>
       </button>
@@ -333,6 +322,14 @@ function App() {
             </div>
           )}
 
+          {stockTakeDueSince && stockTakeDueSince !== dismissedReminderFor && activeTab !== 'Stock Take' && (
+            <StockTakeReminder
+              closedAt={stockTakeDueSince}
+              onStockTake={() => setActiveTab('Stock Take')}
+              onDismiss={() => setDismissedReminderFor(stockTakeDueSince)}
+            />
+          )}
+
           {showMorningRecovery && (
             <OperationalAlert 
               type="error"
@@ -379,26 +376,14 @@ function App() {
         <nav className="md:hidden fixed bottom-0 left-0 right-0 h-14 bg-white/95 backdrop-blur-lg border-t border-slate-200 flex items-center justify-start gap-1.5 overflow-x-auto scrollbar-none z-50 px-4 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] pb-safe">
            {menuItems.map(item => {
              const active = activeTab === item.name;
-             const isLocked = (activeSessionType === 'Internal' && item.name === 'Point of Sale') || 
-                              (activeSessionType === 'External' && item.name === 'Production Hub');
              return (
                <button
                  key={item.name}
-                 onClick={() => {
-                   if (isLocked) {
-                     showNotification(`Access Locked: Active ${activeSessionType} session prevents access to ${item.name}.`);
-                   } else if (!activeSessionType && (item.name === 'Production Hub' || item.name === 'Point of Sale')) {
-                     showNotification(`⚠️ No Active Session: Please start an Internal or External production session before recording data.`);
-                   } else {
-                     setActiveTab(item.name);
-                   }
-                 }}
+                 onClick={() => setActiveTab(item.name)}
                  className={`flex items-center gap-1.5 px-3 h-9 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                   active 
-                   ? 'bg-[#1E3A8A] text-white shadow-sm' 
-                   : isLocked 
-                     ? 'text-slate-300 opacity-50 cursor-not-allowed' 
-                     : 'text-slate-500 hover:bg-slate-50'
+                   active
+                   ? 'bg-[#1E3A8A] text-white shadow-sm'
+                   : 'text-slate-500 hover:bg-slate-50'
                  }`}
                >
                  <item.icon size={14} className="shrink-0" />

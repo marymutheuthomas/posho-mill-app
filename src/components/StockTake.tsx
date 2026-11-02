@@ -84,8 +84,10 @@ export default function StockTake({ role }: StockTakeProps) {
       const { data, error } = await supabase
         .from('stock_take_history')
         .select('id, created_at')
-        .gte('created_at', `${todayDate}T00:00:00Z`)
-        .lt('created_at', `${todayDate}T23:59:59Z`)
+        .gte('created_at', `${todayDate}T00:00:00+03:00`)
+        .lte('created_at', `${todayDate}T23:59:59.999+03:00`)
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
       if (error) throw error;
       return data;
@@ -93,8 +95,6 @@ export default function StockTake({ role }: StockTakeProps) {
     refetchInterval: 30000,
   });
 
-  // Unlock if no record exists for the current day.
-  const isStockTakeUnlocked = !todayStockTake;
 
 
   const { data: history = [], isLoading: loadingHistory } = useQuery({
@@ -296,18 +296,15 @@ export default function StockTake({ role }: StockTakeProps) {
       {success && <div className="bg-emerald-500 text-white p-6 rounded-2xl font-black flex items-center gap-4 shadow-xl"><CheckCircle size={24}/>{success}</div>}
 
       {activeTab === 'Entry' ? (
-        !isStockTakeUnlocked ? (
-          <div className="flex flex-col items-center justify-center p-8 md:p-16 text-center bg-white border border-slate-100 shadow-2xl rounded-2xl max-w-xl mx-auto space-y-4 my-10 animate-in fade-in duration-300">
-            <div className="w-16 h-16 bg-slate-50 border border-slate-100 rounded-full flex items-center justify-center text-[#1E3A8A] shadow-inner">
-              <Clock size={32} />
-            </div>
-            <h3 className="text-base font-black text-slate-900 uppercase tracking-tight">Stock Take Form Locked</h3>
-            <p className="text-xs font-semibold text-slate-400 uppercase leading-relaxed max-w-sm">
-              The daily stock take form unlocks once per day after any milling session is closed.
-            </p>
-          </div>
-        ) : (
+        (
           <>
+            {/* Informational: re-counts and corrections are always allowed */}
+            {todayStockTake && (
+              <div className="max-w-4xl mx-auto p-3 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 text-xs font-semibold flex items-center gap-2">
+                <CheckCircle size={16} className="shrink-0" />
+                A stock take was already recorded today at {new Date(todayStockTake.created_at).toLocaleTimeString('en-KE', { timeZone: 'Africa/Nairobi', hour: '2-digit', minute: '2-digit' })}. You can still record another count.
+              </div>
+            )}
             <div className="mill-card p-0 overflow-hidden bg-white border-slate-100 shadow-2xl rounded-2xl max-w-4xl mx-auto">
               <div className="p-4 md:p-8 bg-slate-50 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
                  <div className="flex items-center gap-4">

@@ -44,7 +44,6 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
   const [internalProdData, setInternalProdData] = useState<any[]>([]);
   
   // Day lock check
-  const [isDayLocked, setIsDayLocked] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Cash Drop Modal State
@@ -60,9 +59,6 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
       try {
         const { data: bsData } = await supabase.from('dashboard_balance_sheet').select('*').maybeSingle();
         if (bsData) setBalanceSheet(bsData);
-
-        const { data: isUnlocked } = await supabase.rpc('check_day_lock');
-        setIsDayLocked(!isUnlocked);
       } catch (err) {
         console.error("Error fetching static financials:", err);
       }
@@ -314,26 +310,6 @@ export default function Dashboard({ onNavigate, role = 'EMPLOYEE', isOnline = tr
           </div>
         </div>
 
-        {/* Day Lock Warning Interlock */}
-        {isDayLocked && (
-          <div className="mt-6 p-4 bg-red-600/20 backdrop-blur-md border border-red-500/50 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-4 animate-pulse">
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="text-red-400 shrink-0" size={20} />
-              <div>
-                <p className="text-[9px] font-bold uppercase tracking-widest text-red-200">System Locked</p>
-                <p className="text-sm font-black text-white">Daily Physical Stock Take Required</p>
-              </div>
-            </div>
-            {onNavigate && (
-              <button 
-                onClick={() => onNavigate('Stock Take')} 
-                className="w-full sm:w-auto px-6 py-2 bg-white text-red-700 rounded-lg font-black text-[10px] uppercase tracking-widest hover:bg-red-50 transition-all shadow-md active:scale-95"
-              >
-                Go Audit Stock
-              </button>
-            )}
-          </div>
-        )}
       </div>
 
       {/* ── Failed Sync Records (Dead-Letter Queue) ── */}

@@ -41,7 +41,7 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
   };
 
   // —— Shared session state (same source as POS, Production, Dashboard and the nav locks) ——
-  const { activeSession, isLoading: loadingSession, lastEndMeter, requiresStockTake: locked, startSession, closeSession } = useMillingSession();
+  const { activeSession, isLoading: loadingSession, lastEndMeter, stockTakeDue, startSession, closeSession } = useMillingSession();
   const { pastSessions, isLoading: loadingPastSessions, editSession, deleteSession } = useSessionHistory();
 
   const isSyncing = startSession.isPending || closeSession.isPending || editSession.isPending || deleteSession.isPending;
@@ -146,21 +146,7 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
                </div>
 
                {!activeSession ? (
-                  locked ? (
-                    <div className="flex flex-col gap-3 w-full md:w-auto max-w-sm">
-                      <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-xl">
-                        <p className="text-[11px] font-normal text-red-500 uppercase tracking-widest leading-relaxed">
-                          System Locked: A physical stock take audit must be performed and logged before opening the next milling session.
-                        </p>
-                      </div>
-                      <button
-                         onClick={() => onNavigate && onNavigate('Stock Take')}
-                         className="w-full px-6 py-4 bg-red-600 text-white rounded-xl font-semibold text-xs uppercase tracking-widest hover:bg-red-500 transition-all shadow-xl active:scale-95"
-                      >
-                         Perform Stock Take
-                      </button>
-                    </div>
-                  ) : (
+                  <div className="flex flex-col gap-3 w-full md:w-auto max-w-sm">
                     <div className="flex flex-wrap gap-3">
                        {(['Internal', 'External'] as SessionType[]).map((type) => (
                           <button
@@ -172,7 +158,16 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
                           </button>
                        ))}
                     </div>
-                  )
+                    {/* Advisory only: starting a session is never blocked on the stock take */}
+                    {stockTakeDue && (
+                      <button
+                         onClick={() => onNavigate && onNavigate('Stock Take')}
+                         className="text-left text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2 hover:bg-amber-100 transition-all"
+                      >
+                         Stock take recommended after last night's late close. Tap to record it.
+                      </button>
+                    )}
+                  </div>
                ) : (
                   <button
                      onClick={() => setEndModal(true)}
