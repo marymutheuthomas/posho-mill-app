@@ -27,68 +27,51 @@ export default function ActiveSessionOverlay() {
   // Don't render if no active session
   if (!activeSession) return null;
 
+  // One slim row at every width so the till form starts near the top of the screen.
   return (
-    <div className="mb-6 animate-in slide-in-from-top-10 duration-500">
-      <div className="bg-slate-900 text-white rounded-2xl shadow-xl border border-white/10 p-4 md:p-5 flex flex-col md:flex-row items-center justify-between gap-4 backdrop-blur-xl bg-slate-900/90">
+    <div className="mb-3 relative">
+      <div className="bg-slate-900 text-white rounded-xl shadow-md border border-white/10 px-3 py-2 flex items-center gap-2 md:gap-3">
 
           {/* Session info */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-emerald-500/20 rounded-xl flex items-center justify-center text-emerald-400">
-              <Zap size={20} className="animate-pulse" />
-            </div>
-            <div>
-              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 leading-tight">
-                Active {activeSession.session_type} Session
-              </p>
-              <div className="flex items-baseline gap-2">
-                <h4 className="text-lg font-black text-white leading-none">
-                  Started @ {activeSession.start_meter}
-                </h4>
-                <span className="text-[9px] text-slate-500 font-mono">kWh</span>
-              </div>
-            </div>
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <Zap size={14} className="text-emerald-400 animate-pulse shrink-0" />
+            <p className="text-[10px] md:text-[11px] font-black uppercase tracking-wider text-slate-300 truncate">
+              {activeSession.session_type} session · started @ <span className="text-white font-mono">{activeSession.start_meter}</span> kWh
+            </p>
           </div>
 
-          {/* End meter input + error/success toasts */}
-          <div className="flex-1 w-full md:max-w-[200px] relative">
-            <input
-              type="number"
-              step="0.01"
-              value={endMeter}
-              onChange={e => setEndMeter(e.target.value)}
-              placeholder="End Odometer..."
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-lg font-black font-mono focus:bg-white/10 focus:border-emerald-500 outline-none transition-all placeholder:text-slate-600"
-            />
-            {error && (
-              <div className="absolute -top-12 left-0 right-0 flex justify-center">
-                <div className="bg-red-500 text-white text-[10px] font-black px-4 py-2 rounded-full flex items-center gap-2 shadow-lg max-w-full text-center">
-                  <AlertTriangle size={12} className="shrink-0" />
-                  <span className="leading-tight">{error}</span>
-                </div>
-              </div>
-            )}
-            {success && (
-              <div className="absolute -top-12 left-0 right-0 flex justify-center">
-                <div className="bg-emerald-500 text-white text-[10px] font-black px-4 py-2 rounded-full flex items-center gap-2 shadow-lg">
-                  <CheckCircle size={12} />
-                  {success}
-                </div>
-              </div>
-            )}
-          </div>
+          {/* End meter input */}
+          <input
+            type="number"
+            step="0.01"
+            value={endMeter}
+            onChange={e => setEndMeter(e.target.value)}
+            placeholder="End kWh"
+            className="w-24 md:w-32 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-sm font-black font-mono focus:bg-white/10 focus:border-emerald-500 outline-none transition-all placeholder:text-slate-600"
+          />
 
           {/* Shutdown button */}
           <button
             onClick={handleClose}
             disabled={closeMutation.isPending}
-            className="w-full md:w-auto bg-emerald-600 hover:bg-emerald-500 text-white px-8 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] shadow-xl shadow-emerald-900/20 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="shrink-0 bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg font-black uppercase tracking-widest text-[9px] active:scale-95 transition-all flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {closeMutation.isPending
-              ? <><RotateCcw className="animate-spin" size={14} /> Closing...</>
-              : <><Square size={14} fill="currentColor" /> Shutdown Shift</>
+              ? <><RotateCcw className="animate-spin" size={12} /> Closing</>
+              : <><Square size={12} fill="currentColor" /> <span className="hidden sm:inline">Shutdown</span><span className="sm:hidden">Stop</span></>
             }
           </button>
         </div>
+
+        {/* Toasts sit below the bar so they never cover the header */}
+        {(error || success) && (
+          <div className="absolute top-full left-0 right-0 mt-1 z-20 flex justify-center pointer-events-none">
+            <div className={`${error ? 'bg-red-500' : 'bg-emerald-500'} text-white text-[10px] font-black px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg max-w-full text-center`}>
+              {error ? <AlertTriangle size={12} className="shrink-0" /> : <CheckCircle size={12} />}
+              <span className="leading-tight">{error || success}</span>
+            </div>
+          </div>
+        )}
     </div>
   );
 }

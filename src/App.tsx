@@ -129,6 +129,8 @@ function App() {
 
   // Temporarily disable the morning recovery banner
   const showMorningRecovery = false;
+  const showOfflineSignIn = !!user?.offline && isOnline;
+  const showStockTakeReminder = !!stockTakeDueSince && stockTakeDueSince !== dismissedReminderFor && activeTab !== 'Stock Take';
 
   const menuItems = [
     { name: 'Dashboard', icon: LayoutDashboard },
@@ -214,7 +216,7 @@ function App() {
 
       {/* PERSISTENT SIDEBAR - Tablet & Desktop */}
       <aside className={`${posMode ? 'hidden' : 'hidden md:flex'} flex-col border-r border-slate-200 bg-white transition-all duration-300 ease-in-out lg:w-64 w-20`}>
-        <div className="h-20 flex items-center px-6 border-b border-slate-100 gap-3 shrink-0">
+        <div className="h-14 flex items-center px-6 border-b border-slate-100 gap-3 shrink-0">
           <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-slate-900/20">
             <Zap className="text-white" size={20} />
           </div>
@@ -237,7 +239,7 @@ function App() {
       <main className="flex-1 flex flex-col relative overflow-hidden bg-slate-50">
         
         {/* TOP COMMAND BAR */}
-        <header className="sticky top-0 z-40 h-12 md:h-20 bg-white/90 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-4 md:px-10 shrink-0 shadow-sm">
+        <header className="sticky top-0 z-40 h-12 md:h-14 bg-white/90 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-4 md:px-10 shrink-0 shadow-sm">
           
           <div className="flex items-center gap-3">
             <button 
@@ -316,19 +318,21 @@ function App() {
         </header>
 
         {/* OPERATIONAL ALERT LAYER */}
-        <div className="px-4 md:px-10 pt-6">
-          {user.offline && isOnline && (
-            <div className="mb-4 p-4 rounded-2xl border border-amber-200 bg-amber-50 text-amber-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <p className="text-xs font-semibold">
-                Connection restored. You signed in offline, so records{pendingCount > 0 ? ` (${pendingCount} waiting)` : ''} can't sync until you sign in again online.
+        {/* Only takes space when something is showing; each banner is a single slim row */}
+        {(showOfflineSignIn || showStockTakeReminder || showMorningRecovery || notification) && (
+        <div className="px-3 md:px-8 pt-2 space-y-2">
+          {showOfflineSignIn && (
+            <div className="px-3 py-1.5 rounded-xl border border-amber-200 bg-amber-50 text-amber-900 flex items-center gap-2">
+              <p className="text-[11px] font-semibold flex-1 min-w-0">
+                Back online. Sign in again to sync{pendingCount > 0 ? ` ${pendingCount} waiting record${pendingCount === 1 ? '' : 's'}` : ' your records'}.
               </p>
-              <button onClick={handleLogout} className="shrink-0 px-4 py-2 rounded-xl bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest hover:bg-slate-800">
-                Sign in to sync
+              <button onClick={handleLogout} className="shrink-0 px-3 py-1 rounded-lg bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest hover:bg-slate-800">
+                Sign in
               </button>
             </div>
           )}
 
-          {stockTakeDueSince && stockTakeDueSince !== dismissedReminderFor && activeTab !== 'Stock Take' && (
+          {showStockTakeReminder && (
             <StockTakeReminder
               closedAt={stockTakeDueSince}
               onStockTake={() => setActiveTab('Stock Take')}
@@ -345,16 +349,17 @@ function App() {
           )}
 
           {notification && (
-            <OperationalAlert 
+            <OperationalAlert
               type="warning"
               onClose={() => setNotification(null)}
-              message={notification} 
+              message={notification}
             />
           )}
         </div>
+        )}
 
         {/* CONTENT SCROLL AREA */}
-        <div id="main-scroll-container" onScroll={handleScroll} className={`flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 md:p-10 ${posMode ? 'pb-6' : 'pb-24'} md:pb-10 custom-scrollbar`}>
+        <div id="main-scroll-container" onScroll={handleScroll} className={`flex-1 overflow-y-auto overflow-x-hidden px-3 pt-3 md:px-8 md:pt-4 ${posMode ? 'pb-6' : 'pb-24'} md:pb-10 custom-scrollbar`}>
           {/* A crash in one screen shows its error here; the menu keeps working and switching tabs recovers */}
           <ErrorBoundary resetKey={activeTab} label={activeTab}>
           {activeTab === 'Dashboard'        && <Dashboard onNavigate={setActiveTab} role={user.role} isOnline={isOnline} pendingCount={pendingCount} />}

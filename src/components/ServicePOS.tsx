@@ -435,28 +435,23 @@ export default function ServicePOS({ role }: ServicePOSProps) {
   if ((loadingProducts || loadingHistory) && salesHistory.length === 0) return <div className="p-20 text-center font-semibold text-slate-400 uppercase tracking-widest italic animate-pulse">Initializing Terminal...</div>;
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 md:space-y-8 pb-32 md:pb-20 min-h-[100dvh] px-4 md:px-0">
-      {error && <div className="bg-red-600 text-white p-4 rounded-xl font-semibold flex items-center gap-3 text-sm mb-4 md:mb-6"><AlertTriangle size={20}/>{error}</div>}
-      {success && <div className="bg-emerald-500 text-white p-4 rounded-xl font-semibold flex items-center gap-3 text-sm mb-4 md:mb-6"><CheckCircle size={20}/>{success}</div>}
+    <div className="max-w-7xl mx-auto space-y-3 md:space-y-4 pb-32 md:pb-20 min-h-[100dvh] px-1 md:px-0">
+      {error && <div className="bg-red-600 text-white px-3 py-2 rounded-xl font-semibold flex items-center gap-2 text-xs"><AlertTriangle size={16}/>{error}</div>}
+      {success && <div className="bg-emerald-500 text-white px-3 py-2 rounded-xl font-semibold flex items-center gap-2 text-xs"><CheckCircle size={16}/>{success}</div>}
       
       {/* ACTIVE SESSION SMART HEADER */}
       <ActiveSessionOverlay />
       
       {!activeSession && (
-        <div className="bg-amber-50 border-2 border-amber-200 p-4 md:p-6 rounded-2xl md:rounded-[2rem] flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 mb-6 md:mb-8 animate-pulse">
-          <div className="flex items-center gap-4">
-             <div className="w-10 h-10 md:w-12 md:h-12 bg-amber-100 rounded-xl md:rounded-2xl flex items-center justify-center text-amber-600">
-                <Clock size={20} />
-             </div>
-             <div>
-                <h4 className="text-sm font-semibold text-amber-900 uppercase tracking-tight text-center md:text-left">No Active Session</h4>
-                <p className="text-[10px] font-medium text-amber-700 uppercase tracking-widest text-center md:text-left">You must START A SESSION in "Session Control" before selling.</p>
-             </div>
-          </div>
+        <div className="bg-amber-50 border border-amber-200 px-3 py-2 rounded-xl flex items-center gap-2 mb-3">
+          <Clock size={14} className="text-amber-600 shrink-0" />
+          <p className="text-[11px] font-semibold text-amber-900">
+            No active session. Start one in Session Control before selling.
+          </p>
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-6 md:gap-10">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-6">
         <div className="md:col-span-3">
           <div className="mill-card p-4 md:p-8 bg-white border-slate-100 shadow-2xl rounded-2xl">
             <form onSubmit={handleInitialSubmit} className="space-y-4 md:space-y-6">
