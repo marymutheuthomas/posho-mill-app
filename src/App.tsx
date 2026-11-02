@@ -190,7 +190,7 @@ function App() {
             onClick={() => setIsDrawerOpen(false)}
           />
           <aside className="fixed inset-y-0 left-0 w-60 bg-white z-[60] shadow-2xl flex flex-col animate-in slide-in-from-left duration-300">
-            <div className="h-14 flex items-center px-4 border-b border-slate-100 justify-between shrink-0">
+            <div className="h-11 flex items-center px-4 border-b border-slate-100 justify-between shrink-0">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center shadow-md">
                   <Zap className="text-white" size={16} />
@@ -216,9 +216,9 @@ function App() {
 
       {/* PERSISTENT SIDEBAR - Tablet & Desktop */}
       <aside className={`${posMode ? 'hidden' : 'hidden md:flex'} flex-col border-r border-slate-200 bg-white transition-all duration-300 ease-in-out lg:w-52 w-16`}>
-        <div className="h-14 flex items-center justify-center lg:justify-start px-3 lg:px-4 border-b border-slate-100 gap-2 shrink-0">
-          <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center shrink-0 shadow-md shadow-slate-900/20">
-            <Zap className="text-white" size={16} />
+        <div className="h-11 flex items-center justify-center lg:justify-start px-3 lg:px-4 border-b border-slate-100 gap-2 shrink-0">
+          <div className="w-7 h-7 bg-slate-900 rounded-lg flex items-center justify-center shrink-0 shadow-md shadow-slate-900/20">
+            <Zap className="text-white" size={14} />
           </div>
           <span className="hidden lg:block font-black text-slate-900 tracking-tight uppercase text-xs leading-tight">Sakhai Posho Mill ERP</span>
         </div>
@@ -239,12 +239,12 @@ function App() {
       <main className="flex-1 flex flex-col relative overflow-hidden bg-slate-50">
         
         {/* TOP COMMAND BAR */}
-        <header className="sticky top-0 z-40 h-12 md:h-14 bg-white/90 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-4 md:px-10 shrink-0 shadow-sm">
+        <header className="sticky top-0 z-40 h-10 md:h-11 bg-white/90 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-4 md:px-10 shrink-0 shadow-sm">
           
           <div className="flex items-center gap-3">
             <button 
               onClick={() => setIsDrawerOpen(true)}
-              className={`w-8 h-8 md:w-10 md:h-10 bg-slate-900 hover:bg-slate-800 rounded-lg flex items-center justify-center shadow-md shrink-0 active:scale-95 transition-all ${posMode ? '' : 'md:hidden'}`}
+              className={`w-7 h-7 md:w-8 md:h-8 bg-slate-900 hover:bg-slate-800 rounded-lg flex items-center justify-center shadow-md shrink-0 active:scale-95 transition-all ${posMode ? '' : 'md:hidden'}`}
               title="Open Drawer Menu"
             >
               <Zap className="text-white" size={16} />
@@ -262,18 +262,18 @@ function App() {
 
           <div className="hidden md:flex flex-1 max-w-md mx-10">
              <div className="relative w-full">
-               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
+               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
                <input 
                 type="text" 
                 placeholder="Global Search Command..."
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 pl-12 pr-4 text-xs font-bold focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg py-1 pl-9 pr-3 text-xs font-bold focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all outline-none"
                />
              </div>
           </div>
 
           <div className="flex items-center gap-3 md:gap-6">
             <div className="flex items-center gap-2">
-              <div className={`flex items-center gap-2 md:gap-3 px-2 md:px-4 py-1 md:py-2 rounded-full border shadow-sm transition-all ${!isOnline ? 'bg-red-50 border-red-100 text-red-700' : 'bg-slate-50 border-slate-100 text-slate-900'}`}>
+              <div className={`flex items-center gap-2 md:gap-3 px-2 md:px-3 py-0.5 md:py-1 rounded-full border shadow-sm transition-all ${!isOnline ? 'bg-red-50 border-red-100 text-red-700' : 'bg-slate-50 border-slate-100 text-slate-900'}`}>
                 {activeSessionType && (
                   <>
                     <div className="flex items-center gap-1.5 md:gap-2 pr-2 md:pr-3 border-r border-slate-200">
@@ -293,25 +293,25 @@ function App() {
                 <button
                   onClick={() => setActiveTab('Dashboard')}
                   title="Records that failed to sync. Review them on the Dashboard."
-                  className="flex items-center gap-1.5 px-2 md:px-3 py-1 md:py-2 rounded-full border border-red-200 bg-red-50 text-red-700 shadow-sm hover:bg-red-100 transition-all"
+                  className="flex items-center gap-1.5 px-2 md:px-3 py-0.5 md:py-1 rounded-full border border-red-200 bg-red-50 text-red-700 shadow-sm hover:bg-red-100 transition-all"
                 >
                   <AlertTriangle size={12} />
                   <span className="text-[8px] md:text-[10px] font-semibold uppercase tracking-widest">{deadLetterCount} FAILED</span>
                 </button>
               )}
-              <div className={`p-1.5 rounded-lg ${isOnline ? 'bg-emerald-50' : 'bg-red-50'}`}>
+              <div className={`p-1 rounded-md ${isOnline ? 'bg-emerald-50' : 'bg-red-50'}`}>
                 {isOnline ? <Wifi className="text-emerald-500" size={14}/> : <WifiOff className="text-red-500" size={14}/>}
               </div>
             </div>
 
-            <div className="hidden lg:block h-8 w-px bg-slate-100"></div>
+            <div className="hidden lg:block h-6 w-px bg-slate-100"></div>
 
             <div className="hidden lg:flex items-center gap-3 pl-2">
                <div className="text-right">
                   <p className="text-[10px] font-bold text-slate-900 uppercase leading-none">{user.role}</p>
                </div>
-               <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center border border-slate-200 hover:border-slate-900 transition-all cursor-pointer">
-                  <User size={20} className="text-slate-900" />
+               <div className="w-7 h-7 bg-slate-100 rounded-lg flex items-center justify-center border border-slate-200 hover:border-slate-900 transition-all cursor-pointer">
+                  <User size={15} className="text-slate-900" />
                </div>
             </div>
           </div>
