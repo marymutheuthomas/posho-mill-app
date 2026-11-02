@@ -165,14 +165,14 @@ function App() {
           setActiveTab(item.name);
           if (isMobile) setIsDrawerOpen(false);
         }}
-        className={`w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-sm font-black transition-all group ${
+        className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold transition-all group ${isMobile ? '' : 'justify-center lg:justify-start'} ${
           active
-          ? 'bg-brand text-white shadow-xl shadow-brand/20'
+          ? 'bg-brand text-white shadow-md shadow-brand/20'
           : 'text-slate-400 hover:bg-slate-50 hover:text-slate-900'
         }`}
       >
         <div className="shrink-0">
-          <item.icon size={22} className={active ? 'text-white' : 'group-hover:scale-110 transition-transform'} />
+          <item.icon size={18} className={active ? 'text-white' : 'group-hover:scale-110 transition-transform'} />
         </div>
         <span className={`${isMobile ? 'block' : 'hidden lg:block'} whitespace-nowrap truncate`}>{item.name}</span>
       </button>
@@ -189,24 +189,24 @@ function App() {
             className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[55] animate-in fade-in duration-300"
             onClick={() => setIsDrawerOpen(false)}
           />
-          <aside className="fixed inset-y-0 left-0 w-72 bg-white z-[60] shadow-2xl flex flex-col animate-in slide-in-from-left duration-300">
-            <div className="h-20 flex items-center px-6 border-b border-slate-100 justify-between shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center shadow-lg">
-                  <Zap className="text-white" size={20} />
+          <aside className="fixed inset-y-0 left-0 w-60 bg-white z-[60] shadow-2xl flex flex-col animate-in slide-in-from-left duration-300">
+            <div className="h-14 flex items-center px-4 border-b border-slate-100 justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center shadow-md">
+                  <Zap className="text-white" size={16} />
                 </div>
-                <span className="font-black text-slate-900 uppercase">Master Menu</span>
+                <span className="font-black text-slate-900 uppercase text-xs">Master Menu</span>
               </div>
-              <button onClick={() => setIsDrawerOpen(false)} className="p-2 hover:bg-slate-50 rounded-lg">
-                <X size={20} className="text-slate-400" />
+              <button onClick={() => setIsDrawerOpen(false)} className="p-1.5 hover:bg-slate-50 rounded-lg">
+                <X size={18} className="text-slate-400" />
               </button>
             </div>
-            <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+            <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
               {menuItems.map(item => <NavButton key={item.name} item={item} isMobile />)}
             </nav>
-            <div className="p-6 border-t border-slate-100">
-              <button onClick={handleLogout} className="w-full flex items-center gap-4 px-4 py-4 rounded-xl text-[10px] font-black text-red-500 bg-red-50 hover:bg-red-100 transition-all uppercase tracking-widest">
-                <Lock size={18} />
+            <div className="p-2 border-t border-slate-100">
+              <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-[10px] font-black text-red-500 bg-red-50 hover:bg-red-100 transition-all uppercase tracking-widest">
+                <Lock size={16} />
                 <span>Secure Logout</span>
               </button>
             </div>
@@ -215,21 +215,21 @@ function App() {
       )}
 
       {/* PERSISTENT SIDEBAR - Tablet & Desktop */}
-      <aside className={`${posMode ? 'hidden' : 'hidden md:flex'} flex-col border-r border-slate-200 bg-white transition-all duration-300 ease-in-out lg:w-64 w-20`}>
-        <div className="h-14 flex items-center px-6 border-b border-slate-100 gap-3 shrink-0">
-          <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-slate-900/20">
-            <Zap className="text-white" size={20} />
+      <aside className={`${posMode ? 'hidden' : 'hidden md:flex'} flex-col border-r border-slate-200 bg-white transition-all duration-300 ease-in-out lg:w-52 w-16`}>
+        <div className="h-14 flex items-center justify-center lg:justify-start px-3 lg:px-4 border-b border-slate-100 gap-2 shrink-0">
+          <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center shrink-0 shadow-md shadow-slate-900/20">
+            <Zap className="text-white" size={16} />
           </div>
-          <span className="hidden lg:block font-black text-slate-900 tracking-tighter uppercase text-lg">Sakhai Posho Mill ERP</span>
+          <span className="hidden lg:block font-black text-slate-900 tracking-tight uppercase text-xs leading-tight">Sakhai Posho Mill ERP</span>
         </div>
 
-        <nav className="flex-1 p-4 space-y-2 overflow-y-auto custom-scrollbar">
+        <nav className="flex-1 p-2 space-y-1 overflow-y-auto custom-scrollbar">
           {menuItems.map(item => <NavButton key={item.name} item={item} />)}
         </nav>
 
-        <div className="p-4 border-t border-slate-100 shrink-0">
-          <button onClick={handleLogout} className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-[10px] font-black text-red-500 hover:bg-red-50 transition-all uppercase tracking-widest">
-            <Lock size={18} />
+        <div className="p-2 border-t border-slate-100 shrink-0">
+          <button onClick={handleLogout} className="w-full flex items-center justify-center lg:justify-start gap-3 px-3 py-2 rounded-xl text-[10px] font-black text-red-500 hover:bg-red-50 transition-all uppercase tracking-widest">
+            <Lock size={16} />
             <span className="hidden lg:block">Secure Logout</span>
           </button>
         </div>
@@ -359,7 +359,7 @@ function App() {
         )}
 
         {/* CONTENT SCROLL AREA */}
-        <div id="main-scroll-container" onScroll={handleScroll} className={`flex-1 overflow-y-auto overflow-x-hidden px-3 pt-3 md:px-8 md:pt-4 ${posMode ? 'pb-6' : 'pb-24'} md:pb-10 custom-scrollbar`}>
+        <div id="main-scroll-container" onScroll={handleScroll} className={`flex-1 overflow-y-auto overflow-x-hidden px-3 pt-3 md:px-8 md:pt-4 ${posMode ? 'pb-6' : 'pb-20'} md:pb-10 custom-scrollbar`}>
           {/* A crash in one screen shows its error here; the menu keeps working and switching tabs recovers */}
           <ErrorBoundary resetKey={activeTab} label={activeTab}>
           {activeTab === 'Dashboard'        && <Dashboard onNavigate={setActiveTab} role={user.role} isOnline={isOnline} pendingCount={pendingCount} />}
@@ -387,14 +387,14 @@ function App() {
         )}
 
         {/* MOBILE PERSISTENT BOTTOM NAVIGATION BAR (hidden on the POS; the header menu button opens the drawer) */}
-        {!posMode && <nav className="md:hidden fixed bottom-0 left-0 right-0 h-14 bg-white/95 backdrop-blur-lg border-t border-slate-200 flex items-center justify-start gap-1.5 overflow-x-auto scrollbar-none z-50 px-4 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] pb-safe">
+        {!posMode && <nav className="md:hidden fixed bottom-0 left-0 right-0 h-12 bg-white/95 backdrop-blur-lg border-t border-slate-200 flex items-center justify-start gap-1.5 overflow-x-auto scrollbar-none z-50 px-4 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] pb-safe">
            {menuItems.map(item => {
              const active = activeTab === item.name;
              return (
                <button
                  key={item.name}
                  onClick={() => setActiveTab(item.name)}
-                 className={`flex items-center gap-1.5 px-3 h-9 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                 className={`flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all ${
                    active
                    ? 'bg-brand text-white shadow-sm'
                    : 'text-slate-500 hover:bg-slate-50'
