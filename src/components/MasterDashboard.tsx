@@ -4,6 +4,7 @@ import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
 import { subDays, startOfMonth, startOfYear, format } from 'date-fns';
 import { Wallet, TrendingUp, Box, Users, Zap, ShieldAlert, Activity, Landmark, FileText, AlertOctagon } from 'lucide-react';
 import { generateManagerPDF } from '../lib/pdfGenerator';
+import StockReconciliation from './StockReconciliation';
 
 const fmt = (v: number) => `KSh ${Number(v || 0).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -476,6 +477,12 @@ export default function MasterDashboard() {
             </div>
 
           </div>
+        </div>
+
+        {/* ══ ROW 3b: Stock Reconciliation (Date-Filtered) ══ */}
+        <div>
+          <SectionLabel>Stock Reconciliation · Date Filtered</SectionLabel>
+          <StockReconciliation start={start} end={end} />
         </div>
 
         {/* ══ ROW 4: P&L Ledger Table ══ */}
