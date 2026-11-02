@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { db, generateUUID, type TransactionType } from '../lib/db';
 import { isNetworkError } from '../lib/network';
+import { getActiveOperatorId } from '../lib/offlineAuth';
 
 interface MutationConfig {
   type: TransactionType;
@@ -34,7 +35,7 @@ export function useDataMutation({ type, queryKey, mutationFn, onSuccess, onError
       // Stamp the author on new records only; edits and voids keep the original recorder.
       let record = payload;
       if (isWrite(type)) {
-        const userId = (await supabase.auth.getSession()).data.session?.user?.id;
+        const userId = getActiveOperatorId() ?? (await supabase.auth.getSession()).data.session?.user?.id;
         const stamp = (item: any) => (item.recorded_by || !userId ? item : { ...item, recorded_by: userId });
         record = Array.isArray(payload) ? payload.map(stamp) : stamp(payload);
       }

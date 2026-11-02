@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { supabase } from '../lib/supabase';
 import { db, generateUUID, type PendingTransaction } from '../lib/db';
 import { isNetworkError } from '../lib/network';
+import { getActiveOperatorId } from '../lib/offlineAuth';
 
 export interface MillingSession {
   id: string;
@@ -178,7 +179,7 @@ export function useMillingSession() {
     mutationFn: async (type: SessionType) => {
       if (activeSession) throw new Error(`A ${activeSession.session_type} session is already running.`);
       if (requiresStockTake) throw new Error('A stock take is required before opening the next session.');
-      const userId = (await supabase.auth.getSession()).data.session?.user?.id;
+      const userId = getActiveOperatorId() ?? (await supabase.auth.getSession()).data.session?.user?.id;
       const row = {
         id: generateUUID(),
         session_type: type,

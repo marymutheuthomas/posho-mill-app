@@ -100,6 +100,11 @@ export async function syncOfflineData() {
   isSyncing = true;
 
   try {
+    // Without a signed-in session RLS rejects every row, which would burn retries and push
+    // valid records into the dead-letter queue. Wait until someone signs in online.
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
     const pending = await db.pendingTransactions.orderBy(':id').limit(MAX_PER_RUN).toArray();
     if (pending.length === 0) return;
     console.log(`🚀 [Offline Sync] Replaying ${pending.length} queued records...`);

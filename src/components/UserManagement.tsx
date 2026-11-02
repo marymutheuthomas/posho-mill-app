@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
-import { 
-  UserPlus, Trash2, 
-  ShieldCheck, AlertTriangle, 
-  Pencil, Save, X, Eye, EyeOff, RotateCcw, CheckCircle
+import { supabase, signupClient } from '../lib/supabase';
+import {
+  UserPlus, Trash2,
+  ShieldCheck, AlertTriangle,
+  Pencil, Save, X, RotateCcw, CheckCircle
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useDataMutation } from '../hooks/useDataMutation';
-import { db } from '../lib/db';
 
 
 
@@ -16,7 +15,6 @@ interface Profile {
   username: string;
   email?: string;
   role: 'ADMIN' | 'EMPLOYEE';
-  display_password?: string;
   created_at: string;
 }
 
@@ -34,7 +32,6 @@ export default function UserManagement() {
   // Edit State
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Profile>>({});
-  const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     checkAdmin();
@@ -57,14 +54,9 @@ export default function UserManagement() {
   const { data: profiles = [], isLoading: loading } = useQuery({
     queryKey: ['profiles'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
+      // Explicit columns: never pull credential fields into the browser
+      const { data, error } = await supabase.from('profiles').select('id, username, role, created_at').order('created_at', { ascending: false });
       if (error) throw error;
-      
-      // Sync to Dexie for offline login
-      if (data) {
-        await db.profiles.clear();
-        await db.profiles.bulkAdd(data.map(p => ({ ...p, email: p.email || '' })));
-      }
       return data as Profile[];
     },
     staleTime: 1000 * 60 * 30,
@@ -76,7 +68,8 @@ export default function UserManagement() {
     queryKey: ['profiles'],
     requiresOnline: true,
     mutationFn: async (payload: any) => {
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      // Isolated client: signing up on the main client would log the admin out
+      const { data: authData, error: authError } = await signupClient.auth.signUp({
         email: payload.email,
         password: payload.password,
         options: { data: { username: payload.username, role: payload.role } }
@@ -84,10 +77,9 @@ export default function UserManagement() {
       if (authError) throw authError;
 
       if (authData.user) {
-        const { error: profileError } = await supabase.from('profiles').update({ 
-          username: payload.username, 
-          role: payload.role,
-          display_password: payload.password 
+        const { error: profileError } = await supabase.from('profiles').update({
+          username: payload.username,
+          role: payload.role
         }).eq('id', authData.user.id);
         if (profileError) throw profileError;
       }
@@ -215,7 +207,7 @@ export default function UserManagement() {
                   <tr>
                     <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Staff Identity</th>
                     <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Access Role</th>
-                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Credentials</th>
+                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Created</th>
                     <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
                   </tr>
                 </thead>
@@ -245,17 +237,9 @@ export default function UserManagement() {
                         )}
                       </td>
                       <td className="px-8 py-6">
-                        <div className="flex items-center gap-3">
-                          <span className="text-xs font-mono font-bold text-slate-400">
-                            {showPasswords[p.id] ? (p.display_password || '********') : '••••••••'}
-                          </span>
-                          <button 
-                            onClick={() => setShowPasswords(prev => ({ ...prev, [p.id]: !prev[p.id] }))}
-                            className="text-slate-300 hover:text-slate-900 transition-colors"
-                          >
-                            {showPasswords[p.id] ? <EyeOff size={14} /> : <Eye size={14} />}
-                          </button>
-                        </div>
+                        <span className="text-xs font-bold text-slate-400">
+                          {p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}
+                        </span>
                       </td>
                       <td className="px-8 py-6 text-right">
                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">

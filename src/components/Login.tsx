@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Lock, Mail, Shield, User, ChevronRight, AlertCircle, Factory } from 'lucide-react';
-import { db } from '../lib/db';
+import { rememberOfflineCredential, verifyOfflineCredential } from '../lib/offlineAuth';
+import { isNetworkError } from '../lib/network';
 
 interface LoginProps {
-  onLogin: (role: 'ADMIN' | 'EMPLOYEE', id?: string) => void;
+  onLogin: (role: 'ADMIN' | 'EMPLOYEE', id: string, offline: boolean) => void;
 }
 
 export default function Login({ onLogin }: LoginProps) {
@@ -19,16 +20,12 @@ export default function Login({ onLogin }: LoginProps) {
     setLoading(true);
 
     try {
-      // 0. Check Offline Mode
+      // 0. Check Offline Mode: verify against the hash cached at this operator's last online login
       if (!navigator.onLine) {
-        const cachedUser = await db.profiles.filter(p => p.email === email && p.display_password === password).first();
-        if (cachedUser) {
-          console.log("OFFLINE LOGIN SUCCESSFUL:", cachedUser.role);
-          onLogin(cachedUser.role, cachedUser.id);
-          return;
-        } else {
-          throw new Error("OFFLINE MODE: No cached credentials found for this identity.");
-        }
+        const result = await verifyOfflineCredential(email, password);
+        if (!result.ok) throw new Error(`OFFLINE MODE: ${result.reason}`);
+        onLogin(result.credential.role, result.credential.userId, true);
+        return;
       }
 
       // 1. Authenticate with Supabase
@@ -39,6 +36,13 @@ export default function Login({ onLogin }: LoginProps) {
 
       if (authError) {
         console.error("SUPABASE_AUTH_DEBUG:", authError.message);
+        // Flaky link: navigator says online but Supabase is unreachable
+        if (authError.name === 'AuthRetryableFetchError' || isNetworkError(authError)) {
+          const result = await verifyOfflineCredential(email, password);
+          if (!result.ok) throw new Error(`OFFLINE MODE: ${result.reason}`);
+          onLogin(result.credential.role, result.credential.userId, true);
+          return;
+        }
         throw authError;
       }
 
@@ -52,19 +56,20 @@ export default function Login({ onLogin }: LoginProps) {
 
         const role = profile?.role || authData.user.user_metadata?.role || 'EMPLOYEE';
         
-        // 3. CACHE PROFILE FOR OFFLINE ACCESS
-        // We store the password temporarily for offline validation
-        await db.profiles.put({
-          id: authData.user.id,
-          username: profile?.username || email.split('@')[0],
-          email: email,
-          role: role as any,
-          display_password: password, // Plain text cache for offline-only validation
-          created_at: new Date().toISOString()
-        });
+        // 3. CACHE A SALTED HASH FOR OFFLINE ACCESS (never the password)
+        try {
+          await rememberOfflineCredential({
+            userId: authData.user.id,
+            username: profile?.username || email.split('@')[0],
+            email,
+            role: role as any,
+          }, password);
+        } catch (cacheErr) {
+          console.warn('Offline login could not be enabled on this terminal:', cacheErr);
+        }
 
-        console.log("Logged in and cached as:", role);
-        onLogin(role as any, authData.user.id);
+        console.log("Logged in as:", role);
+        onLogin(role as any, authData.user.id, false);
       }
     } catch (err: any) {
       setError(`[AUTH-FAILURE]: ${err.message}`);

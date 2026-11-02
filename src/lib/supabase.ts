@@ -12,3 +12,14 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
   }
 });
 
+// Admin sign-ups only. signUp() stores the new user's session on the client that made the call,
+// which on the main client silently swaps the admin out for the account they just created.
+export const signupClient = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+    detectSessionInUrl: false,
+    storageKey: 'posho-signup-isolated'
+  }
+});
+

@@ -9,6 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useMillingSession } from './hooks/useMillingSession';
 import { supabase } from './lib/supabase';
 import { db } from './lib/db';
+import { setActiveOperator, signOutLocally } from './lib/offlineAuth';
 import Dashboard from './components/Dashboard';
 import ProductionEntry from './components/ProductionEntry';
 import Purchases from './components/Purchases';
@@ -24,7 +25,8 @@ import UserManagement from './components/UserManagement';
 import Login from './components/Login';
 
 function App() {
-  const [user, setUser] = useState<{ id: string; role: 'ADMIN' | 'EMPLOYEE' } | null>(null);
+  // offline: signed in against the local credential hash, so there is no Supabase session for this operator
+  const [user, setUser] = useState<{ id: string; role: 'ADMIN' | 'EMPLOYEE'; offline: boolean } | null>(null);
   const [activeTab, setActiveTab] = useState('Dashboard');
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [activeSessionType, setActiveSessionType] = useState<'Internal' | 'External' | null>(null);
@@ -62,9 +64,13 @@ function App() {
     async function restoreSession() {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        setUser({ 
-          id: session.user.id, 
-          role: session.user.user_metadata?.role || 'EMPLOYEE' 
+        // Prefer the role read from profiles at login; user_metadata is editable by the user themselves
+        const cached = await db.offline_credentials.where('userId').equals(session.user.id).first();
+        setActiveOperator(session.user.id);
+        setUser({
+          id: session.user.id,
+          role: cached?.role || session.user.user_metadata?.role || 'EMPLOYEE',
+          offline: false
         });
       }
     }
@@ -108,29 +114,6 @@ function App() {
 
   const { activeSession } = useMillingSession();
 
-  // BACKGROUND PROFILE SYNC (For Offline Logins)
-  useEffect(() => {
-    async function syncProfiles() {
-      if (!isOnline || user?.role !== 'ADMIN') return;
-      try {
-        const { data: remoteProfiles } = await supabase.from('profiles').select('*');
-        if (remoteProfiles) {
-          for (const p of remoteProfiles) {
-            const existing = await db.profiles.get(p.id);
-            await db.profiles.put({
-              ...p,
-              // Keep local display_password if already cached, as remote doesn't have it
-              display_password: existing?.display_password || p.display_password
-            });
-          }
-        }
-      } catch (err) {
-        console.warn("Profile sync skipped:", err);
-      }
-    }
-    syncProfiles();
-  }, [isOnline, user?.role]);
-
   useEffect(() => {
     setActiveSessionType(activeSession?.session_type as any || null);
   }, [activeSession]);
@@ -157,10 +140,11 @@ function App() {
   ].filter(item => !item.adminOnly || user?.role === 'ADMIN');
 
   if (!user) {
-    return <Login onLogin={(role, id) => setUser({ role, id: id || 'offline-user' })} />;
+    return <Login onLogin={(role, id, offline) => { setActiveOperator(id); setUser({ role, id, offline }); }} />;
   }
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await signOutLocally();
     setUser(null);
     setActiveTab('Dashboard');
   };
@@ -338,6 +322,17 @@ function App() {
 
         {/* OPERATIONAL ALERT LAYER */}
         <div className="px-4 md:px-10 pt-6">
+          {user.offline && isOnline && (
+            <div className="mb-4 p-4 rounded-2xl border border-amber-200 bg-amber-50 text-amber-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <p className="text-xs font-semibold">
+                Connection restored. You signed in offline, so records{pendingCount > 0 ? ` (${pendingCount} waiting)` : ''} can't sync until you sign in again online.
+              </p>
+              <button onClick={handleLogout} className="shrink-0 px-4 py-2 rounded-xl bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest hover:bg-slate-800">
+                Sign in to sync
+              </button>
+            </div>
+          )}
+
           {showMorningRecovery && (
             <OperationalAlert 
               type="error"

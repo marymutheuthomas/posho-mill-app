@@ -44,19 +44,22 @@ export interface DeadLetter {
   error: SyncFailure;
 }
 
-export interface CachedProfile {
-  id: string;
+// Offline login verifier: a salted PBKDF2 hash, never the password itself.
+export interface OfflineCredential {
+  email: string;        // normalized, primary key
+  userId: string;
   username: string;
-  email: string;
   role: 'ADMIN' | 'EMPLOYEE';
-  display_password?: string;
-  created_at: string;
+  salt: string;         // base64
+  hash: string;         // base64 PBKDF2-SHA256
+  iterations: number;
+  verifiedAt: number;   // last successful online login
 }
 
 export class OfflineDB extends Dexie {
   pendingTransactions!: Table<PendingTransaction>;
-  profiles!: Table<CachedProfile>;
   dead_letter_queue!: Table<DeadLetter>;
+  offline_credentials!: Table<OfflineCredential>;
 
   constructor() {
     super('PoshoMillOfflineDB');
@@ -68,6 +71,13 @@ export class OfflineDB extends Dexie {
       pendingTransactions: '++id, type, timestamp',
       profiles: 'id, username, email, role',
       dead_letter_queue: '++id, type, failedAt'
+    });
+    // v4: drop the profiles cache, which held plain-text passwords for offline login.
+    this.version(4).stores({
+      pendingTransactions: '++id, type, timestamp',
+      profiles: null,
+      dead_letter_queue: '++id, type, failedAt',
+      offline_credentials: 'email, userId'
     });
   }
 }
