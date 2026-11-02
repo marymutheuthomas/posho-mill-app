@@ -25,10 +25,13 @@ import StockTakeReminder from './components/StockTakeReminder';
 import UserManagement from './components/UserManagement';
 import Login from './components/Login';
 
+// Screen shown after login and after logout: the till is what staff need first.
+const HOME_TAB = 'Point of Sale';
+
 function App() {
   // offline: signed in against the local credential hash, so there is no Supabase session for this operator
   const [user, setUser] = useState<{ id: string; role: 'ADMIN' | 'EMPLOYEE'; offline: boolean } | null>(null);
-  const [activeTab, setActiveTab] = useState('Dashboard');
+  const [activeTab, setActiveTab] = useState(HOME_TAB);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [activeSessionType, setActiveSessionType] = useState<'Internal' | 'External' | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
@@ -144,7 +147,7 @@ function App() {
   const handleLogout = async () => {
     await signOutLocally();
     setUser(null);
-    setActiveTab('Dashboard');
+    setActiveTab(HOME_TAB);
   };
 
   const NavButton = ({ item, isMobile = false }: { item: any, isMobile?: boolean }) => {
