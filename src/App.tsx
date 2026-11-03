@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { 
-  LayoutDashboard, Activity, ShieldCheck, Factory, 
-  ShoppingCart, BookOpen, Settings as SettingsIcon, Lock,
-  Wifi, WifiOff, X,
-  Zap, ShoppingBag, Search, User, ChevronRight, ChevronUp, AlertTriangle
+  LayoutDashboard, Activity, ClipboardCheck, UserCog, Factory,
+  ShoppingCart, BookOpen, Settings as SettingsIcon, LogOut,
+  Wifi, WifiOff, X, Menu,
+  Zap, ShoppingBag, User, ChevronRight, ChevronUp, AlertTriangle
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useMillingSession } from './hooks/useMillingSession';
@@ -25,6 +25,22 @@ import StockTakeReminder from './components/StockTakeReminder';
 import ErrorBoundary from './components/ErrorBoundary';
 import UserManagement from './components/UserManagement';
 import Login from './components/Login';
+import { btn, navItem, SHELL_X } from './lib/ui';
+
+// Log out is the one red item in the menu: red text, red tint on hover, same size as the nav items
+const LOGOUT = 'w-full flex items-center gap-3 min-h-11 px-3 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors';
+
+/** Logo + name, identical in the side menu and the phone drawer. */
+function BrandMark({ compact = false }: { compact?: boolean }) {
+  return (
+    <div className="flex items-center gap-2 min-w-0">
+      <div className="w-8 h-8 bg-brand rounded-lg flex items-center justify-center shrink-0">
+        <Zap className="text-white" size={16} aria-hidden="true" />
+      </div>
+      <span className={`${compact ? 'hidden lg:block' : 'block'} text-sm font-bold tracking-tight text-slate-900 truncate`}>Sakhai Posho Mill</span>
+    </div>
+  );
+}
 
 // Screen shown after login and after logout: the till is what staff need first.
 const HOME_TAB = 'Point of Sale';
@@ -138,11 +154,11 @@ function App() {
     { name: 'Insights & Audit', icon: Activity, adminOnly: true },
     { name: 'Production Hub', icon: Factory },
     { name: 'Point of Sale', icon: ShoppingBag },
-    { name: 'Stock Take', icon: ShieldCheck },
+    { name: 'Stock Take', icon: ClipboardCheck },
     { name: 'Customers', icon: BookOpen },
     { name: 'Purchases', icon: ShoppingCart },
     { name: 'Settings', icon: SettingsIcon },
-    { name: 'User Management', icon: ShieldCheck, adminOnly: true },
+    { name: 'User Management', icon: UserCog, adminOnly: true },
   ].filter(item => !item.adminOnly || user?.role === 'ADMIN');
 
   if (!user) {
@@ -165,15 +181,11 @@ function App() {
           setActiveTab(item.name);
           if (isMobile) setIsDrawerOpen(false);
         }}
-        className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold transition-all group ${isMobile ? '' : 'justify-center lg:justify-start'} ${
-          active
-          ? 'bg-brand text-white shadow-md shadow-brand/20'
-          : 'text-slate-400 hover:bg-slate-50 hover:text-slate-900'
-        }`}
+        aria-current={active ? 'page' : undefined}
+        title={isMobile ? undefined : item.name}
+        className={`${navItem(active)} ${isMobile ? '' : 'justify-center lg:justify-start'}`}
       >
-        <div className="shrink-0">
-          <item.icon size={18} className={active ? 'text-white' : 'group-hover:scale-110 transition-transform'} />
-        </div>
+        <item.icon size={18} className="shrink-0" />
         <span className={`${isMobile ? 'block' : 'hidden lg:block'} whitespace-nowrap truncate`}>{item.name}</span>
       </button>
     );
@@ -190,24 +202,19 @@ function App() {
             onClick={() => setIsDrawerOpen(false)}
           />
           <aside className="fixed inset-y-0 left-0 w-60 bg-white z-[60] shadow-2xl flex flex-col animate-in slide-in-from-left duration-300">
-            <div className="h-11 flex items-center px-4 border-b border-slate-100 justify-between shrink-0">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center shadow-md">
-                  <Zap className="text-white" size={16} />
-                </div>
-                <span className="font-black text-slate-900 uppercase text-xs">Master Menu</span>
-              </div>
-              <button onClick={() => setIsDrawerOpen(false)} className="p-1.5 hover:bg-slate-50 rounded-lg">
-                <X size={18} className="text-slate-400" />
+            <div className="h-12 flex items-center pl-4 pr-2 border-b border-slate-200 justify-between shrink-0">
+              <BrandMark />
+              <button onClick={() => setIsDrawerOpen(false)} className={btn.icon} aria-label="Close menu">
+                <X size={18} />
               </button>
             </div>
-            <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
+            <nav className="flex-1 p-2 space-y-1 overflow-y-auto" aria-label="Main">
               {menuItems.map(item => <NavButton key={item.name} item={item} isMobile />)}
             </nav>
-            <div className="p-2 border-t border-slate-100">
-              <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-[10px] font-black text-red-500 bg-red-50 hover:bg-red-100 transition-all uppercase tracking-widest">
-                <Lock size={16} />
-                <span>Secure Logout</span>
+            <div className="p-2 border-t border-slate-200">
+              <button onClick={handleLogout} className={LOGOUT}>
+                <LogOut size={18} className="shrink-0" />
+                <span>Log out</span>
               </button>
             </div>
           </aside>
@@ -216,103 +223,77 @@ function App() {
 
       {/* PERSISTENT SIDEBAR - Tablet & Desktop */}
       <aside className={`${posMode ? 'hidden' : 'hidden md:flex'} flex-col border-r border-slate-200 bg-white transition-all duration-300 ease-in-out lg:w-52 w-16`}>
-        <div className="h-11 flex items-center justify-center lg:justify-start px-3 lg:px-4 border-b border-slate-100 gap-2 shrink-0">
-          <div className="w-7 h-7 bg-slate-900 rounded-lg flex items-center justify-center shrink-0 shadow-md shadow-slate-900/20">
-            <Zap className="text-white" size={14} />
-          </div>
-          <span className="hidden lg:block font-black text-slate-900 tracking-tight uppercase text-xs leading-tight">Sakhai Posho Mill ERP</span>
+        <div className="h-11 flex items-center justify-center lg:justify-start px-3 lg:px-4 border-b border-slate-200 shrink-0">
+          <BrandMark compact />
         </div>
 
-        <nav className="flex-1 p-2 space-y-1 overflow-y-auto custom-scrollbar">
+        <nav className="flex-1 p-2 space-y-1 overflow-y-auto custom-scrollbar" aria-label="Main">
           {menuItems.map(item => <NavButton key={item.name} item={item} />)}
         </nav>
 
-        <div className="p-2 border-t border-slate-100 shrink-0">
-          <button onClick={handleLogout} className="w-full flex items-center justify-center lg:justify-start gap-3 px-3 py-2 rounded-xl text-[10px] font-black text-red-500 hover:bg-red-50 transition-all uppercase tracking-widest">
-            <Lock size={16} />
-            <span className="hidden lg:block">Secure Logout</span>
+        <div className="p-2 border-t border-slate-200 shrink-0">
+          <button onClick={handleLogout} title="Log out" className={`${LOGOUT} justify-center lg:justify-start`}>
+            <LogOut size={18} className="shrink-0" />
+            <span className="hidden lg:block">Log out</span>
           </button>
         </div>
       </aside>
 
       {/* MAIN CONTENT AREA */}
-      <main className="flex-1 flex flex-col relative overflow-hidden bg-slate-50">
-        
-        {/* TOP COMMAND BAR */}
-        <header className="sticky top-0 z-40 h-10 md:h-11 bg-white/90 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-4 md:px-10 shrink-0 shadow-sm">
-          
-          <div className="flex items-center gap-3">
-            <button 
+      <main className="flex-1 flex flex-col relative overflow-hidden bg-canvas">
+
+        {/* TOP BAR: same white surface and slate-200 border as the side menu and the cards below */}
+        <header className={`sticky top-0 z-40 h-10 md:h-11 bg-white border-b border-slate-200 flex items-center justify-between gap-3 ${SHELL_X} shrink-0`}>
+
+          <div className="flex items-center gap-3 min-w-0">
+            <button
               onClick={() => setIsDrawerOpen(true)}
-              className={`w-7 h-7 md:w-8 md:h-8 bg-slate-900 hover:bg-slate-800 rounded-lg flex items-center justify-center shadow-md shrink-0 active:scale-95 transition-all ${posMode ? '' : 'md:hidden'}`}
-              title="Open Drawer Menu"
+              className={`relative after:absolute after:-inset-2 after:content-[''] w-8 h-8 bg-brand hover:bg-brand-hover text-white rounded-lg flex items-center justify-center shrink-0 transition-colors ${posMode ? '' : 'md:hidden'}`}
+              aria-label="Open menu"
             >
-              <Zap className="text-white" size={16} />
+              <Menu size={18} />
             </button>
-            <div className="hidden md:flex lg:flex items-center gap-2 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
+            <div className="hidden md:flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider min-w-0">
                <span>Mill Console</span>
-               <ChevronRight size={12} />
-               <span className="text-slate-900">{activeTab}</span>
+               <ChevronRight size={14} className="shrink-0" />
+               <span className="text-slate-900 truncate">{activeTab}</span>
             </div>
-            
-            <div className="md:hidden flex items-center">
-               <h2 className="text-xs font-semibold text-slate-900 uppercase truncate max-w-[120px]">{activeTab}</h2>
-            </div>
+            <h2 className="md:hidden text-sm font-semibold text-slate-900 truncate">{activeTab}</h2>
           </div>
 
-          <div className="hidden md:flex flex-1 max-w-md mx-10">
-             <div className="relative w-full">
-               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
-               <input 
-                type="text" 
-                placeholder="Global Search Command..."
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg py-1 pl-9 pr-3 text-xs font-bold focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all outline-none"
-               />
-             </div>
-          </div>
-
-          <div className="flex items-center gap-3 md:gap-6">
+          <div className="flex items-center gap-3 md:gap-4 shrink-0">
             <div className="flex items-center gap-2">
-              <div className={`flex items-center gap-2 md:gap-3 px-2 md:px-3 py-0.5 md:py-1 rounded-full border shadow-sm transition-all ${!isOnline ? 'bg-red-50 border-red-100 text-red-700' : 'bg-slate-50 border-slate-100 text-slate-900'}`}>
+              <div role="status" className={`flex items-center gap-2 md:gap-3 px-2.5 py-1 rounded-lg border text-xs font-semibold uppercase tracking-wider ${!isOnline ? 'bg-red-50 border-red-200 text-red-700' : 'bg-slate-50 border-slate-200 text-slate-700'}`}>
                 {activeSessionType && (
-                  <>
-                    <div className="flex items-center gap-1.5 md:gap-2 pr-2 md:pr-3 border-r border-slate-200">
-                      <div className="w-1.5 md:w-2 h-1.5 md:h-2 bg-emerald-500 rounded-full animate-pulse" />
-                      <span className="text-[8px] md:text-[10px] font-semibold uppercase tracking-widest text-emerald-700">{activeSessionType}</span>
-                    </div>
-                  </>
-                )}
-                <div className="flex items-center gap-1.5 md:gap-2">
-                  <div className={`w-2 md:w-2.5 h-2 md:h-2.5 rounded-full ${!isOnline ? 'bg-red-500 animate-pulse' : pendingCount > 0 ? 'bg-amber-500' : 'bg-emerald-500'}`} />
-                  <span className="text-[8px] md:text-[10px] font-semibold uppercase tracking-widest">
-                    {!isOnline ? 'OFFLINE' : pendingCount > 0 ? `${pendingCount} PENDING` : 'SYNCED'}
+                  <span className="flex items-center gap-1.5 pr-2 md:pr-3 border-r border-slate-200 text-emerald-700">
+                    <span className="w-2 h-2 bg-emerald-500 rounded-full" aria-hidden="true" />
+                    <span className="hidden sm:inline">{activeSessionType} shift</span>
+                    <span className="sm:hidden">{activeSessionType}</span>
                   </span>
-                </div>
+                )}
+                <span className="flex items-center gap-1.5">
+                  <span className={`w-2 h-2 rounded-full ${!isOnline ? 'bg-red-500' : pendingCount > 0 ? 'bg-amber-500' : 'bg-emerald-500'}`} aria-hidden="true" />
+                  {!isOnline ? 'Offline' : pendingCount > 0 ? <><span className="font-mono">{pendingCount}</span> pending</> : 'Synced'}
+                </span>
               </div>
               {user.role === 'ADMIN' && deadLetterCount > 0 && (
                 <button
                   onClick={() => setActiveTab('Dashboard')}
                   title="Records that failed to sync. Review them on the Dashboard."
-                  className="flex items-center gap-1 px-2 py-1 rounded-full bg-red-600 text-white shadow-sm hover:bg-red-700 transition-all"
+                  className="relative after:absolute after:-inset-2 after:content-[''] flex items-center gap-1 px-2 py-1 rounded-full bg-red-600 text-white shadow-sm hover:bg-red-700 transition-all"
                 >
                   <AlertTriangle size={12} className="shrink-0" />
-                  <span className="text-xs font-bold uppercase tracking-wide whitespace-nowrap">{deadLetterCount} FAILED</span>
+                  <span className="text-xs font-bold uppercase tracking-wide whitespace-nowrap"><span className="font-mono">{deadLetterCount}</span> failed</span>
                 </button>
               )}
-              <div className={`p-1 rounded-md ${isOnline ? 'bg-emerald-50' : 'bg-red-50'}`}>
-                {isOnline ? <Wifi className="text-emerald-500" size={14}/> : <WifiOff className="text-red-500" size={14}/>}
-              </div>
+              <span className="sr-only">{isOnline ? 'Online' : 'Offline'}</span>
+              {isOnline ? <Wifi className="text-emerald-600" size={16} aria-hidden="true" /> : <WifiOff className="text-red-600" size={16} aria-hidden="true" />}
             </div>
 
-            <div className="hidden lg:block h-6 w-px bg-slate-100"></div>
-
-            <div className="hidden lg:flex items-center gap-3 pl-2">
-               <div className="text-right">
-                  <p className="text-[10px] font-bold text-slate-900 uppercase leading-none">{user.role}</p>
-               </div>
-               <div className="w-7 h-7 bg-slate-100 rounded-lg flex items-center justify-center border border-slate-200 hover:border-slate-900 transition-all cursor-pointer">
-                  <User size={15} className="text-slate-900" />
-               </div>
+            {/* Signed-in role: information only, not a menu */}
+            <div className="hidden lg:flex items-center gap-2 pl-4 border-l border-slate-200 text-xs font-semibold uppercase tracking-wider text-slate-600">
+              <User size={16} className="text-slate-500" aria-hidden="true" />
+              {user.role === 'ADMIN' ? 'Admin' : 'Staff'}
             </div>
           </div>
         </header>
@@ -320,13 +301,13 @@ function App() {
         {/* OPERATIONAL ALERT LAYER */}
         {/* Only takes space when something is showing; each banner is a single slim row */}
         {(showOfflineSignIn || showStockTakeReminder || showMorningRecovery || notification) && (
-        <div className="px-3 md:px-8 pt-2 space-y-2">
+        <div className={`${SHELL_X} pt-3 space-y-2`}>
           {showOfflineSignIn && (
             <div className="px-3 py-1.5 rounded-xl border border-amber-200 bg-amber-50 text-amber-900 flex items-center gap-2">
-              <p className="text-[11px] font-semibold flex-1 min-w-0">
+              <p className="text-xs font-semibold flex-1 min-w-0">
                 Back online. Sign in again to sync{pendingCount > 0 ? ` ${pendingCount} waiting record${pendingCount === 1 ? '' : 's'}` : ' your records'}.
               </p>
-              <button onClick={handleLogout} className="shrink-0 px-3 py-1 rounded-lg bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest hover:bg-slate-800">
+              <button onClick={handleLogout} className="shrink-0 relative after:absolute after:-inset-2 after:content-[''] px-3 py-1.5 rounded-lg bg-brand text-white text-xs font-bold uppercase tracking-wider hover:bg-brand-hover">
                 Sign in
               </button>
             </div>
@@ -359,7 +340,7 @@ function App() {
         )}
 
         {/* CONTENT SCROLL AREA */}
-        <div id="main-scroll-container" onScroll={handleScroll} className={`flex-1 overflow-y-auto overflow-x-hidden px-3 pt-3 md:px-8 md:pt-4 ${posMode ? 'pb-6' : 'pb-20'} md:pb-10 custom-scrollbar`}>
+        <div id="main-scroll-container" onScroll={handleScroll} className={`flex-1 overflow-y-auto overflow-x-hidden ${SHELL_X} pt-4 ${posMode ? 'pb-6' : 'pb-20'} md:pb-10 custom-scrollbar`}>
           {/* A crash in one screen shows its error here; the menu keeps working and switching tabs recovers */}
           <ErrorBoundary resetKey={activeTab} label={activeTab}>
           {activeTab === 'Dashboard'        && <Dashboard onNavigate={setActiveTab} role={user.role} isOnline={isOnline} pendingCount={pendingCount} />}
@@ -379,7 +360,7 @@ function App() {
         {showBackToTop && (
           <button
             onClick={scrollToTop}
-            className="fixed bottom-20 right-6 z-[60] bg-slate-900 text-white p-3 rounded-full shadow-2xl transition-all duration-300 hover:bg-slate-800 hover:-translate-y-1 active:scale-95 animate-in fade-in zoom-in duration-300 border border-slate-700/30"
+            className="fixed bottom-20 right-6 z-[60] w-12 h-12 flex items-center justify-center bg-brand hover:bg-brand-hover text-white rounded-full shadow-lg transition-colors"
             aria-label="Back to Top"
           >
             <ChevronUp size={20} />
@@ -387,20 +368,21 @@ function App() {
         )}
 
         {/* MOBILE PERSISTENT BOTTOM NAVIGATION BAR (hidden on the POS; the header menu button opens the drawer) */}
-        {!posMode && <nav className="md:hidden fixed bottom-0 left-0 right-0 h-12 bg-white/95 backdrop-blur-lg border-t border-slate-200 flex items-center justify-start gap-1.5 overflow-x-auto scrollbar-none z-50 px-4 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] pb-safe">
+        {!posMode && <nav aria-label="Main" className="md:hidden fixed bottom-0 left-0 right-0 h-12 bg-white border-t border-slate-200 flex items-center justify-start gap-1.5 overflow-x-auto scrollbar-none z-50 px-4 pb-safe">
            {menuItems.map(item => {
              const active = activeTab === item.name;
              return (
                <button
                  key={item.name}
                  onClick={() => setActiveTab(item.name)}
-                 className={`flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all ${
+                 aria-current={active ? 'page' : undefined}
+                 className={`relative after:absolute after:inset-x-0 after:-inset-y-2 after:content-[''] flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
                    active
                    ? 'bg-brand text-white shadow-sm'
-                   : 'text-slate-500 hover:bg-slate-50'
+                   : 'text-slate-600 hover:bg-slate-100'
                  }`}
                >
-                 <item.icon size={14} className="shrink-0" />
+                 <item.icon size={16} className="shrink-0" />
                  <span>{item.name}</span>
                </button>
              );

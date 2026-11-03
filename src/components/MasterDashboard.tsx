@@ -8,6 +8,7 @@ import StockReconciliation from './StockReconciliation';
 import DebtAging from './DebtAging';
 import { useCustomers } from '../hooks/useCustomers';
 import { AGING_OVERDUE_AFTER_DAYS } from '../lib/customerLedger';
+import { btn, chip } from '../lib/ui';
 
 const fmt = (v: number) => `KSh ${Number(v || 0).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -17,7 +18,7 @@ function KpiCard({ label, value, icon: Icon, accent = false, alert = false }: an
   return (
     <div className={`bg-white rounded-xl border p-5 flex flex-col justify-between min-h-[120px] shadow-sm ${alert ? 'border-accent/40' : 'border-slate-100'}`}>
       <div className="flex items-center justify-between mb-3">
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{label}</p>
+        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{label}</p>
         <Icon size={16} className={alert ? 'text-accent' : 'text-slate-300'} />
       </div>
       <p className={`text-2xl font-black font-mono tracking-tighter ${accent ? 'text-emerald-600' : alert ? 'text-accent' : 'text-brand'}`}>{value}</p>
@@ -26,7 +27,7 @@ function KpiCard({ label, value, icon: Icon, accent = false, alert = false }: an
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
-  return <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3 flex items-center gap-2"><span className="w-4 h-px bg-slate-300 inline-block" />{children}</p>;
+  return <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3 flex items-center gap-2"><span className="w-4 h-px bg-slate-300 inline-block" />{children}</p>;
 }
 
 function EmptyState({ text }: { text: string }) {
@@ -152,11 +153,11 @@ export default function MasterDashboard() {
           <AlertOctagon size={20} className="shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-[11px] font-black uppercase tracking-widest leading-none">⚠️ Security Alert · Ghost Milling Detected</p>
-            <p className="text-[10px] font-semibold text-red-200 mt-0.5 leading-tight">
+            <p className="text-[11px] font-semibold text-red-200 mt-0.5 leading-tight">
               One or more sessions registered power consumption with zero KGs logged. Immediate investigation required.
             </p>
           </div>
-          <span className="text-[9px] font-black uppercase tracking-widest bg-white/20 px-3 py-1.5 rounded-lg border border-white/30 whitespace-nowrap">
+          <span className="text-[11px] font-black uppercase tracking-widest bg-white/20 px-3 py-1.5 rounded-lg border border-white/30 whitespace-nowrap">
             Review Anomaly Radar ↓
           </span>
         </div>
@@ -170,14 +171,7 @@ export default function MasterDashboard() {
           id="print-manager-report-btn"
           onClick={handlePrintPDF}
           disabled={pdfLoading}
-          className={`
-            flex items-center gap-2 px-4 py-2 rounded-xl border font-black text-[11px] uppercase tracking-widest
-            transition-all duration-200 shadow-md shrink-0
-            ${pdfLoading
-              ? 'bg-amber-200 border-amber-300 text-amber-700 cursor-wait'
-              : 'bg-accent border-accent-hover text-brand hover:bg-accent-hover hover:shadow-lg hover:shadow-amber-400/30 hover:-translate-y-0.5 active:scale-95'
-            }
-          `}
+          className={`${btn.secondary} shrink-0`}
           title="Download Manager Report as PDF"
         >
           <FileText size={14} className={pdfLoading ? 'animate-spin' : ''} />
@@ -188,7 +182,7 @@ export default function MasterDashboard() {
         <div className="flex items-center gap-1.5">
           {presets.map(p => (
             <button key={p.label} onClick={p.fn}
-              className="px-3 py-1.5 text-[10px] max-md:text-[10px] font-black uppercase tracking-widest bg-white border border-slate-200 text-slate-500 rounded-lg hover:bg-brand hover:text-white hover:border-brand transition-all shadow-sm">
+              className={`${chip(false)} !px-3`}>
               {p.label}
             </button>
           ))}
@@ -197,13 +191,13 @@ export default function MasterDashboard() {
         <div className="flex items-center gap-2 max-md:gap-1 bg-white border border-slate-200 rounded-xl px-3 py-2 max-md:px-2 max-md:py-1 shadow-sm ml-auto">
           <input type="date" value={format(start, 'yyyy-MM-dd')}
             onChange={e => { const d = new Date(e.target.value); if (!isNaN(d.getTime())) setStart(d); }}
-            className="text-xs max-md:text-[10px] font-bold text-slate-700 bg-transparent outline-none cursor-pointer" />
-          <span className="text-slate-300 font-bold text-xs max-md:text-[10px]">→</span>
+            className="text-slate-700 bg-transparent outline-none cursor-pointer" />
+          <span className="text-slate-300 font-bold text-xs max-md:text-[11px]">→</span>
           <input type="date" value={format(end, 'yyyy-MM-dd')}
             onChange={e => { const d = new Date(e.target.value); if (!isNaN(d.getTime())) setEnd(d); }}
-            className="text-xs max-md:text-[10px] font-bold text-slate-700 bg-transparent outline-none cursor-pointer" />
+            className="text-slate-700 bg-transparent outline-none cursor-pointer" />
         </div>
-        {loading && <span className="text-[10px] max-md:text-[10px] font-bold text-accent uppercase tracking-widest animate-pulse">Syncing...</span>}
+        {loading && <span className="text-[11px] font-bold text-accent uppercase tracking-widest animate-pulse">Syncing...</span>}
       </div>
 
       <div className="max-w-[1440px] mx-auto px-4 md:px-8 py-6 space-y-6">
@@ -215,11 +209,11 @@ export default function MasterDashboard() {
           </div>
           <div>
             <h1 className="text-xl md:text-2xl font-black text-brand tracking-tight uppercase">Master Control Center</h1>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Enterprise Intelligence · Financial &amp; Operational</p>
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Enterprise Intelligence · Financial &amp; Operational</p>
           </div>
           <div className="ml-auto flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg shadow-sm">
             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Live Sync</span>
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Live Sync</span>
           </div>
         </div>
 
@@ -244,7 +238,7 @@ export default function MasterDashboard() {
               <div className="flex items-center justify-between mb-4 shrink-0">
                 <div>
                   <h3 className="text-sm font-black text-brand uppercase tracking-tight">P&L Visualizer</h3>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Profit &amp; Loss Trend</p>
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Profit &amp; Loss Trend</p>
                 </div>
                 <TrendingUp className="text-slate-200" size={20} />
               </div>
@@ -271,7 +265,7 @@ export default function MasterDashboard() {
               <div className="flex items-center justify-between mb-4 shrink-0">
                 <div>
                   <h3 className="text-sm font-black text-brand uppercase tracking-tight">Cash Flow</h3>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Daily Reconciliation</p>
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Daily Reconciliation</p>
                 </div>
                 <Wallet className="text-slate-200" size={20} />
               </div>
@@ -305,7 +299,7 @@ export default function MasterDashboard() {
               <div className="flex items-center justify-between mb-4 shrink-0">
                 <div>
                   <h3 className="text-sm font-black text-brand uppercase tracking-tight">Anomaly Radar</h3>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Power Leakage · Session Drill-Down</p>
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Power Leakage · Session Drill-Down</p>
                 </div>
                 <Zap className="text-accent" size={18} />
               </div>
@@ -319,10 +313,10 @@ export default function MasterDashboard() {
                     >
                       {/* Session code + alert badge */}
                       <div className="flex items-center justify-between gap-2">
-                        <span className={`text-[10px] font-black font-mono truncate max-w-[100px] ${isGhost ? 'text-red-700' : 'text-slate-600'}`}>
+                        <span className={`text-[11px] font-black font-mono truncate max-w-[100px] ${isGhost ? 'text-red-700' : 'text-slate-600'}`}>
                           {a.session_code || a.session_id || new Date(a.audit_date || Date.now()).toLocaleDateString()}
                         </span>
-                        <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border shrink-0 ${
+                        <span className={`px-1.5 py-0.5 rounded text-[11px] font-black uppercase tracking-widest border shrink-0 ${
                           isGhost ? 'bg-red-100 text-red-700 border-red-300' :
                           a.leakage_alert?.includes('GHOST') ? 'bg-red-50 text-red-600 border-red-200' :
                           a.leakage_alert?.includes('UNRECORDED') ? 'bg-amber-50 text-amber-600 border-amber-200' :
@@ -335,19 +329,19 @@ export default function MasterDashboard() {
                       {/* Metrics grid */}
                       <div className="grid grid-cols-3 gap-1">
                         <div>
-                          <p className="text-[8px] font-bold text-slate-400 uppercase">Power kWh</p>
+                          <p className="text-[11px] font-bold text-slate-400 uppercase">Power kWh</p>
                           <p className={`text-xs font-black font-mono ${isGhost ? 'text-red-600' : 'text-slate-700'}`}>
                             {Number(a.total_power_kwh ?? a.kwh_per_kg ?? 0).toFixed(2)}
                           </p>
                         </div>
                         <div>
-                          <p className="text-[8px] font-bold text-slate-400 uppercase">Exp. Cash</p>
+                          <p className="text-[11px] font-bold text-slate-400 uppercase">Exp. Cash</p>
                           <p className="text-xs font-black font-mono text-slate-700">
                             {Number(a.expected_money_in ?? 0).toLocaleString()}
                           </p>
                         </div>
                         <div>
-                          <p className="text-[8px] font-bold text-slate-400 uppercase">KGs</p>
+                          <p className="text-[11px] font-bold text-slate-400 uppercase">KGs</p>
                           <p className={`text-xs font-black font-mono ${isGhost ? 'text-red-600 animate-pulse' : 'text-slate-700'}`}>
                             {Number(a.total_kgs_processed ?? 0).toLocaleString()}
                           </p>
@@ -364,7 +358,7 @@ export default function MasterDashboard() {
               <div className="flex items-center justify-between mb-4 shrink-0">
                 <div>
                   <h3 className="text-sm font-black text-brand uppercase tracking-tight">Production Yield</h3>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Session Drill-Down · Date Filtered</p>
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Session Drill-Down · Date Filtered</p>
                 </div>
                 <Activity className="text-slate-200" size={18} />
               </div>
@@ -372,60 +366,60 @@ export default function MasterDashboard() {
 
                 {/* Internal sessions */}
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2 mb-2">Internal Sessions</p>
+                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2 mb-2">Internal Sessions</p>
                   {intProd.length > 0 ? (
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr>
                           {['Session', 'KG', 'kWh', 'Cost', 'Eff%'].map(h => (
-                            <th key={h} className="pb-1 text-[8px] font-black text-slate-400 uppercase tracking-widest pr-2">{h}</th>
+                            <th key={h} className="pb-1 text-[11px] font-black text-slate-400 uppercase tracking-widest pr-2">{h}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
                         {intProd.map((r, i) => (
                           <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="py-1.5 pr-2 text-[9px] font-bold font-mono text-slate-600 truncate max-w-[60px]">{r.session_code || r.session_id || `S${i+1}`}</td>
-                            <td className="py-1.5 pr-2 text-[9px] font-bold text-slate-700">{Number(r.kgs_processed || r.net_output_kg || 0).toLocaleString()}</td>
-                            <td className="py-1.5 pr-2 text-[9px] font-bold text-slate-700">{Number(r.power_consumed_kwh || 0).toFixed(1)}</td>
-                            <td className="py-1.5 pr-2 text-[9px] font-bold text-slate-700">{Number(r.exact_power_cost_ksh || 0).toLocaleString()}</td>
-                            <td className={`py-1.5 text-[9px] font-black ${effColor(r.efficiency_score)}`}>
+                            <td className="py-1.5 pr-2 text-[11px] font-bold font-mono text-slate-600 truncate max-w-[60px]">{r.session_code || r.session_id || `S${i+1}`}</td>
+                            <td className="py-1.5 pr-2 text-[11px] font-bold text-slate-700">{Number(r.kgs_processed || r.net_output_kg || 0).toLocaleString()}</td>
+                            <td className="py-1.5 pr-2 text-[11px] font-bold text-slate-700">{Number(r.power_consumed_kwh || 0).toFixed(1)}</td>
+                            <td className="py-1.5 pr-2 text-[11px] font-bold text-slate-700">{Number(r.exact_power_cost_ksh || 0).toLocaleString()}</td>
+                            <td className={`py-1.5 text-[11px] font-black ${effColor(r.efficiency_score)}`}>
                               {r.efficiency_score != null ? `${Number(r.efficiency_score).toFixed(1)}%` : '—'}
                             </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
-                  ) : <p className="text-[10px] text-slate-300 italic">No internal sessions</p>}
+                  ) : <p className="text-[11px] text-slate-300 italic">No internal sessions</p>}
                 </div>
 
                 {/* External sessions */}
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2 mb-2">External Sessions</p>
+                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2 mb-2">External Sessions</p>
                   {extProd.length > 0 ? (
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr>
                           {['Session', 'KG', 'kWh', 'Cost', 'Eff%'].map(h => (
-                            <th key={h} className="pb-1 text-[8px] font-black text-slate-400 uppercase tracking-widest pr-2">{h}</th>
+                            <th key={h} className="pb-1 text-[11px] font-black text-slate-400 uppercase tracking-widest pr-2">{h}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
                         {extProd.map((r, i) => (
                           <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="py-1.5 pr-2 text-[9px] font-bold font-mono text-slate-600 truncate max-w-[60px]">{r.session_code || r.session_id || `S${i+1}`}</td>
-                            <td className="py-1.5 pr-2 text-[9px] font-bold text-slate-700">{Number(r.kgs_processed || r.total_input_kg || 0).toLocaleString()}</td>
-                            <td className="py-1.5 pr-2 text-[9px] font-bold text-slate-700">{Number(r.power_consumed_kwh || 0).toFixed(1)}</td>
-                            <td className="py-1.5 pr-2 text-[9px] font-bold text-slate-700">{Number(r.exact_power_cost_ksh || 0).toLocaleString()}</td>
-                            <td className={`py-1.5 text-[9px] font-black ${effColor(r.efficiency_score)}`}>
+                            <td className="py-1.5 pr-2 text-[11px] font-bold font-mono text-slate-600 truncate max-w-[60px]">{r.session_code || r.session_id || `S${i+1}`}</td>
+                            <td className="py-1.5 pr-2 text-[11px] font-bold text-slate-700">{Number(r.kgs_processed || r.total_input_kg || 0).toLocaleString()}</td>
+                            <td className="py-1.5 pr-2 text-[11px] font-bold text-slate-700">{Number(r.power_consumed_kwh || 0).toFixed(1)}</td>
+                            <td className="py-1.5 pr-2 text-[11px] font-bold text-slate-700">{Number(r.exact_power_cost_ksh || 0).toLocaleString()}</td>
+                            <td className={`py-1.5 text-[11px] font-black ${effColor(r.efficiency_score)}`}>
                               {r.efficiency_score != null ? `${Number(r.efficiency_score).toFixed(1)}%` : '—'}
                             </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
-                  ) : <p className="text-[10px] text-slate-300 italic">No external sessions</p>}
+                  ) : <p className="text-[11px] text-slate-300 italic">No external sessions</p>}
                 </div>
               </div>
             </div>
@@ -452,7 +446,7 @@ export default function MasterDashboard() {
                   <thead className="bg-slate-50">
                     <tr>
                       {['Month', 'Revenue', 'COGS', 'Expenses', 'Power', 'Net Profit'].map((h, i) => (
-                        <th key={h} className={`px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 ${i > 0 ? 'text-right' : ''} ${h === 'Net Profit' ? 'bg-slate-100 text-slate-900' : ''}`}>{h}</th>
+                        <th key={h} className={`px-6 py-4 text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 ${i > 0 ? 'text-right' : ''} ${h === 'Net Profit' ? 'bg-slate-100 text-slate-900' : ''}`}>{h}</th>
                       ))}
                     </tr>
                   </thead>

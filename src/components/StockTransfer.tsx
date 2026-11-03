@@ -12,6 +12,7 @@ import {
   History,
   Clock
 } from 'lucide-react';
+import { btn, chip } from '../lib/ui';
 
 interface Product {
   id: string;
@@ -164,7 +165,7 @@ export default function StockTransfer() {
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`flex-1 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-3 ${activeTab === tab ? 'bg-[#4F46E5] text-white shadow-lg' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}
+            className={`${chip(activeTab === tab)} flex-1`}
           >
             {tab === 'dispatch' && <Send size={16} />}
             {tab === 'incoming' && <Inbox size={16} />}
@@ -197,16 +198,16 @@ export default function StockTransfer() {
               </div>
               <div>
                 <h3 className="text-xl font-black text-slate-800 uppercase tracking-tighter">Dispatch to Shop</h3>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Move stock from Mill to Retail</p>
+                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest">Move stock from Mill to Retail</p>
               </div>
             </div>
 
             <form onSubmit={handleDispatch} className="space-y-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Select Product</label>
+                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Select Product</label>
                 <select
                   required
-                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-6 py-4 font-bold outline-none focus:border-[#4F46E5] transition-all max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
+                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-6 py-4 outline-none focus:border-[#4F46E5] transition-all"
                   value={formData.productId}
                   onChange={(e) => setFormData({...formData, productId: e.target.value})}
                 >
@@ -218,13 +219,13 @@ export default function StockTransfer() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Transfer Quantity (KG)</label>
+                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Transfer Quantity (KG)</label>
                 <input
                   type="number"
                   step="0.1"
                   required
                   placeholder="0.0"
-                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-6 py-4 font-bold outline-none focus:border-[#4F46E5] transition-all max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
+                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-6 py-4 outline-none focus:border-[#4F46E5] transition-all"
                   value={formData.quantity}
                   onChange={(e) => setFormData({...formData, quantity: e.target.value})}
                 />
@@ -232,7 +233,7 @@ export default function StockTransfer() {
 
               <button
                 type="submit"
-                className="w-full bg-[#4F46E5] text-white font-black py-6 rounded-2xl shadow-xl hover:bg-[#3730A3] transition-all flex items-center justify-center gap-3 uppercase tracking-widest text-sm"
+                className={`${btn.primary} w-full shadow-xl`}
               >
                 <ArrowRight size={20} /> Initialize Dispatch
               </button>
@@ -247,7 +248,7 @@ export default function StockTransfer() {
               Every bag dispatched is tracked. Stock is only considered "Retail Ready" after the shop manager verifies the receipt on their terminal.
             </p>
             <div className="bg-white/10 p-6 rounded-2xl border border-white/10 backdrop-blur-md">
-              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-2">Internal Audit Rule</p>
+              <p className="text-[11px] font-black text-white/40 uppercase tracking-widest mb-2">Internal Audit Rule</p>
               <p className="text-xs font-bold leading-relaxed">System flags any dispatch pending for more than 24 hours to prevent "Lost in Transit" inventory errors.</p>
             </div>
           </div>
@@ -278,18 +279,18 @@ export default function StockTransfer() {
                         <Package size={28} />
                       </div>
                       <div>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Incoming Shipment</p>
+                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">Incoming Shipment</p>
                         <h4 className="text-xl font-black text-slate-800">{t.quantity}kg of {t.product?.name}</h4>
                         <div className="flex items-center gap-2 mt-1">
                           <Clock size={12} className="text-indigo-400" />
-                          <span className="text-[10px] font-bold text-indigo-400 uppercase">{new Date(t.created_at).toLocaleString()}</span>
+                          <span className="text-[11px] font-bold text-indigo-400 uppercase">{new Date(t.created_at).toLocaleString()}</span>
                         </div>
                       </div>
                     </div>
                     
                     <button
                       onClick={() => handleReceive(t)}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg flex items-center gap-2"
+                      className={`${btn.primary} shadow-lg`}
                     >
                       <CheckCircle size={16} /> Verify & Receive
                     </button>
@@ -307,10 +308,10 @@ export default function StockTransfer() {
               <table className="w-full">
                 <thead>
                   <tr className="text-left border-b border-slate-50">
-                    <th className="pb-6 text-[10px] font-black text-slate-400 uppercase tracking-widest px-4">Date</th>
-                    <th className="pb-6 text-[10px] font-black text-slate-400 uppercase tracking-widest px-4">Product</th>
-                    <th className="pb-6 text-[10px] font-black text-slate-400 uppercase tracking-widest px-4 text-center">Qty</th>
-                    <th className="pb-6 text-[10px] font-black text-slate-400 uppercase tracking-widest px-4 text-right">Status</th>
+                    <th className="pb-6 text-[11px] font-black text-slate-400 uppercase tracking-widest px-4">Date</th>
+                    <th className="pb-6 text-[11px] font-black text-slate-400 uppercase tracking-widest px-4">Product</th>
+                    <th className="pb-6 text-[11px] font-black text-slate-400 uppercase tracking-widest px-4 text-center">Qty</th>
+                    <th className="pb-6 text-[11px] font-black text-slate-400 uppercase tracking-widest px-4 text-right">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -320,7 +321,7 @@ export default function StockTransfer() {
                       <td className="py-6 px-4 text-sm font-black text-slate-800">{t.product?.name}</td>
                       <td className="py-6 px-4 text-sm font-black text-slate-800 text-center">{t.quantity}kg</td>
                       <td className="py-6 px-4 text-right">
-                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${t.status === 'Completed' ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600 animate-pulse'}`}>
+                        <span className={`px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest ${t.status === 'Completed' ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600 animate-pulse'}`}>
                           {t.status}
                         </span>
                       </td>

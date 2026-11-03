@@ -1,6 +1,7 @@
 import React from 'react';
 import { format, subDays, startOfMonth, startOfYear } from 'date-fns';
 import { Calendar } from 'lucide-react';
+import { chip } from '../lib/ui';
 
 interface GlobalDateFilterProps {
   startDate: Date;
@@ -43,7 +44,7 @@ export default function GlobalDateFilter({ startDate, endDate, onChange }: Globa
             <button
               key={idx}
               onClick={preset.onClick}
-              className="px-2.5 py-1.5 text-[9px] max-md:text-[10px] font-semibold uppercase tracking-wider bg-white border border-slate-200 text-slate-650 rounded-lg shadow-sm hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all"
+              className={`${chip(false)} !px-3`}
             >
               {preset.label}
             </button>
@@ -54,7 +55,7 @@ export default function GlobalDateFilter({ startDate, endDate, onChange }: Globa
         <div className="flex items-center gap-2 max-md:gap-1 bg-white p-1.5 max-md:p-1 rounded-xl border border-slate-200 shadow-sm w-full sm:w-auto justify-between sm:justify-end">
           <div className="flex items-center gap-1.5 max-md:gap-1 px-1 text-slate-400">
             <Calendar size={14} className="shrink-0" />
-            <span className="text-[9px] max-md:text-[10px] font-semibold text-slate-400 uppercase tracking-widest hidden xs:block">Range</span>
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest hidden xs:block">Range</span>
           </div>
           
           <div className="flex items-center gap-1.5 max-md:gap-1 min-w-0 flex-1 sm:flex-initial">
@@ -62,15 +63,15 @@ export default function GlobalDateFilter({ startDate, endDate, onChange }: Globa
               type="date" 
               value={format(startDate, 'yyyy-MM-dd')}
               onChange={handleStartChange}
-              className="text-[11px] max-md:text-[10px] font-semibold text-slate-700 bg-slate-50 border border-slate-100 rounded-lg px-2 py-1 max-md:px-1 max-md:py-0.5 outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all cursor-pointer min-w-0 flex-1 sm:flex-initial"
+              className="text-slate-700 bg-slate-50 border border-slate-100 rounded-lg px-2 py-1 max-md:px-1 max-md:py-0.5 outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all cursor-pointer min-w-0 flex-1 sm:flex-initial"
             />
-            <span className="text-slate-300 font-bold text-xs max-md:text-[10px]">-</span>
+            <span className="text-slate-300 font-bold text-xs max-md:text-[11px]">-</span>
             <input 
               type="date" 
               value={format(endDate, 'yyyy-MM-dd')}
               onChange={handleEndChange}
               min={format(startDate, 'yyyy-MM-dd')}
-              className="text-[11px] max-md:text-[10px] font-semibold text-slate-700 bg-slate-50 border border-slate-100 rounded-lg px-2 py-1 max-md:px-1 max-md:py-0.5 outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all cursor-pointer min-w-0 flex-1 sm:flex-initial"
+              className="text-slate-700 bg-slate-50 border border-slate-100 rounded-lg px-2 py-1 max-md:px-1 max-md:py-0.5 outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all cursor-pointer min-w-0 flex-1 sm:flex-initial"
             />
           </div>
         </div>

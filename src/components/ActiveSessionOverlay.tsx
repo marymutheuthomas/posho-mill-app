@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Zap, Square, RotateCcw, AlertTriangle, CheckCircle } from 'lucide-react';
 import { useMillingSession } from '../hooks/useMillingSession';
+import { btn } from '../lib/ui';
 
 export default function ActiveSessionOverlay() {
   const { activeSession, closeSession: closeMutation } = useMillingSession();
@@ -35,7 +36,7 @@ export default function ActiveSessionOverlay() {
           {/* Session info */}
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <Zap size={14} className="text-emerald-400 animate-pulse shrink-0" />
-            <p className="text-[10px] md:text-[11px] font-black uppercase tracking-wider text-slate-300 truncate">
+            <p className="text-[11px] font-black uppercase tracking-wider text-slate-300 truncate">
               {activeSession.session_type} session · started @ <span className="text-white font-mono">{activeSession.start_meter}</span> kWh
             </p>
           </div>
@@ -47,14 +48,14 @@ export default function ActiveSessionOverlay() {
             value={endMeter}
             onChange={e => setEndMeter(e.target.value)}
             placeholder="End kWh"
-            className="w-24 md:w-32 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-sm font-black font-mono focus:bg-white/10 focus:border-emerald-500 outline-none transition-all placeholder:text-slate-600"
+            className="w-24 md:w-32 h-11 bg-white/5 border border-white/10 rounded-lg px-2 py-1 font-mono focus:bg-white/10 focus:border-emerald-500 outline-none transition-all placeholder:text-slate-600"
           />
 
           {/* Shutdown button */}
           <button
             onClick={handleClose}
             disabled={closeMutation.isPending}
-            className="shrink-0 bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg font-black uppercase tracking-widest text-[9px] active:scale-95 transition-all flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
+            className={`${btn.danger} shrink-0 !h-11 !px-3`}
           >
             {closeMutation.isPending
               ? <><RotateCcw className="animate-spin" size={12} /> Closing</>
@@ -66,7 +67,7 @@ export default function ActiveSessionOverlay() {
         {/* Toasts sit below the bar so they never cover the header */}
         {(error || success) && (
           <div className="absolute top-full left-0 right-0 mt-1 z-20 flex justify-center pointer-events-none">
-            <div className={`${error ? 'bg-red-500' : 'bg-emerald-500'} text-white text-[10px] font-black px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg max-w-full text-center`}>
+            <div className={`${error ? 'bg-red-500' : 'bg-emerald-500'} text-white text-[11px] font-black px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg max-w-full text-center`}>
               {error ? <AlertTriangle size={12} className="shrink-0" /> : <CheckCircle size={12} />}
               <span className="leading-tight">{error || success}</span>
             </div>

@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useDataMutation } from '../hooks/useDataMutation';
 import { useMillingSession } from '../hooks/useMillingSession';
 import ActiveSessionOverlay from './ActiveSessionOverlay';
+import { FIELD, FIELD_NUM, FIELD_LABEL, SECTION_TITLE, btn } from '../lib/ui';
 
 const PRODUCT_CODES = {
   INPUT: '101',
@@ -208,7 +209,7 @@ export default function ProductionEntry() {
             type="button"
             onClick={startDefaultShift}
             disabled={startSession.isPending}
-            className="shrink-0 h-11 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-60"
+            className={`${btn.primary} shrink-0`}
           >
             <Zap size={14} /> {startSession.isPending ? 'Starting…' : 'Start Default Shift'}
           </button>
@@ -220,8 +221,8 @@ export default function ProductionEntry() {
             {/* Entry Form */}
             <div className="mill-card p-4 md:p-10 bg-white border-slate-100 shadow-xl shadow-slate-100/50 rounded-2xl">
               <div className="mb-6 md:mb-8 border-b border-slate-100 pb-4">
-                <h3 className="text-lg md:text-xl font-bold text-slate-900 uppercase tracking-tight">Production Log</h3>
-                <p className="text-[10px] md:text-xs font-semibold italic text-amber-600 mt-2 bg-amber-50 p-3 rounded-lg border border-amber-100/50 inline-block">
+                <h3 className={`${SECTION_TITLE} text-slate-900`}>Production Log</h3>
+                <p className="text-[11px] md:text-xs font-semibold italic text-amber-600 mt-2 bg-amber-50 p-3 rounded-lg border border-amber-100/50 inline-block">
                   Note: To sell raw or unmilled products, please use the Sales/POS terminal. They cannot be logged as milled production.
                 </p>
               </div>
@@ -229,64 +230,66 @@ export default function ProductionEntry() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
                   <div className="space-y-6 md:space-y-8">
                     <div>
-                      <div className="flex items-center justify-between mb-3 md:mb-4">
-                        <label className="block text-[10px] md:text-[11px] font-semibold text-slate-400 uppercase tracking-widest max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Phase 1: Raw Input (Bulk)</label>
-                        <input 
-                          type="date" 
+                      <div className="mb-4">
+                        <label htmlFor="prod-date" className={FIELD_LABEL}>Production Date</label>
+                        <input
+                          id="prod-date"
+                          type="date"
                           value={backdate}
                           onChange={e => setBackdate(e.target.value)}
-                          className="text-[10px] max-md:text-[10px] font-semibold text-slate-900 bg-white border border-slate-200 px-3 py-1.5 max-md:px-2 max-md:py-1 rounded-lg outline-none cursor-pointer"
+                          className={`${FIELD} cursor-pointer`}
                         />
                       </div>
+                      <label htmlFor="prod-input-kg" className={FIELD_LABEL}>Phase 1: Raw Input (Bulk)</label>
                       <div className="relative group">
-                        <input type="number" step="0.01" required value={inputKg} onChange={e => setInputKg(e.target.value)} placeholder="0.00" className="mill-input w-full text-2xl md:text-4xl font-semibold pr-16 md:pr-20 py-4 md:py-6 border-slate-200 focus:border-brand text-base md:text-4xl" />
-                        <span className="absolute right-6 top-1/2 -translate-y-1/2 font-semibold text-slate-300 uppercase text-lg group-focus-within:text-brand transition-colors">KG</span>
+                        <input id="prod-input-kg" type="number" step="0.01" required value={inputKg} onChange={e => setInputKg(e.target.value)} placeholder="0.00" className={`${FIELD_NUM} !pr-16`} />
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 font-mono font-semibold text-slate-400 text-sm group-focus-within:text-emerald-600 transition-colors">KG</span>
                       </div>
-                      <div className="mt-3 flex justify-between px-2">
-                        <span className="text-[10px] font-medium text-slate-400 uppercase">Available Bulk</span>
-                        <span className={`text-[10px] font-semibold ${!hasEnoughStock && inputVal > 0 ? 'text-red-600 animate-pulse' : 'text-slate-900'}`}>{inputProduct?.current_stock.toLocaleString()} KG</span>
+                      <div className="mt-2 flex justify-between px-1">
+                        <span className="text-xs font-medium text-slate-500 uppercase">Available Bulk</span>
+                        <span className={`font-mono text-xs font-semibold ${!hasEnoughStock && inputVal > 0 ? 'text-red-600 animate-pulse' : 'text-slate-900'}`}>{inputProduct?.current_stock.toLocaleString()} KG</span>
                       </div>
                       {!hasEnoughStock && inputVal > 0 && (
-                        <p className="mt-2 text-[10px] font-semibold text-red-600 uppercase flex items-center gap-1">
+                        <p className="mt-2 text-[11px] font-semibold text-red-600 uppercase flex items-center gap-1">
                           <AlertTriangle size={12} /> INSUFFICIENT STOCK
                         </p>
                       )}
                     </div>
 
                     <div>
-                      <label className="block text-[10px] md:text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-3 md:mb-4 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Phase 2: Main Flour Output</label>
-                      <select required value={mainProductId} onChange={e => setMainProductId(e.target.value)} className="mill-input w-full font-semibold mb-4 py-3 md:py-4 text-base md:text-sm uppercase tracking-tight">
+                      <label htmlFor="prod-main" className={FIELD_LABEL}>Phase 2: Main Flour Output</label>
+                      <select id="prod-main" required value={mainProductId} onChange={e => setMainProductId(e.target.value)} className={`${FIELD} mb-3 uppercase`}>
                         <option value="">Select Grade...</option>
                         {mainOutputProducts.map(p => <option key={p.id} value={p.id}>{p.product_code} · {p.name}</option>)}
                       </select>
                       <div className="relative group">
-                        <input type="number" step="0.01" required value={mainOutputKg} onChange={e => setMainOutputKg(e.target.value)} placeholder="0.00" className="mill-input w-full text-2xl md:text-4xl font-semibold pr-16 md:pr-20 py-4 md:py-6 text-base md:text-4xl" />
-                        <span className="absolute right-6 top-1/2 -translate-y-1/2 font-semibold text-slate-300 uppercase text-lg">KG</span>
+                        <input aria-label="Main output weight (kg)" type="number" step="0.01" required value={mainOutputKg} onChange={e => setMainOutputKg(e.target.value)} placeholder="0.00" className={`${FIELD_NUM} !pr-16`} />
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 font-mono font-semibold text-slate-400 text-sm">KG</span>
                       </div>
                     </div>
                   </div>
 
                   <div className="space-y-6 md:space-y-8">
                     <div>
-                      <label className="block text-[10px] md:text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-3 md:mb-4 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Phase 3: By-Products</label>
-                      <select value={byProductId} onChange={e => setByProductId(e.target.value)} className="mill-input w-full font-semibold mb-4 py-3 md:py-4 text-base md:text-sm uppercase tracking-tight bg-slate-50">
+                      <label htmlFor="prod-by" className={FIELD_LABEL}>Phase 3: By-Products</label>
+                      <select id="prod-by" value={byProductId} onChange={e => setByProductId(e.target.value)} className={`${FIELD} mb-3 uppercase bg-slate-50`}>
                         <option value="">None (Optional)</option>
                         {byProductOptions.map(p => <option key={p.id} value={p.id}>{p.product_code} · {p.name}</option>)}
                       </select>
                       <div className="relative">
-                        <input type="number" step="0.01" value={byProductKg} onChange={e => setByProductKg(e.target.value)} placeholder="0.00" disabled={!byProductId} className="mill-input w-full text-2xl md:text-4xl font-semibold pr-16 md:pr-20 py-4 md:py-6 disabled:bg-slate-50 disabled:text-slate-300 text-base md:text-4xl" />
-                        <span className="absolute right-6 top-1/2 -translate-y-1/2 font-semibold text-slate-300 uppercase text-lg">KG</span>
+                        <input aria-label="By-product weight (kg)" type="number" step="0.01" value={byProductKg} onChange={e => setByProductKg(e.target.value)} placeholder="0.00" disabled={!byProductId} className={`${FIELD_NUM} !pr-16 disabled:bg-slate-50 disabled:text-slate-300`} />
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 font-mono font-semibold text-slate-400 text-sm">KG</span>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                      <div className="mill-card p-4 md:p-6 bg-emerald-50 border-emerald-200 flex flex-col justify-center rounded-xl">
-                        <p className="text-[9px] font-semibold text-emerald-600 uppercase tracking-widest mb-1">Kuku Feed</p>
-                        <p className="text-xl md:text-3xl font-semibold text-emerald-900">{kukuFeedVal.toFixed(2)} <span className="text-xs">KG</span></p>
+                      <div className="mill-card p-4 bg-emerald-50 border-emerald-200 flex flex-col justify-center rounded-xl">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700 mb-1.5">Kuku Feed</p>
+                        <p className="h-12 flex items-center font-mono text-2xl font-semibold text-emerald-900">{kukuFeedVal.toFixed(2)} <span className="ml-1 text-sm text-emerald-700">KG</span></p>
                       </div>
-                      <div className="mill-card p-4 md:p-6 bg-slate-50 border-slate-200 flex flex-col justify-center rounded-xl">
-                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Processing Loss</p>
-                        <input type="number" step="0.01" value={manualWasteKg} onChange={e => setManualWasteKg(e.target.value)} placeholder="0.01" className="mill-input w-full text-lg md:text-2xl font-semibold text-center" />
+                      <div className="mill-card p-4 bg-slate-50 border-slate-200 flex flex-col justify-center rounded-xl">
+                        <label htmlFor="prod-loss" className={FIELD_LABEL}>Processing Loss (KG)</label>
+                        <input id="prod-loss" type="number" step="0.01" value={manualWasteKg} onChange={e => setManualWasteKg(e.target.value)} placeholder="0.01" className={`${FIELD_NUM} text-center`} />
                       </div>
                     </div>
                   </div>
@@ -296,7 +299,7 @@ export default function ProductionEntry() {
                   <button 
                     type="submit" 
                     disabled={!isInputValid || productionMutation.isPending} 
-                    className={`w-full py-4 md:py-6 rounded-2xl font-semibold uppercase text-sm tracking-widest flex items-center justify-center gap-4 shadow-xl transition-all active:scale-95 ${!isInputValid ? 'bg-slate-100 text-slate-300 cursor-not-allowed shadow-none' : 'bg-slate-900 text-white hover:bg-slate-800'}`}
+                    className={`${btn.primary} w-full shadow-xl`}
                   >
                     {productionMutation.isPending ? (
                       <><RotateCcw className="animate-spin" size={20} /> RECORDING...</>
@@ -311,7 +314,7 @@ export default function ProductionEntry() {
 
           <div className="space-y-6 md:space-y-8">
             <div className="mill-card p-4 md:p-6 bg-white border-slate-100 shadow-lg rounded-2xl">
-              <h3 className="text-[10px] md:text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-4 md:mb-6 flex items-center gap-2">
+              <h3 className={`${SECTION_TITLE} text-slate-900 mb-4 flex items-center gap-2`}>
                 <Scale size={16} className="text-brand" /> Stock Monitor
               </h3>
               <div className="space-y-4">
@@ -320,11 +323,11 @@ export default function ProductionEntry() {
                   return (
                     <div key={p.id} className="flex flex-col gap-1 border-b border-slate-50 pb-3 last:border-0">
                       <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-semibold text-slate-900 uppercase">{p.name}</span>
-                        <span className={`text-[10px] font-semibold ${isLow ? 'text-red-600' : 'text-slate-400'}`}>{p.product_code}</span>
+                        <span className="text-[11px] font-semibold text-slate-900 uppercase">{p.name}</span>
+                        <span className={`text-[11px] font-semibold ${isLow ? 'text-red-600' : 'text-slate-400'}`}>{p.product_code}</span>
                       </div>
                       <div className="flex items-end justify-between">
-                        <span className="text-base md:text-lg font-semibold text-slate-900">{p.current_stock.toLocaleString()} <span className="text-[10px] text-slate-300">KG</span></span>
+                        <span className="font-mono text-base md:text-lg font-semibold text-slate-900">{p.current_stock.toLocaleString()} <span className="text-[11px] text-slate-400">KG</span></span>
                         <div className={`w-1.5 h-1.5 rounded-full ${isLow ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}`} />
                       </div>
                     </div>
@@ -343,14 +346,14 @@ export default function ProductionEntry() {
               <Calendar size={20} className="text-brand" />
             </div>
             <div>
-              <h3 className="text-base md:text-lg font-semibold text-slate-900 uppercase tracking-tight">Monthly Ledger</h3>
-              <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">Yield History</p>
+              <h3 className={`${SECTION_TITLE} text-slate-900`}>Monthly Ledger</h3>
+              <p className="text-[11px] font-medium text-slate-400 uppercase tracking-widest">Yield History</p>
             </div>
           </div>
           <div className="hidden md:flex gap-4">
             <div className="px-4 py-2 bg-white rounded-lg border border-slate-200 text-center">
-              <p className="text-[9px] font-semibold text-slate-400 uppercase mb-0.5">Total</p>
-              <p className="text-sm font-semibold text-slate-900">
+              <p className="text-[11px] font-semibold text-slate-400 uppercase mb-0.5">Total</p>
+              <p className="font-mono text-sm font-semibold text-slate-900">
                 {logs.reduce((acc, l) => acc + (l.main_output_kg || 0), 0).toLocaleString()} KG
               </p>
             </div>
@@ -370,7 +373,7 @@ export default function ProductionEntry() {
                 <tr key={log.id || index} className="hover:bg-slate-50/50 transition-colors group text-xs text-slate-650 max-md:text-[11px] max-md:font-normal">
                   <td className="px-2 py-1.5 md:px-3 md:py-1.5 max-md:text-[11px] whitespace-nowrap">
                     <p className="font-medium max-md:font-normal text-slate-800 max-md:text-[11px]">{new Date(log.created_at).toLocaleDateString()}</p>
-                    <p className="text-[9px] max-md:text-[9px] text-slate-400 uppercase flex items-center gap-1 mt-0.5"><Scale size={10} className="opacity-40" /> {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                    <p className="text-[11px] text-slate-400 uppercase flex items-center gap-1 mt-0.5"><Scale size={10} className="opacity-40" /> {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                   </td>
                   <td className="px-2 py-1.5 md:px-3 md:py-1.5 font-mono text-slate-650 max-md:text-[11px] whitespace-nowrap">
                     <div className="flex items-center gap-1">
@@ -383,14 +386,14 @@ export default function ProductionEntry() {
                       <ArrowUpRight size={12} className="text-emerald-500" />
                       <div>
                         <span className="text-slate-800 font-medium max-md:font-normal max-md:text-[11px]">{log.main_output_kg.toLocaleString()} kg</span>
-                        <p className="text-[9px] max-md:text-[9px] font-medium max-md:font-normal text-slate-400 uppercase tracking-tight font-sans mt-0.5">{log.products?.product_code} · {log.products?.name}</p>
+                        <p className="text-[11px] font-medium max-md:font-normal text-slate-400 uppercase tracking-tight font-sans mt-0.5">{log.products?.product_code} · {log.products?.name}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-2 py-1.5 md:px-3 md:py-1.5 max-md:text-[11px] whitespace-nowrap">
                     <div className="flex items-center gap-1">
                       <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                      <span className="text-[9px] max-md:text-[9px] font-medium max-md:font-normal text-slate-400 uppercase tracking-wider">Synced</span>
+                      <span className="text-[11px] font-medium max-md:font-normal text-slate-400 uppercase tracking-wider">Synced</span>
                     </div>
                   </td>
                 </tr>

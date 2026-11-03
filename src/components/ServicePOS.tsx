@@ -13,10 +13,8 @@ import { useCustomers } from '../hooks/useCustomers';
 import { creditCheck } from '../lib/customerLedger';
 import ActiveSessionOverlay from './ActiveSessionOverlay';
 
-// Counter tablets and phones: every field and primary button is at least 48px tall (h-12),
-// and text-base on phones stops iOS zooming into the field on focus.
-const FIELD = 'mill-input w-full h-12 px-4 rounded-xl font-medium text-base md:text-sm focus:ring-1 focus:ring-slate-900 focus:border-slate-900';
-const FIELD_LABEL = 'block text-[11px] font-semibold text-slate-500 uppercase tracking-widest mb-1.5';
+import { FIELD, FIELD_LABEL, btn, chip } from '../lib/ui';
+
 // Shift type the POS banner starts with one tap; counter sales are mostly customer milling.
 const DEFAULT_SHIFT_TYPE = 'External' as const;
 
@@ -439,7 +437,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
             type="button"
             onClick={startDefaultShift}
             disabled={startSession.isPending}
-            className="shrink-0 h-11 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-60"
+            className={`${btn.primary} shrink-0`}
           >
             <Zap size={14} /> {startSession.isPending ? 'Starting…' : 'Start Default Shift'}
           </button>
@@ -458,7 +456,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                         key={type}
                         type="button" 
                         onClick={() => setFormData({...formData, transactionType: type as any})} 
-                        className={`flex-1 h-12 px-4 rounded-xl font-semibold text-xs uppercase border transition-all ${formData.transactionType === type ? 'bg-slate-900 text-white border-slate-900 shadow-md' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100'}`}
+                        className={`${chip(formData.transactionType === type)} flex-1`}
                       >
                         {type === 'Service' ? 'Milling' : 'Retail'}
                       </button>
@@ -533,16 +531,16 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                     <button 
                       type="button"
                       onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                      className="absolute right-1 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-slate-400"
+                      aria-label="Show customers" className={`${btn.icon} absolute right-0.5 top-1/2 -translate-y-1/2`}
                     >
-                      <ChevronDown size={14} />
+                      <ChevronDown size={16} />
                     </button>
 
                     {isDropdownOpen && (
                       <div className="absolute z-50 w-full mt-2 bg-white border border-slate-100 rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                         <div className="max-h-[250px] overflow-y-auto divide-y divide-slate-50">
                           {customers.filter(c => c.customer_name.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 ? (
-                            <div className="p-4 text-center text-[10px] font-medium text-slate-400 uppercase tracking-widest italic">No customers found</div>
+                            <div className="p-4 text-center text-[11px] font-medium text-slate-400 uppercase tracking-widest italic">No customers found</div>
                           ) : (
                             customers.filter(c => c.customer_name.toLowerCase().includes(searchTerm.toLowerCase())).map(c => {
                               const balance = c.remaining_balance ?? 0;
@@ -561,7 +559,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                                     <p className="text-[11px] font-semibold uppercase tracking-tight">
                                       {c.customer_name} — <span className={balance > 0 ? 'text-red-500' : 'text-emerald-500'}>Balance: {balance.toLocaleString()} KES</span>
                                     </p>
-                                    <p className={`text-[8px] font-medium uppercase tracking-widest ${formData.customerId === c.id ? 'text-slate-500' : 'text-slate-400'}`}>
+                                    <p className={`text-[11px] font-medium uppercase tracking-widest ${formData.customerId === c.id ? 'text-slate-500' : 'text-slate-400'}`}>
                                       {c.customer_phone || 'Account Verified'}
                                     </p>
                                   </div>
@@ -577,13 +575,13 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                 </div>
 
                 <div className="mill-card p-4 bg-white border-slate-200 shadow-lg border-t-4 border-t-slate-900 font-mono">
-                  <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-1 font-sans">Total Charge</p>
+                  <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest mb-1 font-sans">Total Charge</p>
                   <h3 className="text-xl md:text-2xl font-semibold text-slate-900 tracking-tighter">KES {formData.feeCharged}</h3>
                 </div>
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
                     {['Cash', 'M-Pesa', 'Debt', 'Split'].map(m => (
-                      <button key={m} type="button" onClick={() => setFormData({...formData, paymentMethod: m as any})} className={`h-12 px-2 md:px-4 rounded-xl font-semibold text-xs uppercase border transition-all ${formData.paymentMethod === m ? 'bg-emerald-600 text-white border-emerald-600 shadow-md' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>{m}</button>
+                      <button key={m} type="button" onClick={() => setFormData({...formData, paymentMethod: m as any})} className={`${chip(formData.paymentMethod === m)} !px-2`}>{m}</button>
                     ))}
                   </div>
 
@@ -614,7 +612,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                   <button 
                     type="submit" 
                     disabled={formData.paymentMethod === 'Debt' && !formData.customerId}
-                    className={`w-full h-12 text-sm font-semibold rounded-xl flex items-center justify-center gap-3 shadow-xl transition-all active:scale-95 ${(formData.paymentMethod === 'Debt' && !formData.customerId) ? 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none' : 'bg-slate-900 text-white hover:bg-slate-800'}`}
+                    className={`${btn.primary} w-full shadow-xl`}
                   >
                      <ChevronRight size={18} /> CHECKOUT & SYNC
                   </button>
@@ -638,11 +636,11 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                   <Clock className="text-emerald-400" size={28} />
                 </div>
                 <h3 className="text-xl md:text-2xl font-semibold uppercase tracking-tight">Final Review</h3>
-                <p className="text-[10px] font-medium text-slate-500 uppercase tracking-widest mt-1">Ready for Ledger Sync</p>
+                <p className="text-[11px] font-medium text-slate-500 uppercase tracking-widest mt-1">Ready for Ledger Sync</p>
               </div>
 
-              {error && <div className="bg-red-500/20 text-red-200 p-3 rounded-xl font-semibold text-[10px] uppercase flex items-center gap-2 border border-red-500/30 animate-pulse"><AlertTriangle size={14}/>{error}</div>}
-              {success && <div className="bg-emerald-500/20 text-emerald-200 p-3 rounded-xl font-semibold text-[10px] uppercase flex items-center gap-2 border border-emerald-500/30"><CheckCircle size={14}/>{success}</div>}
+              {error && <div className="bg-red-500/20 text-red-200 p-3 rounded-xl font-semibold text-[11px] uppercase flex items-center gap-2 border border-red-500/30 animate-pulse"><AlertTriangle size={14}/>{error}</div>}
+              {success && <div className="bg-emerald-500/20 text-emerald-200 p-3 rounded-xl font-semibold text-[11px] uppercase flex items-center gap-2 border border-emerald-500/30"><CheckCircle size={14}/>{success}</div>}
 
               <div className="space-y-3 font-mono text-xs">
                 <div className="flex justify-between border-b border-slate-800 pb-2">
@@ -660,9 +658,9 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                 
                 {formData.paymentMethod === 'Split' && (
                   <div className="bg-slate-800/50 p-3 rounded-xl space-y-1 my-2">
-                    {parseFloat(formData.amountCash) > 0 && <div className="flex justify-between text-[10px]"><span className="text-slate-400">Cash:</span><span>{formData.amountCash}</span></div>}
-                    {parseFloat(formData.amountMpesa) > 0 && <div className="flex justify-between text-[10px]"><span className="text-slate-400">M-Pesa:</span><span>{formData.amountMpesa}</span></div>}
-                    {parseFloat(formData.amountDebt) > 0 && <div className="flex justify-between text-[10px]"><span className="text-slate-400">Debt:</span><span>{formData.amountDebt}</span></div>}
+                    {parseFloat(formData.amountCash) > 0 && <div className="flex justify-between text-[11px]"><span className="text-slate-400">Cash:</span><span>{formData.amountCash}</span></div>}
+                    {parseFloat(formData.amountMpesa) > 0 && <div className="flex justify-between text-[11px]"><span className="text-slate-400">M-Pesa:</span><span>{formData.amountMpesa}</span></div>}
+                    {parseFloat(formData.amountDebt) > 0 && <div className="flex justify-between text-[11px]"><span className="text-slate-400">Debt:</span><span>{formData.amountDebt}</span></div>}
                   </div>
                 )}
 
@@ -679,11 +677,11 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                 </div>
               </div>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 pt-4">
-                <button onClick={() => setShowReceipt(false)} className="py-4 md:py-5 rounded-2xl bg-slate-800 text-slate-400 font-semibold text-sm uppercase hover:bg-slate-700 active:scale-95 transition-all">Back</button>
+                <button onClick={() => setShowReceipt(false)} className={btn.secondary}>Back</button>
                 <button 
                   onClick={handleFinalCheckout} 
                   disabled={checkoutMutation.isPending || (formData.paymentMethod === 'Debt' && !formData.customerId)}
-                  className={`py-4 md:py-5 rounded-2xl font-semibold text-sm uppercase shadow-xl active:scale-95 transition-all ${(formData.paymentMethod === 'Debt' && !formData.customerId) ? 'bg-slate-700 text-slate-500 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-500'}`}
+                  className={`${btn.confirm} shadow-xl`}
                 >
                   {checkoutMutation.isPending ? 'PROCESSING...' : 'CONFIRM'}
                 </button>
@@ -695,12 +693,12 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                 <h3 className="text-xs md:text-sm font-semibold text-slate-900 uppercase tracking-widest flex items-center gap-2">
                   <User size={16} className="text-emerald-600" /> Registry
                 </h3>
-                <span className="text-[10px] font-semibold bg-slate-100 px-2 py-1 rounded-md text-slate-500">{customers.length} Accounts</span>
+                <span className="text-[11px] font-semibold bg-slate-100 px-2 py-1 rounded-md text-slate-500">{customers.length} Accounts</span>
               </div>
               
               <div className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar space-y-2">
                 {customers.length === 0 ? (
-                  <p className="py-10 text-center text-[10px] font-medium text-slate-400 uppercase tracking-widest italic">No customers found</p>
+                  <p className="py-10 text-center text-[11px] font-medium text-slate-400 uppercase tracking-widest italic">No customers found</p>
                 ) : (
                   customers.map(c => (
                     <button 
@@ -715,11 +713,11 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                     >
                       <div className="space-y-1">
                         <p className={`text-[11px] font-semibold uppercase ${formData.customerId === c.id ? 'text-white' : 'text-slate-900'}`}>{c.customer_name}</p>
-                        <p className={`text-[9px] font-medium uppercase tracking-widest ${formData.customerId === c.id ? 'text-slate-400' : 'text-slate-400'}`}>{c.customer_phone || 'Account Verified'}</p>
+                        <p className={`text-[11px] font-medium uppercase tracking-widest ${formData.customerId === c.id ? 'text-slate-400' : 'text-slate-400'}`}>{c.customer_phone || 'Account Verified'}</p>
                       </div>
                       <div className="text-right">
-                        <p className={`text-[10px] font-semibold font-mono ${formData.customerId === c.id ? 'text-emerald-400' : 'text-emerald-600'}`}>KES {(c.remaining_balance || 0).toLocaleString()}</p>
-                        <span className={`text-[8px] font-bold uppercase tracking-tighter ${formData.customerId === c.id ? 'text-emerald-400' : 'text-slate-300'}`}>
+                        <p className={`text-[11px] font-semibold font-mono ${formData.customerId === c.id ? 'text-emerald-400' : 'text-emerald-600'}`}>KES {(c.remaining_balance || 0).toLocaleString()}</p>
+                        <span className={`text-[11px] font-bold uppercase tracking-tighter ${formData.customerId === c.id ? 'text-emerald-400' : 'text-slate-300'}`}>
                           {formData.customerId === c.id ? 'Selected ✓' : 'Select →'}
                         </span>
                       </div>
@@ -741,7 +739,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
             </div>
             <div>
               <h3 className="text-sm font-semibold text-slate-950 uppercase tracking-tight">Sales History Log</h3>
-              <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider mt-0.5">Registry Audit · Historical Data</p>
+              <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wider mt-0.5">Registry Audit · Historical Data</p>
             </div>
           </div>
           <button 
@@ -749,10 +747,10 @@ export default function ServicePOS({ role }: ServicePOSProps) {
               queryClient.invalidateQueries({ queryKey: ['sales_history'] });
               setCurrentPage(1);
             }} 
-            className="p-1.5 bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-slate-900 transition-all shadow-sm"
+            aria-label="Refresh" className={`${btn.icon} border border-slate-200 bg-white`}
             title="Refresh History"
           >
-            <RotateCcw size={15} />
+            <RotateCcw size={16} />
           </button>
         </div>
 
@@ -792,11 +790,11 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                                 </div>
                                 <div>
                                   <p className="font-medium max-md:font-normal text-slate-800 uppercase tracking-tight truncate max-w-[120px] max-md:text-[11px]">{log.customer_name || 'Walk-in'}</p>
-                                  <span className="text-[10px] max-md:text-[9px] text-slate-400 block mt-0.5 leading-none">
+                                  <span className="text-[11px] text-slate-400 block mt-0.5 leading-none">
                                     {new Date(log.created_at).toLocaleDateString()} {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                   </span>
                                   {log.receipt_code && (
-                                    <span className="text-[11px] font-normal text-slate-400 block mt-0.5 leading-none uppercase tracking-widest">
+                                    <span className="text-[11px] font-mono font-normal text-slate-400 block mt-0.5 leading-none uppercase tracking-widest">
                                       {log.receipt_code}
                                     </span>
                                   )}
@@ -807,7 +805,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                               {prod?.name || 'Maize'} ({log.weight_kg} kg)
                             </td>
                             <td className="px-2 py-1.5 md:px-4 md:py-3 whitespace-nowrap max-md:text-[11px]">
-                              <span className={`px-2 py-0.5 rounded text-[9px] font-semibold max-md:font-normal uppercase ${isService ? 'bg-blue-50 text-brand border border-blue-100/50' : 'bg-amber-50 text-amber-700 border border-amber-100/50'} max-md:text-[9px]`}>
+                              <span className={`px-2 py-0.5 rounded text-[11px] font-semibold max-md:font-normal uppercase ${isService ? 'bg-blue-50 text-brand border border-blue-100/50' : 'bg-amber-50 text-amber-700 border border-amber-100/50'} max-md:text-[11px]`}>
                                 {isService ? 'Service' : 'Retail'}
                               </span>
                             </td>
@@ -817,7 +815,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                                 (log.amount_mpesa || 0) > 0 ? `M-Pesa: ${log.amount_mpesa}` : null,
                                 (log.amount_debt || 0) > 0 ? `Debt: ${log.amount_debt}` : null,
                               ].filter(Boolean).length > 0 ? (
-                                <span className="text-[10px] max-md:text-[11px] text-slate-600 block leading-tight">
+                                <span className="text-[11px] text-slate-600 block leading-tight">
                                   {[
                                     (log.amount_cash || 0) > 0 ? `Cash: ${log.amount_cash}` : null,
                                     (log.amount_mpesa || 0) > 0 ? `M-Pesa: ${log.amount_mpesa}` : null,
@@ -825,7 +823,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                                   ].filter(Boolean).join(' | ')}
                                 </span>
                               ) : (
-                                <span className={`text-[10px] max-md:text-[11px] font-semibold max-md:font-normal ${log.payment_method === 'Debt' ? 'text-red-600' : 'text-emerald-600'}`}>
+                                <span className={`text-[11px] font-semibold max-md:font-normal ${log.payment_method === 'Debt' ? 'text-red-600' : 'text-emerald-600'}`}>
                                   {log.payment_method}
                                 </span>
                               )}
@@ -834,7 +832,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                               KSh {log.total_price?.toLocaleString()}
                             </td>
                             <td className="px-2 py-1.5 md:px-4 md:py-3 whitespace-nowrap max-md:text-[11px]">
-                              <div className="flex items-center justify-center gap-1.5">
+                              <div className="flex items-center justify-center gap-2">
                                 <button 
                                   onClick={() => {
                                     setFormData({
@@ -851,26 +849,26 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                                     });
                                     setShowReceipt(true);
                                   }} 
-                                  className="h-7 w-7 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 border border-slate-100 rounded-lg transition-all flex items-center justify-center" 
+                                  className={btn.icon} 
                                   title="View Receipt"
                                 >
-                                  <Eye size={12} />
+                                  <Eye size={16} />
                                 </button>
                                 {role === 'ADMIN' && (
                                   <>
                                     <button 
                                       onClick={() => startEdit(log)} 
-                                      className="h-7 w-7 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 border border-slate-100 rounded-lg transition-all flex items-center justify-center" 
+                                      className={btn.icon} 
                                       title="Edit Sale"
                                     >
-                                      <Pencil size={12} />
+                                      <Pencil size={16} />
                                     </button>
                                     <button 
                                       onClick={() => setDeletingSale(log)} 
-                                      className="h-7 w-7 bg-red-50 hover:bg-red-100 text-red-600 border border-red-100/50 rounded-lg transition-all flex items-center justify-center" 
+                                      className={btn.iconDanger} 
                                       title="Delete Sale"
                                     >
-                                      <Trash2 size={12} />
+                                      <Trash2 size={16} />
                                     </button>
                                   </>
                                 )}
@@ -913,18 +911,18 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                         <div className="flex justify-between items-start">
                           <div>
                             <p className="font-bold text-slate-800 uppercase text-xs truncate max-w-[150px]">{log.customer_name || 'Walk-in'}</p>
-                            <span className="text-[10px] text-slate-400 block mt-0.5">
+                            <span className="text-[11px] text-slate-400 block mt-0.5">
                               {new Date(log.created_at).toLocaleDateString()} {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
                             {log.receipt_code && (
-                              <span className="text-[10px] text-slate-400 font-mono block mt-0.5 uppercase tracking-wider">
+                              <span className="text-[11px] text-slate-400 font-mono block mt-0.5 uppercase tracking-wider">
                                 {log.receipt_code}
                               </span>
                             )}
                           </div>
                           <div className="text-right">
                             <p className="text-xs font-bold font-mono text-slate-850">KSh {log.total_price?.toLocaleString()}</p>
-                            <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase inline-block mt-1 ${isService ? 'bg-blue-50 text-brand border border-blue-100' : 'bg-amber-50 text-amber-700 border border-amber-100'}`}>
+                            <span className={`px-1.5 py-0.5 rounded text-[11px] font-bold uppercase inline-block mt-1 ${isService ? 'bg-blue-50 text-brand border border-blue-100' : 'bg-amber-50 text-amber-700 border border-amber-100'}`}>
                               {isService ? 'Service' : 'Retail'}
                             </span>
                           </div>
@@ -952,7 +950,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                               });
                               setShowReceipt(true);
                             }}
-                            className="flex-1 px-3 py-2 h-10 bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 shadow-sm transition-colors"
+                            className={`${btn.secondary} flex-1`}
                           >
                             <Eye size={14} /> View
                           </button>
@@ -960,7 +958,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                           <button 
                             onClick={() => { if (role === 'ADMIN') startEdit(log); }} 
                             disabled={role !== 'ADMIN'}
-                            className={`flex-1 px-3 py-2 h-10 rounded-xl text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 shadow-sm transition-colors ${role === 'ADMIN' ? 'bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-700 border border-slate-200' : 'bg-slate-50 text-slate-300 border border-slate-100 cursor-not-allowed opacity-60'}`}
+                            className={`${btn.secondary} flex-1`}
                             title={role === 'ADMIN' ? 'Edit Transaction' : 'Admin Access Required'}
                           >
                             <Pencil size={14} /> Edit
@@ -969,7 +967,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                           <button 
                             onClick={() => { if (role === 'ADMIN') setDeletingSale(log); }} 
                             disabled={role !== 'ADMIN'}
-                            className={`flex-1 px-3 py-2 h-10 rounded-xl text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 shadow-sm transition-colors ${role === 'ADMIN' ? 'bg-red-50 hover:bg-red-100 active:bg-red-200 text-red-600 border border-red-100' : 'bg-slate-50 text-slate-300 border border-slate-100 cursor-not-allowed opacity-60'}`}
+                            className={`${btn.danger} flex-1`}
                             title={role === 'ADMIN' ? 'Delete Transaction' : 'Admin Access Required'}
                           >
                             <Trash2 size={14} /> Delete
@@ -1009,17 +1007,17 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                     <button
                       disabled={validCurrentPage === 1}
                       onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                      className="px-2 py-1 text-[10px] font-semibold text-slate-600 bg-white border border-slate-200 rounded-md hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                      className={btn.secondary}
                     >
                       Previous
                     </button>
-                    <span className="text-[10px] text-slate-500 font-semibold px-1">
+                    <span className="text-[11px] text-slate-500 font-semibold px-1">
                       Page {validCurrentPage} of {totalPages}
                     </span>
                     <button
                       disabled={validCurrentPage === totalPages}
                       onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                      className="px-2 py-1 text-[10px] font-semibold text-slate-600 bg-white border border-slate-200 rounded-md hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                      className={btn.secondary}
                     >
                       Next
                     </button>
@@ -1038,9 +1036,9 @@ export default function ServicePOS({ role }: ServicePOSProps) {
             <div className="p-6 bg-slate-900 text-white flex justify-between items-center">
               <div>
                 <h3 className="text-lg font-medium uppercase tracking-tight">Edit Transaction</h3>
-                <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest mt-1">Registry Correction</p>
+                <p className="text-[11px] text-slate-400 font-medium uppercase tracking-widest mt-1">Registry Correction</p>
               </div>
-              <button onClick={() => setEditingSale(null)} className="p-2 hover:bg-white/10 rounded-full transition-all"><X size={20}/></button>
+              <button onClick={() => setEditingSale(null)} aria-label="Close" className={btn.iconOnDark}><X size={20}/></button>
             </div>
             <form onSubmit={handleEditSubmit} className="p-6 space-y-4">
               <div className="space-y-1.5">
@@ -1051,7 +1049,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                   step="0.01" 
                   value={editForm.weightKg} 
                   onChange={e => setEditForm({...editForm, weightKg: e.target.value})} 
-                  className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all" 
+                  className="w-full px-4 h-12 rounded-xl border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all" 
                 />
               </div>
               <div className="space-y-1.5">
@@ -1062,7 +1060,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                   step="0.01" 
                   value={editForm.totalPrice} 
                   disabled 
-                  className="w-full px-4 h-12 rounded-xl border border-slate-200 bg-slate-50 text-base font-semibold text-slate-500 cursor-not-allowed" 
+                  className="w-full px-4 h-12 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 cursor-not-allowed" 
                 />
               </div>
 
@@ -1072,7 +1070,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                 <button
                   type="button"
                   onClick={() => setEditForm(prev => ({ ...prev, isSplit: !prev.isSplit }))}
-                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${editForm.isSplit ? 'bg-emerald-600' : 'bg-slate-200'}`}
+                  className={`relative after:absolute after:-inset-3 after:content-[''] inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${editForm.isSplit ? 'bg-emerald-600' : 'bg-slate-200'}`}
                 >
                   <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${editForm.isSplit ? 'translate-x-5' : 'translate-x-0'}`} />
                 </button>
@@ -1088,7 +1086,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                         key={m} 
                         type="button" 
                         onClick={() => setEditForm({...editForm, paymentMethod: m as any})} 
-                        className={`h-12 rounded-xl font-medium text-xs uppercase border transition-all ${editForm.paymentMethod === m ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100'}`}
+                        className={chip(editForm.paymentMethod === m)}
                       >
                         {m}
                       </button>
@@ -1099,36 +1097,36 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                 /* Toggle is ON: Three Separate Active Split Amount Fields arranged side-by-side in 3-column micro-grid */
                 <div className="grid grid-cols-3 gap-2 pt-4 border-t border-slate-100">
                   <div className="space-y-1">
-                    <label className="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider ml-1 text-center max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Cash</label>
+                    <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider ml-1 text-center max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Cash</label>
                     <input
                       type="number"
                       step="0.01"
                       placeholder="0.00"
                       value={editForm.amountCash}
                       onChange={e => setEditForm({ ...editForm, amountCash: e.target.value })}
-                      className="w-full px-2 h-12 rounded-xl border border-slate-200 text-base font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all placeholder-slate-300 text-center"
+                      className="w-full px-2 h-12 rounded-xl border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all placeholder-slate-300 text-center"
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider ml-1 text-center max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">M-Pesa</label>
+                    <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider ml-1 text-center max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">M-Pesa</label>
                     <input
                       type="number"
                       step="0.01"
                       placeholder="0.00"
                       value={editForm.amountMpesa}
                       onChange={e => setEditForm({ ...editForm, amountMpesa: e.target.value })}
-                      className="w-full px-2 h-12 rounded-xl border border-slate-200 text-base font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all placeholder-slate-300 text-center"
+                      className="w-full px-2 h-12 rounded-xl border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all placeholder-slate-300 text-center"
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider ml-1 text-center max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Debt</label>
+                    <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider ml-1 text-center max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Debt</label>
                     <input
                       type="number"
                       step="0.01"
                       placeholder="0.00"
                       value={editForm.amountDebt}
                       onChange={e => setEditForm({ ...editForm, amountDebt: e.target.value })}
-                      className="w-full px-2 h-12 rounded-xl border border-slate-200 text-base font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all placeholder-slate-300 text-center"
+                      className="w-full px-2 h-12 rounded-xl border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all placeholder-slate-300 text-center"
                     />
                   </div>
                 </div>
@@ -1141,7 +1139,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                 const isBalanced = Math.abs(totalAllocated - totalPriceTarget) < 0.01;
                 if (!isBalanced) {
                   return (
-                    <div className="p-3 bg-red-50 text-red-900 border border-red-200 rounded-xl text-[10px] font-bold leading-relaxed flex items-start gap-2 shadow-sm animate-in slide-in-from-top-2 duration-200">
+                    <div className="p-3 bg-red-50 text-red-900 border border-red-200 rounded-xl text-[11px] font-bold leading-relaxed flex items-start gap-2 shadow-sm animate-in slide-in-from-top-2 duration-200">
                       <AlertTriangle size={16} className="text-red-600 flex-shrink-0 mt-0.5" />
                       <span>
                         Allocations (KSh {totalAllocated.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}) must balance exactly to the transaction total price (KSh {totalPriceTarget.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}).
@@ -1155,7 +1153,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
               <button
                 type="submit"
                 disabled={editSaleMutation.isPending || (editForm.isSplit && Math.abs((Number(editForm.amountCash || 0) + Number(editForm.amountMpesa || 0) + Number(editForm.amountDebt || 0)) - Number(editForm.totalPrice || 0)) >= 0.01)}
-                className="w-full bg-brand hover:bg-brand/90 text-white font-medium h-12 rounded-xl transition-all shadow-sm text-xs uppercase tracking-wider disabled:bg-slate-200 disabled:text-slate-400"
+                className={`${btn.primary} w-full shadow-sm`}
               >
                 {editSaleMutation.isPending ? 'UPDATING...' : '✓ SAVE CHANGES'}
               </button>
@@ -1179,8 +1177,8 @@ export default function ServicePOS({ role }: ServicePOSProps) {
               </p>
             </div>
             <div className="p-6 grid grid-cols-1 gap-3 md:grid-cols-2">
-              <button onClick={() => setDeletingSale(null)} className="py-4 rounded-xl bg-slate-100 text-slate-600 font-black text-xs uppercase hover:bg-slate-200 transition-all">Cancel</button>
-              <button onClick={() => deleteSaleMutation.mutate(deletingSale)} disabled={deleteSaleMutation.isPending} className="py-4 rounded-xl bg-red-600 text-white font-black text-xs uppercase hover:bg-red-700 transition-all shadow-lg shadow-red-200">
+              <button onClick={() => setDeletingSale(null)} className={btn.secondary}>Cancel</button>
+              <button onClick={() => deleteSaleMutation.mutate(deletingSale)} disabled={deleteSaleMutation.isPending} className={`${btn.danger} shadow-lg shadow-red-200`}>
                 {deleteSaleMutation.isPending ? 'DELETING...' : 'YES, VOID'}
               </button>
             </div>

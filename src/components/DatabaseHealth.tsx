@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase, supabaseUrl, supabaseKey } from '../lib/supabase';
 import { Database, RefreshCw } from 'lucide-react';
+import { btn } from '../lib/ui';
 
 interface DatabaseHealthProps {
   children: React.ReactNode;
@@ -116,7 +117,7 @@ export default function DatabaseHealth({ children }: DatabaseHealthProps) {
 
           <button 
             onClick={checkHealth}
-            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition-colors uppercase tracking-widest"
+            className={`${btn.primary} w-full`}
           >
             <RefreshCw size={20} />
             Retry Connection

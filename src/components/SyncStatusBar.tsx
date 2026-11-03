@@ -14,7 +14,7 @@ export default function SyncStatusBar() {
     return (
       <div className="flex items-center gap-1.5 text-red-500">
         <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-        <span className="text-[9px] font-black uppercase tracking-widest">Offline</span>
+        <span className="text-[11px] font-black uppercase tracking-widest">Offline</span>
       </div>
     );
   }
@@ -23,7 +23,7 @@ export default function SyncStatusBar() {
     return (
       <div className="flex items-center gap-1.5 text-amber-500">
         <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-        <span className="text-[9px] font-black uppercase tracking-widest">Reconnecting…</span>
+        <span className="text-[11px] font-black uppercase tracking-widest">Reconnecting…</span>
       </div>
     );
   }
@@ -31,7 +31,7 @@ export default function SyncStatusBar() {
   return (
     <div className="flex items-center gap-1.5 text-emerald-500">
       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-      <span className="text-[9px] font-black uppercase tracking-widest">Synced</span>
+      <span className="text-[11px] font-black uppercase tracking-widest">Synced</span>
     </div>
   );
 }

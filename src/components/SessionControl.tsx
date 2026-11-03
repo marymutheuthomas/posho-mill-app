@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useSessionDrawer } from '../hooks/useSessionDrawer';
+import { FIELD, FIELD_NUM, FIELD_LABEL, SECTION_TITLE, btn } from '../lib/ui';
 import { useMillingSession, useSessionHistory, type MillingSession, type SessionType } from '../hooks/useMillingSession';
 import {
   Zap, AlertTriangle, Play, 
@@ -112,7 +113,7 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
         <RotateCcw className="w-10 h-10 text-slate-300 animate-spin" />
-        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Synchronizing Registry...</p>
+        <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">Synchronizing Registry...</p>
       </div>
     );
   }
@@ -135,7 +136,7 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
                   </div>
                   <div>
                      <div className="flex items-center gap-3 mb-2">
-                        <span className={`px-3 py-1 rounded-full text-[9px] md:text-[10px] font-semibold uppercase tracking-[0.2em] ${activeSession ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-slate-100 text-slate-400'}`}>
+                        <span className={`px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-[0.2em] ${activeSession ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-slate-100 text-slate-400'}`}>
                            {activeSession ? 'System Active' : 'System Standby'}
                         </span>
                         {isSyncing && <RotateCcw size={14} className="text-blue-400 animate-spin" />}
@@ -143,7 +144,7 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
                      <h1 className={`text-2xl md:text-5xl font-semibold tracking-tighter uppercase transition-colors ${activeSession ? 'text-white' : 'text-slate-900'}`}>
                         {activeSession ? activeSession.session_type : 'Ready to Start'}
                      </h1>
-                     <p className={`text-[10px] md:text-xs font-medium uppercase tracking-widest mt-2 ${activeSession ? 'text-slate-400' : 'text-slate-400'}`}>
+                     <p className={`text-[11px] md:text-xs font-medium uppercase tracking-widest mt-2 ${activeSession ? 'text-slate-400' : 'text-slate-400'}`}>
                         {activeSession ? `Operator Terminal · Session: ${activeSession.session_code || '---'}` : 'Start a session to log power meter readings. Sales are still recorded without one.'}
                      </p>
                   </div>
@@ -156,7 +157,7 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
                           <button
                              key={type}
                              onClick={() => setStartModal({ open: true, type: type as any })}
-                             className="flex-1 md:flex-none px-6 md:px-10 py-4 md:py-5 bg-slate-900 text-white rounded-xl md:rounded-2xl font-semibold text-xs md:text-sm uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl active:scale-95"
+                             className={`${btn.primary} flex-1 md:flex-none md:px-10 shadow-xl`}
                           >
                              {type}
                           </button>
@@ -166,7 +167,7 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
                     {stockTakeDue && (
                       <button
                          onClick={() => onNavigate && onNavigate('Stock Take')}
-                         className="text-left text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2 hover:bg-amber-100 transition-all"
+                         className="text-left text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 min-h-11 hover:bg-amber-100 transition-colors"
                       >
                          Stock take recommended after last night's late close. Tap to record it.
                       </button>
@@ -175,7 +176,7 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
                ) : (
                   <button
                      onClick={() => setEndModal(true)}
-                     className="w-full md:w-auto px-10 py-4 md:py-5 bg-red-600 text-white rounded-xl md:rounded-2xl font-semibold text-xs md:text-sm uppercase tracking-widest hover:bg-red-500 transition-all shadow-xl shadow-red-900/20 active:scale-95"
+                     className={`${btn.danger} w-full md:w-auto md:px-10 shadow-xl shadow-red-900/20`}
                   >
                      Stop Session
                   </button>
@@ -191,13 +192,13 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
                <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-brand">
                   <Activity size={20} />
                </div>
-               <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Opening Reading</p>
+               <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">Opening Reading</p>
             </div>
             <h2 className="text-3xl md:text-5xl font-semibold tracking-tighter text-slate-900 font-mono">
                {activeSession ? activeSession.start_meter : (lastEndMeter || '0.00')} <span className="text-sm font-semibold text-slate-300">kWh</span>
             </h2>
             <div className="mt-6 md:mt-8 pt-6 border-t border-slate-50">
-               <p className="text-[9px] font-medium text-slate-400 uppercase tracking-tight">Verified by System Registry</p>
+               <p className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Verified by System Registry</p>
             </div>
          </div>
 
@@ -207,7 +208,7 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
                <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600">
                   <Clock size={20} />
                </div>
-               <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Duration</p>
+               <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">Duration</p>
             </div>
             <h2 className="text-3xl md:text-5xl font-semibold tracking-tighter text-slate-900 font-mono">
                {activeSession ? (
@@ -215,7 +216,7 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
                ) : '--:--'}
             </h2>
             <div className="mt-6 md:mt-8 pt-6 border-t border-slate-50">
-               <p className="text-[9px] font-medium text-slate-400 uppercase tracking-tight">Start Time Local</p>
+               <p className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Start Time Local</p>
             </div>
          </div>
 
@@ -225,13 +226,13 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
                <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white">
                   <Activity size={20} />
                </div>
-               <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Access Protocol</p>
+               <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">Access Protocol</p>
             </div>
-            <h2 className="text-3xl md:text-4xl font-semibold tracking-tighter text-slate-900 uppercase">
+            <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-slate-900 uppercase">
                {role || 'Staff'}
             </h2>
             <div className="mt-6 md:mt-8 pt-6 border-t border-slate-50">
-               <p className="text-[9px] font-medium text-slate-400 uppercase tracking-tight">Privileged Terminal Access</p>
+               <p className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Privileged Terminal Access</p>
             </div>
          </div>
       </div>
@@ -240,29 +241,29 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
       {activeSession && drawer && (
         <div className="mill-card p-4 md:p-6 bg-white border-slate-100 shadow-sm rounded-2xl">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">This shift&apos;s drawer</p>
-            {drawer.pendingCount > 0 && <span className="text-[9px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">{drawer.pendingCount} not synced yet</span>}
+            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">This shift&apos;s drawer</p>
+            {drawer.pendingCount > 0 && <span className="text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">{drawer.pendingCount} not synced yet</span>}
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className="rounded-xl bg-brand text-white p-3">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-blue-200">Expected cash</p>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-blue-200">Expected cash</p>
               <p className="text-xl font-mono font-bold">{kes(drawer.expectedCash)}</p>
-              <p className="text-[9px] text-blue-200">{kes(drawer.cashSales)} sales + {kes(drawer.cashRepayments)} repayments</p>
+              <p className="text-[11px] text-blue-200">{kes(drawer.cashSales)} sales + {kes(drawer.cashRepayments)} repayments</p>
             </div>
             <div className="rounded-xl border border-slate-100 bg-canvas p-3">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Expected M-Pesa</p>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Expected M-Pesa</p>
               <p className="text-xl font-mono font-bold text-slate-900">{kes(drawer.expectedMpesa)}</p>
-              <p className="text-[9px] text-slate-400">{kes(drawer.mpesaSales)} sales + {kes(drawer.mpesaRepayments)} repayments</p>
+              <p className="text-[11px] text-slate-400">{kes(drawer.mpesaSales)} sales + {kes(drawer.mpesaRepayments)} repayments</p>
             </div>
             <div className="rounded-xl border border-slate-100 bg-canvas p-3">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Credit given</p>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Credit given</p>
               <p className="text-xl font-mono font-bold text-amber-600">{kes(drawer.creditGiven)}</p>
-              <p className="text-[9px] text-slate-400">Added to customer balances</p>
+              <p className="text-[11px] text-slate-400">Added to customer balances</p>
             </div>
             <div className="rounded-xl border border-slate-100 bg-canvas p-3">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Bank repayments</p>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Bank repayments</p>
               <p className="text-xl font-mono font-bold text-slate-900">{kes(drawer.bankRepayments)}</p>
-              <p className="text-[9px] text-slate-400">Not in the drawer</p>
+              <p className="text-[11px] text-slate-400">Not in the drawer</p>
             </div>
           </div>
         </div>
@@ -276,15 +277,15 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
               <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-10 -mt-10 blur-2xl" />
               <div className="relative z-10 flex justify-between items-center">
                 <div>
-                  <h3 className="text-xl md:text-2xl font-semibold uppercase tracking-tight">Start Session</h3>
-                  <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest mt-1">Verify Initial State</p>
+                  <h3 className={`${SECTION_TITLE} text-white`}>Start Session</h3>
+                  <p className="text-[11px] text-slate-400 font-semibold uppercase tracking-widest mt-1">Verify Initial State</p>
                 </div>
-                <button onClick={() => setStartModal({open: false, type: null})} className="p-2 hover:bg-white/10 rounded-full transition-all"><X size={20}/></button>
+                <button onClick={() => setStartModal({open: false, type: null})} aria-label="Close" className={btn.iconOnDark}><X size={20}/></button>
               </div>
             </div>
             <div className="p-8 md:p-10 space-y-8">
               <div className="space-y-4">
-                <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">Initial Odometer Reading</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-600">Initial Odometer Reading</p>
                 <div className="text-3xl md:text-5xl font-semibold text-slate-900 font-mono text-center py-6 bg-slate-50 rounded-2xl border-2 border-slate-100">
                   {lastEndMeter} <span className="text-sm">kWh</span>
                 </div>
@@ -292,7 +293,7 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
               <button 
                 onClick={() => handleStart(startModal.type!)}
                 disabled={isSyncing}
-                className="w-full py-4 md:py-6 bg-slate-900 text-white rounded-2xl font-semibold uppercase text-sm tracking-widest shadow-xl hover:bg-slate-800 active:scale-95 transition-all flex items-center justify-center gap-3"
+                className={`${btn.primary} w-full shadow-xl`}
               >
                 {isSyncing ? <RotateCcw className="animate-spin" size={20} /> : <Play size={20} fill="currentColor" />}
                 {isSyncing ? 'Starting...' : 'Authorize Start'}
@@ -310,35 +311,36 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
               <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-10 -mt-10 blur-2xl" />
               <div className="relative z-10 flex justify-between items-center">
                 <div>
-                  <h3 className="text-xl md:text-2xl font-semibold uppercase tracking-tight">End Session</h3>
-                  <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest mt-1">Meter Verification Required</p>
+                  <h3 className={`${SECTION_TITLE} text-white`}>End Session</h3>
+                  <p className="text-[11px] text-slate-400 font-semibold uppercase tracking-widest mt-1">Meter Verification Required</p>
                 </div>
-                <button onClick={() => setEndModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-all"><X size={20}/></button>
+                <button onClick={() => setEndModal(false)} aria-label="Close" className={btn.iconOnDark}><X size={20}/></button>
               </div>
             </div>
             <div className="p-8 md:p-10 space-y-8">
               <div className="space-y-4">
-                <div className="flex items-center justify-between text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">
-                   <span>Final Meter Reading (kWh)</span>
-                   <span className="text-brand">Min: {activeSession?.start_meter}</span>
+                <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                   <label htmlFor="end-meter">Final Meter Reading (kWh)</label>
+                   <span className="text-brand font-mono">Min: {activeSession?.start_meter}</span>
                 </div>
                 <div className="relative group">
-                  <input 
-                    required 
+                  <input
+                    id="end-meter"
+                    required
                     type="number" 
                     step="0.01" 
                     min={activeSession?.start_meter}
                     value={closingMeter} 
                     onChange={e => setClosingMeter(e.target.value)} 
-                    className="mill-input w-full font-semibold text-2xl md:text-4xl py-4 md:py-6 text-center border-slate-200 focus:border-red-500 transition-all text-base md:text-4xl max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" 
+                    className={`${FIELD_NUM} text-center !px-16`}
                     placeholder="0.00"
                   />
-                  <div className="absolute right-6 top-1/2 -translate-y-1/2 font-semibold text-slate-200 text-lg uppercase">kWh</div>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 font-mono font-semibold text-slate-400 text-sm">kWh</div>
                 </div>
               </div>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <button type="button" onClick={() => setEndModal(false)} className="py-4 md:py-5 rounded-2xl bg-slate-50 text-slate-400 font-semibold text-xs uppercase hover:bg-slate-100 transition-all">Cancel</button>
-                <button onClick={handleEnd} disabled={isSyncing} className="py-4 md:py-5 rounded-2xl bg-red-600 text-white font-semibold text-xs uppercase hover:bg-red-700 shadow-xl shadow-red-200 transition-all flex items-center justify-center gap-2">
+                <button type="button" onClick={() => setEndModal(false)} className={btn.secondary}>Cancel</button>
+                <button onClick={handleEnd} disabled={isSyncing} className={`${btn.danger} shadow-xl shadow-red-200`}>
                   {isSyncing ? 'SYNCING...' : <><ZapOff size={14}/> STOP MILL</>}
                 </button>
               </div>
@@ -355,8 +357,8 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
               <Zap size={16} />
             </div>
             <div>
-              <h3 className="text-sm md:text-lg font-semibold text-slate-900 uppercase tracking-tight">Session History & Audit Ledger</h3>
-              <p className="text-[9px] font-medium text-slate-400 uppercase tracking-widest">Correct Odometer or Session Time Mismatches</p>
+              <h3 className={`${SECTION_TITLE} text-slate-900`}>Session History & Audit Ledger</h3>
+              <p className="text-[11px] font-medium text-slate-400 uppercase tracking-widest">Correct Odometer or Session Time Mismatches</p>
             </div>
           </div>
         </div>
@@ -385,10 +387,10 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
                 return (
                   <tr key={s.id} className="hover:bg-slate-50/50 transition-colors group text-xs text-slate-650 max-md:text-[11px]">
                     <td className="px-2 py-1.5 md:px-3 md:py-1.5 max-md:text-[11px] whitespace-nowrap">
-                      <p className="font-semibold text-slate-800 uppercase tracking-tight">{s.session_code || '—'}</p>
+                      <p className="font-mono font-semibold text-slate-800 uppercase tracking-tight">{s.session_code || '—'}</p>
                     </td>
                     <td className="px-2 py-1.5 md:px-3 md:py-1.5 max-md:text-[11px] whitespace-nowrap">
-                      <span className={`px-2 py-0.5 rounded text-[8px] font-semibold uppercase ${
+                      <span className={`px-2 py-0.5 rounded text-[11px] font-semibold uppercase ${
                         s.session_type === 'Internal' ? 'bg-blue-50 text-brand border border-blue-100' : 'bg-amber-50 text-amber-700 border border-amber-100'
                       }`}>{s.session_type}</span>
                     </td>
@@ -397,7 +399,7 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
                     <td className="px-2 py-1.5 md:px-3 md:py-1.5 font-mono font-semibold text-emerald-600 max-md:text-[11px] whitespace-nowrap">+{consumed} kWh</td>
                     <td className="px-2 py-1.5 md:px-3 md:py-1.5 max-md:text-[11px] whitespace-nowrap">
                       <p className="font-medium text-slate-800">{new Date(s.created_at).toLocaleDateString()}</p>
-                      <p className="text-[9px] text-slate-400 uppercase mt-0.5 flex items-center gap-1">
+                      <p className="text-[11px] text-slate-400 uppercase mt-0.5 flex items-center gap-1">
                         <Clock size={10} /> 
                         {new Date(s.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                         <span>→</span>
@@ -405,7 +407,7 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
                       </p>
                     </td>
                     <td className="px-2 py-1.5 md:px-3 md:py-1.5 text-right whitespace-nowrap">
-                      <div className="flex justify-end gap-1">
+                      <div className="flex justify-end gap-2">
                         <button onClick={() => {
                           setEditSessionForm({
                             start_meter: s.start_meter,
@@ -414,8 +416,8 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
                             closed_at: s.closed_at || new Date().toISOString()
                           });
                           setEditSessionModal({ open: true, record: s });
-                        }} className="p-1 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 border border-slate-100 rounded-md transition-all"><Pencil size={10}/></button>
-                        <button onClick={() => setDeleteSessionModal({ open: true, record: s })} className="p-1 bg-red-50 hover:bg-red-100 text-red-655 border border-red-100/50 rounded-md transition-all"><Trash2 size={10}/></button>
+                        }} aria-label="Edit session" className={btn.icon}><Pencil size={16}/></button>
+                        <button onClick={() => setDeleteSessionModal({ open: true, record: s })} aria-label="Delete session" className={btn.iconDanger}><Trash2 size={16}/></button>
                       </div>
                     </td>
                   </tr>
@@ -432,31 +434,31 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
           <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-8 bg-slate-900 text-white flex justify-between items-center">
               <div>
-                <h3 className="text-xl font-black uppercase tracking-tighter">Edit Session</h3>
-                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">Adjust Session Date or Odometer Readings</p>
+                <h3 className={`${SECTION_TITLE} text-white`}>Edit Session</h3>
+                <p className="text-[11px] text-slate-400 font-black uppercase tracking-widest mt-1">Adjust Session Date or Odometer Readings</p>
               </div>
-              <button onClick={() => setEditSessionModal({ open: false, record: null })} className="p-2 hover:bg-white/10 rounded-full transition-all"><X size={20}/></button>
+              <button onClick={() => setEditSessionModal({ open: false, record: null })} aria-label="Close" className={btn.iconOnDark}><X size={20}/></button>
             </div>
             <form onSubmit={handleEditSession} className="p-8 space-y-6">
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Opening Meter (kWh)</label>
-                  <input required type="number" step="0.01" value={editSessionForm.start_meter} onChange={e => setEditSessionForm({...editSessionForm, start_meter: parseFloat(e.target.value) || 0})} className="mill-input w-full font-bold max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
+                  <label htmlFor="edit-start-meter" className={FIELD_LABEL}>Opening Meter (kWh)</label>
+                  <input id="edit-start-meter" required type="number" step="0.01" value={editSessionForm.start_meter} onChange={e => setEditSessionForm({...editSessionForm, start_meter: parseFloat(e.target.value) || 0})} className={`${FIELD_NUM} !text-base`} />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Closing Meter (kWh)</label>
-                  <input required type="number" step="0.01" value={editSessionForm.end_meter} onChange={e => setEditSessionForm({...editSessionForm, end_meter: parseFloat(e.target.value) || 0})} className="mill-input w-full font-bold max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
+                  <label htmlFor="edit-end-meter" className={FIELD_LABEL}>Closing Meter (kWh)</label>
+                  <input id="edit-end-meter" required type="number" step="0.01" value={editSessionForm.end_meter} onChange={e => setEditSessionForm({...editSessionForm, end_meter: parseFloat(e.target.value) || 0})} className={`${FIELD_NUM} !text-base`} />
                 </div>
               </div>
               <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Start Date & Time</label>
-                <input required type="datetime-local" value={toDateTimeLocal(editSessionForm.created_at)} onChange={e => setEditSessionForm({...editSessionForm, created_at: new Date(e.target.value).toISOString()})} className="mill-input w-full font-bold uppercase max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
+                <label htmlFor="edit-start-at" className={FIELD_LABEL}>Start Date & Time</label>
+                <input id="edit-start-at" required type="datetime-local" value={toDateTimeLocal(editSessionForm.created_at)} onChange={e => setEditSessionForm({...editSessionForm, created_at: new Date(e.target.value).toISOString()})} className={`${FIELD} uppercase`} />
               </div>
               <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Close Date & Time</label>
-                <input required type="datetime-local" value={toDateTimeLocal(editSessionForm.closed_at)} onChange={e => setEditSessionForm({...editSessionForm, closed_at: new Date(e.target.value).toISOString()})} className="mill-input w-full font-bold uppercase max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
+                <label htmlFor="edit-close-at" className={FIELD_LABEL}>Close Date & Time</label>
+                <input id="edit-close-at" required type="datetime-local" value={toDateTimeLocal(editSessionForm.closed_at)} onChange={e => setEditSessionForm({...editSessionForm, closed_at: new Date(e.target.value).toISOString()})} className={`${FIELD} uppercase`} />
               </div>
-              <button type="submit" disabled={isSyncing} className="mill-btn-primary w-full py-4 shadow-xl">
+              <button type="submit" disabled={isSyncing} className={`${btn.primary} w-full shadow-xl`}>
                 {isSyncing ? 'UPDATING...' : '✓ SAVE CHANGES'}
               </button>
             </form>
@@ -472,14 +474,14 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
               <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Trash2 size={32} />
               </div>
-              <h3 className="text-xl font-black uppercase tracking-tighter">Delete Session?</h3>
+              <h3 className={`${SECTION_TITLE} text-white`}>Delete Session?</h3>
               <p className="text-xs text-red-100 font-bold uppercase mt-1 leading-relaxed">
-                This action will permanently delete session <span className="font-black text-white">{deleteSessionModal.record?.session_code}</span>.
+                This action will permanently delete session <span className="font-mono font-black text-white">{deleteSessionModal.record?.session_code}</span>.
               </p>
             </div>
             <div className="p-6 grid grid-cols-1 gap-3 md:grid-cols-2">
-              <button onClick={() => setDeleteSessionModal({ open: false, record: null })} className="py-4 rounded-xl bg-slate-100 text-slate-600 font-black text-xs uppercase hover:bg-slate-200 transition-all">Cancel</button>
-              <button onClick={handleDeleteSession} disabled={isSyncing} className="py-4 rounded-xl bg-red-600 text-white font-black text-xs uppercase hover:bg-red-700 transition-all shadow-lg shadow-red-200">
+              <button onClick={() => setDeleteSessionModal({ open: false, record: null })} className={btn.secondary}>Cancel</button>
+              <button onClick={handleDeleteSession} disabled={isSyncing} className={`${btn.danger} shadow-lg shadow-red-200`}>
                 {isSyncing ? 'DELETING...' : 'YES, DELETE'}
               </button>
             </div>

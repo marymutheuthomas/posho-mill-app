@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { AlertTriangle, RefreshCcw } from 'lucide-react';
+import { btn } from '../lib/ui';
 
 interface Props {
   children?: ReactNode;
@@ -51,7 +52,7 @@ class ErrorBoundary extends Component<Props, State> {
           </pre>
           <button
             onClick={() => window.location.reload()}
-            className="flex items-center gap-2 mx-auto text-slate-900 font-black uppercase text-[10px] tracking-widest hover:text-mill-primary transition-colors"
+            className={`${btn.primary} mx-auto`}
           >
             <RefreshCcw size={14} />
             Reload

@@ -4,6 +4,7 @@ import { useCustomers, useCustomerMutations, type CustomerWithLedger } from '../
 import { useMillingSession } from '../hooks/useMillingSession';
 import { buildStatement, creditCheck, type Risk } from '../lib/customerLedger';
 import { generateCustomerStatementPDF } from '../lib/pdfGenerator';
+import { btn, chip } from '../lib/ui';
 
 const ksh = (n: number) => `KSh ${n.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const dateOnly = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
@@ -114,7 +115,7 @@ export default function Customers({ role }: { role: 'ADMIN' | 'EMPLOYEE' }) {
   }, [selected, range]);
 
   const inputClass = 'mill-input w-full text-sm';
-  const label = 'block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1';
+  const label = 'block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1';
 
   // Plain render function, not a nested component: a nested component remounts on every
   // keystroke and the inputs lose focus.
@@ -154,10 +155,10 @@ export default function Customers({ role }: { role: 'ADMIN' | 'EMPLOYEE' }) {
           <Users className="text-brand" size={20} />
           <div>
             <h1 className="text-lg font-black text-brand uppercase tracking-tight">Customers & Debt</h1>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Balances are calculated from sales and payments</p>
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Balances are calculated from sales and payments</p>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-widest">
+        <div className="flex flex-wrap gap-2 text-[11px] font-black uppercase tracking-widest">
           <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-600">{customers.length} customers</span>
           <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-brand">{totals.owing} owing · {ksh(totals.owed)}</span>
           {totals.overdueCount > 0 && <span className="px-2.5 py-1 rounded-lg bg-red-50 border border-red-200 text-red-700">{totals.overdueCount} overdue · {ksh(totals.overdue)}</span>}
@@ -168,14 +169,14 @@ export default function Customers({ role }: { role: 'ADMIN' | 'EMPLOYEE' }) {
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" />
-          <input className="mill-input w-full pl-9 text-sm" placeholder="Search name, phone or location" value={search} onChange={e => setSearch(e.target.value)} />
+          <input className="mill-input w-full pl-9" placeholder="Search name, phone or location" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         <div className="flex gap-1 bg-white border border-slate-200 rounded-lg p-1 overflow-x-auto">
           {([['all', 'All'], ['owing', 'Owing'], ['overdue', 'Overdue'], ['near-limit', 'Near limit']] as [Filter, string][]).map(([f, l]) => (
-            <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest whitespace-nowrap ${filter === f ? 'bg-brand text-white' : 'text-slate-500 hover:bg-slate-50'}`}>{l}</button>
+            <button key={f} onClick={() => setFilter(f)} className={`${chip(filter === f)} whitespace-nowrap`}>{l}</button>
           ))}
         </div>
-        <button onClick={() => { setForm(EMPTY_FORM); setAdding(true); }} className="mill-btn-primary flex items-center justify-center gap-2 text-xs uppercase tracking-widest">
+        <button onClick={() => { setForm(EMPTY_FORM); setAdding(true); }} className={btn.primary}>
           <Plus size={14} /> Add customer
         </button>
       </div>
@@ -200,7 +201,7 @@ export default function Customers({ role }: { role: 'ADMIN' | 'EMPLOYEE' }) {
                       <p className="text-[12px] font-bold text-slate-800 truncate flex items-center gap-1.5">
                         {c.name}{c.pending && <CloudOff size={11} className="text-amber-500 shrink-0" aria-label="Not synced yet" />}
                       </p>
-                      <p className="text-[10px] text-slate-400 truncate">{[c.phone, c.location].filter(Boolean).join(' · ') || 'No contact details'}</p>
+                      <p className="text-[11px] text-slate-400 truncate">{[c.phone, c.location].filter(Boolean).join(' · ') || 'No contact details'}</p>
                       {credit.ratio !== null && (
                         <div className="mt-1 h-1 rounded-full bg-slate-100 overflow-hidden" title={`${Math.round(credit.ratio * 100)}% of ${ksh(c.credit_limit)} limit`}>
                           <div className={`h-full ${credit.level === 'over' ? 'bg-red-500' : credit.level === 'near' ? 'bg-amber-500' : 'bg-brand'}`} style={{ width: `${Math.min(100, credit.ratio * 100)}%` }} />
@@ -209,7 +210,7 @@ export default function Customers({ role }: { role: 'ADMIN' | 'EMPLOYEE' }) {
                     </div>
                     <div className="text-right shrink-0">
                       <p className={`text-[12px] font-mono font-bold ${c.balance > 0 ? 'text-slate-800' : c.balance < 0 ? 'text-emerald-600' : 'text-slate-300'}`}>{ksh(c.balance)}</p>
-                      <span className={`inline-block mt-0.5 px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${RISK[c.risk].badge}`}>{RISK[c.risk].label}</span>
+                      <span className={`inline-block mt-0.5 px-1.5 py-0.5 rounded text-[11px] font-black uppercase tracking-widest border ${RISK[c.risk].badge}`}>{RISK[c.risk].label}</span>
                     </div>
                   </button>
                 );
@@ -228,8 +229,8 @@ export default function Customers({ role }: { role: 'ADMIN' | 'EMPLOYEE' }) {
                   <p className="text-[11px] text-slate-500">{[selected.phone, selected.location, selected.kra_pin && `PIN ${selected.kra_pin}`].filter(Boolean).join(' · ') || 'No contact details'}</p>
                 </div>
                 <div className="flex gap-1 shrink-0">
-                  {!editing && <button onClick={() => startEdit(selected)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-50 hover:text-brand" aria-label="Edit customer"><Pencil size={15} /></button>}
-                  <button onClick={() => setSelectedId(null)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-50" aria-label="Close"><X size={15} /></button>
+                  {!editing && <button onClick={() => startEdit(selected)} className={btn.icon} aria-label="Edit customer"><Pencil size={16} /></button>}
+                  <button onClick={() => setSelectedId(null)} className={btn.icon} aria-label="Close"><X size={16} /></button>
                 </div>
               </div>
 
@@ -237,8 +238,8 @@ export default function Customers({ role }: { role: 'ADMIN' | 'EMPLOYEE' }) {
                 <form onSubmit={submitEdit} className="space-y-3">
                   {renderProfileFields(form, setForm, selected.id)}
                   <div className="flex gap-2">
-                    <button type="submit" disabled={updateCustomer.isPending} className="mill-btn-primary flex items-center gap-2 text-xs uppercase tracking-widest"><Save size={14} /> Save</button>
-                    <button type="button" onClick={() => setEditing(false)} className="px-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Cancel</button>
+                    <button type="submit" disabled={updateCustomer.isPending} className={btn.primary}><Save size={14} /> Save</button>
+                    <button type="button" onClick={() => setEditing(false)} className={btn.secondary}>Cancel</button>
                   </div>
                 </form>
               ) : (
@@ -252,14 +253,14 @@ export default function Customers({ role }: { role: 'ADMIN' | 'EMPLOYEE' }) {
                       ['Overdue 30d+', ksh(selected.aging.overdue), selected.aging.overdue ? 'text-red-600' : 'text-slate-300'],
                     ].map(([l, v, tone]) => (
                       <div key={l} className="rounded-lg border border-slate-100 bg-canvas px-3 py-2">
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{l}</p>
+                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{l}</p>
                         <p className={`text-sm font-mono font-bold ${tone}`}>{v}</p>
                       </div>
                     ))}
                   </div>
                   {(() => {
                     const c = creditCheck(selected.balance, selected.credit_limit);
-                    if (c.level === 'no-limit') return <p className="mt-2 text-[10px] text-slate-400">No credit limit set{isAdmin ? ' — edit the customer to add one.' : '.'}</p>;
+                    if (c.level === 'no-limit') return <p className="mt-2 text-[11px] text-slate-400">No credit limit set{isAdmin ? ' — edit the customer to add one.' : '.'}</p>;
                     return <p className={`mt-2 text-[11px] font-semibold ${c.level === 'over' ? 'text-red-600' : c.level === 'near' ? 'text-amber-700' : 'text-slate-500'}`}>
                       {Math.round((c.ratio || 0) * 100)}% of {ksh(selected.credit_limit)} limit used · {c.headroom! >= 0 ? `${ksh(c.headroom!)} available` : `${ksh(-c.headroom!)} over limit`}
                     </p>;
@@ -277,9 +278,9 @@ export default function Customers({ role }: { role: 'ADMIN' | 'EMPLOYEE' }) {
                   <option>Cash</option><option>M-Pesa</option><option>Bank</option>
                 </select>
                 <input placeholder="Note / M-Pesa code" className={inputClass} value={payment.notes} onChange={e => setPayment({ ...payment, notes: e.target.value })} />
-                <button type="submit" disabled={repaying} className="mill-btn-primary text-xs uppercase tracking-widest">Record</button>
+                <button type="submit" disabled={repaying} className={btn.confirm}>Record</button>
               </div>
-              <p className={`text-[10px] font-semibold ${activeSession ? 'text-slate-400' : 'text-amber-700'}`}>
+              <p className={`text-[11px] font-semibold ${activeSession ? 'text-slate-400' : 'text-amber-700'}`}>
                 {activeSession
                   ? `Counts in the open ${activeSession.session_type} session's ${payment.method === 'Cash' ? 'cash drawer' : payment.method + ' total'}.`
                   : 'No session is open, so this payment will not be counted in any shift\'s cash drawer.'}
@@ -290,17 +291,17 @@ export default function Customers({ role }: { role: 'ADMIN' | 'EMPLOYEE' }) {
             <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
               <div className="p-3 border-b border-slate-100 flex flex-wrap items-center gap-2">
                 <h3 className="text-[11px] font-black text-brand uppercase tracking-widest mr-auto">Statement</h3>
-                <input type="date" className="mill-input text-xs py-1" value={range.from} max={range.to} onChange={e => setRange({ ...range, from: e.target.value })} />
+                <input type="date" className="mill-input py-1" value={range.from} max={range.to} onChange={e => setRange({ ...range, from: e.target.value })} />
                 <span className="text-slate-300 text-xs">to</span>
-                <input type="date" className="mill-input text-xs py-1" value={range.to} min={range.from} onChange={e => setRange({ ...range, to: e.target.value })} />
+                <input type="date" className="mill-input py-1" value={range.to} min={range.from} onChange={e => setRange({ ...range, to: e.target.value })} />
                 <button onClick={() => generateCustomerStatementPDF({ customer: selected, statement, from: statement.from, to: statement.to })}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50">
-                  <FileDown size={13} /> PDF
+                  className={btn.secondary}>
+                  <FileDown size={16} /> PDF
                 </button>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
-                  <thead className="bg-slate-50 text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                  <thead className="bg-slate-50 text-[11px] font-black text-slate-400 uppercase tracking-widest">
                     <tr><th className="px-3 py-2">Date</th><th className="px-3 py-2">Item</th><th className="px-3 py-2 text-right">Charge</th><th className="px-3 py-2 text-right">Payment</th><th className="px-3 py-2 text-right">Balance</th></tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50 text-[11px]">
@@ -318,7 +319,7 @@ export default function Customers({ role }: { role: 'ADMIN' | 'EMPLOYEE' }) {
                         <td className="px-3 py-2 text-right font-mono font-bold">{ksh(l.running)}</td>
                       </tr>
                     ))}
-                    {statement.lines.length === 0 && <tr><td colSpan={5} className="px-3 py-6 text-center text-[10px] font-bold text-slate-300 uppercase tracking-widest">No activity in this period</td></tr>}
+                    {statement.lines.length === 0 && <tr><td colSpan={5} className="px-3 py-6 text-center text-[11px] font-bold text-slate-300 uppercase tracking-widest">No activity in this period</td></tr>}
                   </tbody>
                   <tfoot className="bg-slate-900 text-white text-[11px] font-bold">
                     <tr><td className="px-3 py-2" colSpan={2}>Closing balance</td><td className="px-3 py-2 text-right font-mono">{ksh(statement.charges)}</td><td className="px-3 py-2 text-right font-mono">{ksh(statement.payments)}</td><td className="px-3 py-2 text-right font-mono">{ksh(statement.closing)}</td></tr>
@@ -336,10 +337,10 @@ export default function Customers({ role }: { role: 'ADMIN' | 'EMPLOYEE' }) {
           <form onSubmit={submitNew} className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-black text-brand uppercase tracking-widest">Add customer</h3>
-              <button type="button" onClick={() => setAdding(false)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-50" aria-label="Close"><X size={16} /></button>
+              <button type="button" onClick={() => setAdding(false)} className={btn.icon} aria-label="Close"><X size={16} /></button>
             </div>
             {renderProfileFields(form, setForm)}
-            <button type="submit" disabled={createCustomer.isPending} className="mill-btn-primary w-full text-xs uppercase tracking-widest">Save customer</button>
+            <button type="submit" disabled={createCustomer.isPending} className={`${btn.primary} w-full`}>Save customer</button>
           </form>
         </div>
       )}

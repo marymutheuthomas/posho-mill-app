@@ -29,66 +29,115 @@
   --color-mill-warning: #F59E0B;
 }
 
-body {
-  background-color: var(--color-canvas);
-  color: var(--color-ink);
-  font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
+/*
+  Typography rules. Everything here sits in a Tailwind layer, so a utility class on an
+  element always wins over it: these are defaults, never hidden overrides.
+*/
+@layer base {
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    /* Digits are all the same width, so amounts and weights line up in lists and tables */
+    font-variant-numeric: tabular-nums;
+  }
+
+  h1 {
+    font-weight: 200;
+  }
+
+  /* One text style for every typed field on every screen. 16px on phones and tablets
+     (anything smaller makes iOS zoom in on focus), 14px from md up. */
+  input:where(:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"])),
+  select,
+  textarea {
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.5rem;
+    font-weight: 500;
+    color: var(--color-ink);
+  }
+
+  @media (min-width: 768px) {
+    input:where(:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"])),
+    select,
+    textarea {
+      font-size: 0.875rem;
+      line-height: 1.25rem;
+    }
+  }
+
+  /* Weights, amounts, meter readings: monospace so digits never shift as they are typed */
+  input[type="number"],
+  input[inputmode="decimal"],
+  input[inputmode="numeric"] {
+    font-family: var(--font-mono);
+  }
+
+  ::placeholder {
+    color: #94A3B8; /* slate-400 */
+    font-weight: 400;
+    opacity: 1;
+  }
+
+  button {
+    font-family: inherit;
+    line-height: 1.25rem;
+  }
 }
 
-h1, .text-4xl, .text-5xl, .text-6xl {
-  font-weight: 200 !important;
-}
+@layer components {
+  .mill-card {
+    background-color: #FFFFFF;
+    border: 1px solid var(--color-mill-border);
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  }
 
-.mill-card {
-  background-color: #FFFFFF;
-  border: 1px solid var(--color-mill-border);
-  border-radius: 0.75rem;
-  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-}
+  /* Text style comes from the base field rule above; this only adds the box.
+     48px minimum keeps every field a comfortable touch target. */
+  .mill-input {
+    background-color: #FFFFFF;
+    border: 1px solid var(--color-mill-border);
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    min-height: 3rem;
+  }
 
-.mill-input {
-  background-color: #FFFFFF;
-  border: 1px solid var(--color-mill-border);
-  border-radius: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  color: var(--color-ink);
-  font-weight: 600;
-  min-height: 38px;
-}
+  .mill-input:focus {
+    outline: none;
+    border-color: var(--color-brand);
+    box-shadow: 0 0 0 3px rgb(30 58 138 / 0.12);
+  }
 
-.mill-input:focus {
-  outline: none;
-  border-color: var(--color-brand);
-  box-shadow: 0 0 0 3px rgb(30 58 138 / 0.12);
-}
+  .mill-btn-primary {
+    background-color: var(--color-brand);
+    color: #FFFFFF;
+    font-weight: 700;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    transition: all 0.2s;
+    min-height: 3rem;
+  }
 
-.mill-btn-primary {
-  background-color: var(--color-brand);
-  color: #FFFFFF;
-  font-weight: 700;
-  padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-  transition: all 0.2s;
-  min-height: 38px;
-}
+  .mill-btn-primary:hover {
+    background-color: var(--color-brand-hover);
+  }
 
-.mill-btn-primary:hover {
-  background-color: var(--color-brand-hover);
-}
+  .mill-btn-success {
+    background-color: #10B981;
+    color: #FFFFFF;
+    font-weight: 700;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    transition: all 0.2s;
+    min-height: 3rem;
+  }
 
-.mill-btn-success {
-  background-color: #10B981;
-  color: #FFFFFF;
-  font-weight: 700;
-  padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-  transition: all 0.2s;
-  min-height: 38px;
-}
-
-.mill-btn-success:hover {
-  background-color: #059669;
+  .mill-btn-success:hover {
+    background-color: #059669;
+  }
 }
 
 /* ─── COMPACT MODE (mobile / tablet < 768px) ─── */

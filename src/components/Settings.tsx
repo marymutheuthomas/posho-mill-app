@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Tag, Database, Shield, RefreshCcw, Save } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { btn } from '../lib/ui';
 
 interface Product {
   id: string;
@@ -97,10 +98,10 @@ export default function Settings({ role: _role }: { role?: 'ADMIN' | 'EMPLOYEE' 
                 </div>
                 <div>
                   <h2 className="text-xl font-semibold text-slate-900 uppercase tracking-tighter">Price Configuration</h2>
-                  <p className="text-[10px] font-medium text-slate-500 uppercase tracking-widest">Global Rate Management</p>
+                  <p className="text-[11px] font-medium text-slate-500 uppercase tracking-widest">Global Rate Management</p>
                 </div>
               </div>
-              <button onClick={() => refetch()} className="p-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all">
+              <button onClick={() => refetch()} className={`${btn.icon} border border-slate-200 bg-white`} aria-label="Refresh">
                 <RefreshCcw size={16} className={isLoading ? 'animate-spin' : ''} />
               </button>
             </div>
@@ -109,9 +110,9 @@ export default function Settings({ role: _role }: { role?: 'ADMIN' | 'EMPLOYEE' 
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50/50">
-                    <th className="px-8 py-4 text-[10px] font-semibold text-slate-500 uppercase tracking-widest border-b">Product Name</th>
-                    <th className="px-8 py-4 text-[10px] font-semibold text-slate-500 uppercase tracking-widest border-b">Milling Fee (KES)</th>
-                    <th className="px-8 py-4 text-[10px] font-semibold text-slate-500 uppercase tracking-widest border-b">Retail Price (KES)</th>
+                    <th className="px-8 py-4 text-[11px] font-semibold text-slate-500 uppercase tracking-widest border-b">Product Name</th>
+                    <th className="px-8 py-4 text-[11px] font-semibold text-slate-500 uppercase tracking-widest border-b">Milling Fee (KES)</th>
+                    <th className="px-8 py-4 text-[11px] font-semibold text-slate-500 uppercase tracking-widest border-b">Retail Price (KES)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -119,7 +120,7 @@ export default function Settings({ role: _role }: { role?: 'ADMIN' | 'EMPLOYEE' 
                     <tr key={p.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-8 py-4 font-semibold text-slate-900 uppercase text-xs">
                         {p.name}
-                        <p className="text-[9px] text-slate-400 font-medium tracking-widest">{p.product_code}</p>
+                        <p className="text-[11px] text-slate-400 font-medium tracking-widest">{p.product_code}</p>
                       </td>
                       <td className="px-8 py-4">
                         <div className="relative max-w-[120px]">
@@ -127,7 +128,7 @@ export default function Settings({ role: _role }: { role?: 'ADMIN' | 'EMPLOYEE' 
                             type="number" 
                             value={p.milling_fee} 
                             onChange={(e) => handleInputChange(p.id, 'milling_fee', e.target.value)}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-semibold focus:ring-2 focus:ring-slate-900 focus:border-slate-900 outline-none transition-all max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
+                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-slate-900 focus:border-slate-900 outline-none transition-all"
                           />
                         </div>
                       </td>
@@ -137,7 +138,7 @@ export default function Settings({ role: _role }: { role?: 'ADMIN' | 'EMPLOYEE' 
                             type="number" 
                             value={p.selling_price} 
                             onChange={(e) => handleInputChange(p.id, 'selling_price', e.target.value)}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-semibold focus:ring-2 focus:ring-slate-900 focus:border-slate-900 outline-none transition-all max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
+                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-slate-900 focus:border-slate-900 outline-none transition-all"
                           />
                         </div>
                       </td>
@@ -152,11 +153,7 @@ export default function Settings({ role: _role }: { role?: 'ADMIN' | 'EMPLOYEE' 
                <button 
                 onClick={() => saveMutation.mutate(editedProducts)}
                 disabled={!hasChanges || saveMutation.isPending}
-                className={`flex items-center gap-2 px-8 py-3 rounded-2xl font-black uppercase tracking-widest text-[11px] transition-all ${
-                  hasChanges 
-                  ? 'bg-slate-900 text-white shadow-xl hover:scale-105 active:scale-95' 
-                  : 'bg-slate-100 text-slate-300 cursor-not-allowed'
-                }`}
+                className={`${btn.primary} shadow-xl`}
                >
                  <Save size={16} />
                  {saveMutation.isPending ? 'Syncing...' : 'Save Price Changes'}
@@ -174,7 +171,7 @@ export default function Settings({ role: _role }: { role?: 'ADMIN' | 'EMPLOYEE' 
               </div>
               <div>
                 <h3 className="text-lg font-semibold uppercase tracking-tighter">System Info</h3>
-                <p className="text-[10px] font-medium text-slate-500 uppercase tracking-widest">Master Terminal Sync</p>
+                <p className="text-[11px] font-medium text-slate-500 uppercase tracking-widest">Master Terminal Sync</p>
               </div>
             </div>
             
@@ -201,7 +198,7 @@ export default function Settings({ role: _role }: { role?: 'ADMIN' | 'EMPLOYEE' 
               </div>
               <div>
                 <h3 className="text-lg font-semibold uppercase tracking-tighter text-slate-900">Security</h3>
-                <p className="text-[10px] font-medium text-slate-500 uppercase tracking-widest">Access & Policies</p>
+                <p className="text-[11px] font-medium text-slate-500 uppercase tracking-widest">Access & Policies</p>
               </div>
             </div>
             
@@ -222,7 +219,7 @@ export default function Settings({ role: _role }: { role?: 'ADMIN' | 'EMPLOYEE' 
             
             <button 
               onClick={() => queryClient.invalidateQueries()}
-              className="w-full mt-6 py-4 bg-slate-100 text-slate-500 text-[10px] font-semibold uppercase rounded-xl hover:bg-slate-200 transition-all"
+              className={`${btn.secondary} w-full mt-6`}
             >
               Force Cache Refresh
             </button>

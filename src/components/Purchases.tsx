@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { withRetry } from '../lib/network';
 import { Package, User as UserIcon, RotateCcw, History, CheckCircle, AlertCircle, Pencil, Trash2, X, DollarSign } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { btn, chip } from '../lib/ui';
 
 type SyncStatus = 'pending' | 'synced' | 'failed';
 type PurchaseMode = 'restock' | 'expense';
@@ -215,7 +216,7 @@ export default function Purchases() {
     <div className="max-w-6xl mx-auto space-y-8 pb-20">
       <div className="flex items-center justify-end">
         <div className="bg-white border border-slate-200 px-4 py-2 rounded-xl shadow-sm">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Est. Cost</p>
+          <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Est. Cost</p>
           <p className="text-lg font-black text-slate-900">KES {totalPreview}</p>
         </div>
       </div>
@@ -226,13 +227,9 @@ export default function Purchases() {
       {/* MODE TOGGLE */}
       <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-2xl p-1.5 w-fit shadow-sm">
         <button type="button" onClick={() => handleModeChange('restock')}
-          className={`px-5 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${
-            mode === 'restock' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-400 hover:text-slate-700'
-          }`}>📦 Inventory Restock</button>
+          className={chip(mode === 'restock')}>📦 Inventory Restock</button>
         <button type="button" onClick={() => handleModeChange('expense')}
-          className={`px-5 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${
-            mode === 'expense' ? 'bg-amber-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-700'
-          }`}>💸 General Expense</button>
+          className={chip(mode === 'expense')}>💸 General Expense</button>
       </div>
 
       <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -241,9 +238,9 @@ export default function Purchases() {
             <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Package size={16}/> {mode === 'restock' ? 'Product' : 'Expense Details'}</h3>
             {mode === 'restock' ? (
               <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Product</label>
+                <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Product</label>
                 <select required value={formData.product_id} onChange={e => setFormData({...formData, product_id: e.target.value})}
-                  className="mill-input w-full font-bold bg-white max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900">
+                  className="mill-input w-full bg-white">
                   <option value="">Select product...</option>
                   {allProducts.map(p => <option key={p.id} value={p.id}>{p.name} ({p.product_code})</option>)}
                 </select>
@@ -251,13 +248,13 @@ export default function Purchases() {
             ) : (
               <>
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Expense Description</label>
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Expense Description</label>
                   <input type="text" required placeholder="e.g. Monthly salary for staff" value={formData.expenseDesc}
-                    onChange={e => setFormData({...formData, expenseDesc: e.target.value})} className="mill-input w-full max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
+                    onChange={e => setFormData({...formData, expenseDesc: e.target.value})} className="mill-input w-full" />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Category</label>
-                  <select value={formData.expenseCategory} onChange={e => setFormData({...formData, expenseCategory: e.target.value})} className="mill-input w-full font-bold bg-white max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900">
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Category</label>
+                  <select value={formData.expenseCategory} onChange={e => setFormData({...formData, expenseCategory: e.target.value})} className="mill-input w-full bg-white">
                     <option value="">Select category...</option>
                     {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
@@ -272,22 +269,22 @@ export default function Purchases() {
             <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><DollarSign size={16}/> Financials</h3>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Quantity (KG/Units)</label>
+                <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Quantity (KG/Units)</label>
                 <input type="number" step="0.01" placeholder="1" value={formData.qtyReceived} onChange={e => setFormData({...formData, qtyReceived: e.target.value})}
-                  className="mill-input w-full max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
+                  className="mill-input w-full" />
               </div>
               <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Unit Price</label>
+                <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Unit Price</label>
                 <input type="number" step="0.01" required placeholder="0.00" value={formData.unitPrice} onChange={e => setFormData({...formData, unitPrice: e.target.value})}
-                  className="mill-input w-full max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
+                  className="mill-input w-full" />
               </div>
             </div>
             <div>
-              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Supplier Name</label>
+              <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Supplier Name</label>
               <div className="relative">
                 <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
                 <input type="text" placeholder="Vendor details" value={formData.supplierName} onChange={e => setFormData({...formData, supplierName: e.target.value})}
-                  className="mill-input w-full pl-10 max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
+                  className="mill-input w-full pl-10" />
               </div>
             </div>
           </div>
@@ -295,9 +292,7 @@ export default function Purchases() {
 
         <div className="md:col-span-2">
           <button type="submit" disabled={loadingState === 'saving'}
-            className={`mill-btn-primary w-full py-5 text-lg shadow-lg flex items-center justify-center gap-3 uppercase tracking-widest ${
-              mode === 'expense' ? 'bg-amber-500 hover:bg-amber-600' : ''
-            }`}>
+            className={`${btn.confirm} w-full shadow-lg`}>
             {loadingState === 'saving' ? 'PROCESSING...' : mode === 'restock' ? '📦 RECORD RESTOCK' : '💸 RECORD EXPENSE'}
           </button>
         </div>
@@ -312,7 +307,7 @@ export default function Purchases() {
             </div>
             <div>
               <h3 className="text-sm md:text-lg font-semibold text-slate-900 uppercase tracking-tight">Purchase History</h3>
-              <p className="hidden md:block text-[9px] font-medium text-slate-400 uppercase tracking-widest">Audit · Last 50 Records</p>
+              <p className="hidden md:block text-[11px] font-medium text-slate-400 uppercase tracking-widest">Audit · Last 50 Records</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -321,17 +316,17 @@ export default function Purchases() {
                   type="date" 
                   value={dateRange.start} 
                   onChange={e => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                  className="text-[8px] max-md:text-[10px] font-semibold uppercase text-slate-500 outline-none bg-transparent w-[85px]"
+                  className="uppercase text-slate-500 outline-none bg-transparent w-[85px]"
                 />
-                <span className="text-slate-300 text-[8px]">/</span>
+                <span className="text-slate-300 text-[11px]">/</span>
                 <input 
                   type="date" 
                   value={dateRange.end} 
                   onChange={e => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                  className="text-[8px] max-md:text-[10px] font-semibold uppercase text-slate-500 outline-none bg-transparent w-[85px]"
+                  className="uppercase text-slate-500 outline-none bg-transparent w-[85px]"
                 />
-                <button onClick={fetchHistory} className="p-1 hover:bg-slate-50 rounded text-slate-400 hover:text-slate-900 transition-all">
-                  <RotateCcw size={11} className={loadingState === 'fetching' ? 'animate-spin' : ''} />
+                <button onClick={fetchHistory} className={btn.icon} aria-label="Refresh">
+                  <RotateCcw size={16} className={loadingState === 'fetching' ? 'animate-spin' : ''} />
                 </button>
              </div>
           </div>
@@ -360,14 +355,14 @@ export default function Purchases() {
                 <tr key={p.id} className="hover:bg-slate-50/50 transition-colors group text-xs text-slate-650 max-md:text-[11px]">
                   <td className="px-2 py-1.5 md:px-3 md:py-1.5 max-md:text-[11px] whitespace-nowrap">
                     <p className="font-medium max-md:font-normal text-slate-800 max-md:text-[11px]">{new Date(p.created_at).toLocaleDateString()}</p>
-                    <p className="text-[9px] max-md:text-[9px] text-slate-400 uppercase flex items-center gap-1 mt-0.5"><History size={10} className="opacity-40" /> {new Date(p.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                    <p className="text-[11px] text-slate-400 uppercase flex items-center gap-1 mt-0.5"><History size={10} className="opacity-40" /> {new Date(p.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
                     {p.purchase_code && <p className="text-[11px] font-normal text-slate-400 uppercase tracking-widest mt-0.5">{p.purchase_code}</p>}
                   </td>
                   <td className="px-2 py-1.5 md:px-3 md:py-1.5 max-md:text-[11px] whitespace-nowrap">
                     <div className="flex items-center gap-1.5">
                       {p.product_id 
-                        ? <span className="px-1.5 py-0.5 rounded bg-blue-50 text-brand border border-blue-100 text-[8px] font-semibold max-md:font-normal uppercase">Stock</span>
-                        : <span className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 border border-amber-100 text-[8px] font-semibold max-md:font-normal uppercase">Expense</span>
+                        ? <span className="px-1.5 py-0.5 rounded bg-blue-50 text-brand border border-blue-100 text-[11px] font-semibold max-md:font-normal uppercase">Stock</span>
+                        : <span className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 border border-amber-100 text-[11px] font-semibold max-md:font-normal uppercase">Expense</span>
                       }
                       <span className="font-semibold max-md:font-normal text-slate-700 uppercase max-md:text-[11px]">
                         {p.product_id ? getProductName(p.product_id) : (p.old_item_name || p.category || '-')}
@@ -379,9 +374,9 @@ export default function Purchases() {
                   <td className="px-2 py-1.5 md:px-3 md:py-1.5 font-mono text-slate-650 max-md:text-[11px] whitespace-nowrap">{p.unit_price?.toLocaleString()}</td>
                   <td className="px-2 py-1.5 md:px-3 md:py-1.5 font-mono font-medium max-md:font-normal text-slate-900 max-md:text-[11px] whitespace-nowrap">KES {p.total_amount?.toLocaleString()}</td>
                   <td className="px-2 py-1.5 md:px-3 md:py-1.5 text-right whitespace-nowrap">
-                    <div className="flex justify-end gap-1">
-                      <button onClick={() => openEditModal(p)} className="p-1 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 border border-slate-100 rounded-md transition-all"><Pencil size={10}/></button>
-                      <button onClick={() => setDeleteModal({ open: true, record: p })} className="p-1 bg-red-50 hover:bg-red-100 text-red-655 border border-red-100/50 rounded-md transition-all"><Trash2 size={10}/></button>
+                    <div className="flex justify-end gap-2">
+                      <button onClick={() => openEditModal(p)} className={btn.icon} aria-label="Edit purchase"><Pencil size={16}/></button>
+                      <button onClick={() => setDeleteModal({ open: true, record: p })} className={btn.iconDanger} aria-label="Delete purchase"><Trash2 size={16}/></button>
                     </div>
                   </td>
                 </tr>
@@ -397,9 +392,9 @@ export default function Purchases() {
             <div className="p-8 bg-slate-900 text-white flex justify-between items-center">
               <div>
                 <h3 className="text-xl font-black uppercase tracking-tighter">Edit Purchase</h3>
-                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">Correct Typo or Amount</p>
+                <p className="text-[11px] text-slate-400 font-black uppercase tracking-widest mt-1">Correct Typo or Amount</p>
               </div>
-              <button onClick={() => setEditModal({ open: false, record: null, mode: 'restock' })} className="p-2 hover:bg-white/10 rounded-full transition-all"><X size={20}/></button>
+              <button onClick={() => setEditModal({ open: false, record: null, mode: 'restock' })} className={btn.iconOnDark} aria-label="Close"><X size={20}/></button>
             </div>
             <form onSubmit={handleEditPurchase} className="p-8 space-y-6">
               {/* Mode toggle inside edit modal */}
@@ -410,7 +405,7 @@ export default function Purchases() {
                     // Clear expense fields; keep product_id as-is
                     setEditForm(prev => ({...prev, expenseDesc: '', expenseCategory: ''}));
                   }}
-                  className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${editModal.mode === 'restock' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-400 border-slate-200'}`}
+                  className={`${chip(editModal.mode === 'restock')} flex-1`}
                 >📦 Restock</button>
                 <button type="button"
                   onClick={() => {
@@ -418,13 +413,13 @@ export default function Purchases() {
                     // *** CRITICAL: null out product_id to prevent FK constraint violations ***
                     setEditForm(prev => ({...prev, product_id: ''}));
                   }}
-                  className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${editModal.mode === 'expense' ? 'bg-amber-500 text-white border-amber-500' : 'bg-white text-slate-400 border-slate-200'}`}
+                  className={`${chip(editModal.mode === 'expense')} flex-1`}
                 >💸 Expense</button>
               </div>
               {editModal.mode === 'restock' ? (
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Product</label>
-                  <select value={editForm.product_id} onChange={e => setEditForm({...editForm, product_id: e.target.value})} className="mill-input w-full font-bold bg-white text-slate-900 max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900">
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Product</label>
+                  <select value={editForm.product_id} onChange={e => setEditForm({...editForm, product_id: e.target.value})} className="mill-input w-full bg-white text-slate-900">
                     <option value="">Select product...</option>
                     {allProducts.map(p => <option key={p.id} value={p.id}>{p.name} ({p.product_code})</option>)}
                   </select>
@@ -432,12 +427,12 @@ export default function Purchases() {
               ) : (
                 <>
                   <div>
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Expense Description</label>
-                    <input type="text" value={editForm.expenseDesc} onChange={e => setEditForm({...editForm, expenseDesc: e.target.value})} className="mill-input w-full font-bold max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
+                    <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Expense Description</label>
+                    <input type="text" value={editForm.expenseDesc} onChange={e => setEditForm({...editForm, expenseDesc: e.target.value})} className="mill-input w-full" />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Category</label>
-                    <select value={editForm.expenseCategory} onChange={e => setEditForm({...editForm, expenseCategory: e.target.value})} className="mill-input w-full font-bold bg-white max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900">
+                    <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Category</label>
+                    <select value={editForm.expenseCategory} onChange={e => setEditForm({...editForm, expenseCategory: e.target.value})} className="mill-input w-full bg-white">
                       {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
@@ -445,23 +440,23 @@ export default function Purchases() {
               )}
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Quantity (KG/Units)</label>
-                  <input type="number" step="0.01" value={editForm.qty || ''} onChange={e => setEditForm({...editForm, qty: parseFloat(e.target.value) || 0})} className="mill-input w-full font-bold max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Quantity (KG/Units)</label>
+                  <input type="number" step="0.01" value={editForm.qty || ''} onChange={e => setEditForm({...editForm, qty: parseFloat(e.target.value) || 0})} className="mill-input w-full" />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Unit Price</label>
-                  <input type="number" step="0.01" value={editForm.price || ''} onChange={e => setEditForm({...editForm, price: parseFloat(e.target.value) || 0})} className="mill-input w-full font-bold max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Unit Price</label>
+                  <input type="number" step="0.01" value={editForm.price || ''} onChange={e => setEditForm({...editForm, price: parseFloat(e.target.value) || 0})} className="mill-input w-full" />
                 </div>
               </div>
               <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Supplier Name</label>
-                <input type="text" value={editForm.supplier} onChange={e => setEditForm({...editForm, supplier: e.target.value})} className="mill-input w-full font-bold uppercase max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
+                <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Supplier Name</label>
+                <input type="text" value={editForm.supplier} onChange={e => setEditForm({...editForm, supplier: e.target.value})} className="mill-input w-full uppercase" />
               </div>
               <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Transaction Date & Time</label>
-                <input type="datetime-local" value={toDateTimeLocal(editForm.created_at)} onChange={e => setEditForm({...editForm, created_at: new Date(e.target.value).toISOString()})} className="mill-input w-full font-bold uppercase max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
+                <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Transaction Date & Time</label>
+                <input type="datetime-local" value={toDateTimeLocal(editForm.created_at)} onChange={e => setEditForm({...editForm, created_at: new Date(e.target.value).toISOString()})} className="mill-input w-full uppercase" />
               </div>
-              <button type="submit" disabled={loadingState === 'saving'} className="mill-btn-primary w-full py-4 shadow-xl">
+              <button type="submit" disabled={loadingState === 'saving'} className={`${btn.primary} w-full shadow-xl`}>
                 {loadingState === 'saving' ? 'UPDATING...' : '✓ SAVE CHANGES'}
               </button>
             </form>
@@ -486,8 +481,8 @@ export default function Purchases() {
               </p>
             </div>
             <div className="p-6 grid grid-cols-1 gap-3 md:grid-cols-2">
-              <button onClick={() => setDeleteModal({ open: false, record: null })} className="py-4 rounded-xl bg-slate-100 text-slate-600 font-black text-xs uppercase hover:bg-slate-200 transition-all">Cancel</button>
-              <button onClick={handleDeletePurchase} disabled={loadingState === 'saving'} className="py-4 rounded-xl bg-red-600 text-white font-black text-xs uppercase hover:bg-red-700 transition-all shadow-lg shadow-red-200">
+              <button onClick={() => setDeleteModal({ open: false, record: null })} className={btn.secondary}>Cancel</button>
+              <button onClick={handleDeletePurchase} disabled={loadingState === 'saving'} className={`${btn.danger} shadow-lg shadow-red-200`}>
                 {loadingState === 'saving' ? 'DELETING...' : 'YES, DELETE'}
               </button>
             </div>

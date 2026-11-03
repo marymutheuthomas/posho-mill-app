@@ -62,16 +62,16 @@ export default function StockReconciliation({ start, end }: { start: Date; end: 
           <Scale className="text-brand shrink-0" size={18} />
           <div>
             <h3 className="text-sm font-black text-brand uppercase tracking-tight">Stock Reconciliation</h3>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Inventory ledger vs product stock vs physical counts</p>
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Inventory ledger vs product stock vs physical counts</p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {SEVERITY.filter(s => tally[s]).map(s => (
-            <span key={s} className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${STATUS[s].badge}`}>
+            <span key={s} className={`px-2 py-0.5 rounded text-[11px] font-black uppercase tracking-widest border ${STATUS[s].badge}`}>
               {tally[s]} {STATUS[s].label}
             </span>
           ))}
-          <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest cursor-pointer ml-1">
+          <label className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 uppercase tracking-widest cursor-pointer ml-1">
             <input type="checkbox" checked={issuesOnly} onChange={e => setIssuesOnly(e.target.checked)} className="accent-brand" />
             Issues only
           </label>
@@ -88,7 +88,7 @@ export default function StockReconciliation({ start, end }: { start: Date; end: 
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead className="bg-slate-50">
-              <tr className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+              <tr className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
                 <th className="px-3 py-3 border-b border-slate-100">Product</th>
                 <th className="px-3 py-3 border-b border-slate-100 text-right">Opening</th>
                 <th className="px-3 py-3 border-b border-slate-100 text-right">Purchases</th>
@@ -110,7 +110,7 @@ export default function StockReconciliation({ start, end }: { start: Date; end: 
                 <tr key={r.productId} className={`${STATUS[r.status].row} hover:bg-slate-50 transition-colors`}>
                   <td className="px-3 py-2.5">
                     <p className="text-[11px] font-bold text-slate-800 uppercase whitespace-nowrap">{r.name}</p>
-                    <p className="text-[9px] text-slate-400 font-mono">{r.code}</p>
+                    <p className="text-[11px] text-slate-400 font-mono">{r.code}</p>
                   </td>
                   {num(r.opening)}
                   {num(r.purchases, 'text-emerald-600')}
@@ -126,7 +126,7 @@ export default function StockReconciliation({ start, end }: { start: Date; end: 
                     {r.count ? (
                       <>
                         <p className="text-[11px] font-mono text-slate-700">{kg(r.count.physical)}</p>
-                        <p className="text-[9px] text-slate-400">{new Date(r.count.at).toLocaleDateString()} · exp. {kg(r.count.expectedAtCount)}</p>
+                        <p className="text-[11px] text-slate-400">{new Date(r.count.at).toLocaleDateString()} · exp. {kg(r.count.expectedAtCount)}</p>
                       </>
                     ) : <span className="text-[11px] text-slate-300">—</span>}
                   </td>
@@ -134,7 +134,7 @@ export default function StockReconciliation({ start, end }: { start: Date; end: 
                     {r.count ? signed(r.count.variance) : '—'}
                   </td>
                   <td className="px-3 py-2.5 text-right">
-                    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border whitespace-nowrap ${STATUS[r.status].badge}`}>{STATUS[r.status].label}</span>
+                    <span className={`px-2 py-0.5 rounded text-[11px] font-black uppercase tracking-widest border whitespace-nowrap ${STATUS[r.status].badge}`}>{STATUS[r.status].label}</span>
                   </td>
                 </tr>
               ))}
@@ -148,7 +148,7 @@ export default function StockReconciliation({ start, end }: { start: Date; end: 
         </div>
       )}
 
-      <p className="px-5 py-3 border-t border-slate-100 text-[9px] font-semibold text-slate-400 leading-relaxed">
+      <p className="px-5 py-3 border-t border-slate-100 text-[11px] font-semibold text-slate-400 leading-relaxed">
         Expected = opening + purchases + production out − production in − sales ± adjustments (kg, by ledger effective time).
         Drift = on-system stock − all-time ledger total; anything beyond {DRIFT_TOLERANCE_KG} kg means stock changed without a ledger entry.
         Variance = latest count in the period − stock the ledger expected just before that count; amber beyond {VARIANCE_MINOR.kg} kg / {VARIANCE_MINOR.pct * 100}%, red beyond {VARIANCE_MAJOR.kg} kg / {VARIANCE_MAJOR.pct * 100}%.

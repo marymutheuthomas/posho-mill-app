@@ -24,7 +24,7 @@ export default function DebtAging({ customers }: { customers: CustomerWithLedger
         <div className="flex items-center justify-between mb-3">
           <div>
             <h3 className="text-sm font-black text-brand uppercase tracking-tight">Debt Aging</h3>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Lifetime · {owing.length} owing · {ksh(total)}</p>
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Lifetime · {owing.length} owing · {ksh(total)}</p>
           </div>
           <ShieldAlert className="text-accent" size={18} />
         </div>
@@ -36,16 +36,16 @@ export default function DebtAging({ customers }: { customers: CustomerWithLedger
         <div className="grid grid-cols-3 gap-2">
           {buckets.map(b => (
             <div key={b.label}>
-              <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{b.label}</p>
+              <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">{b.label}</p>
               <p className={`text-xs font-mono font-bold ${b.value ? b.tone : 'text-slate-300'}`}>{ksh(b.value)}</p>
-              <p className="text-[9px] text-slate-400">{b.count} customer{b.count === 1 ? '' : 's'}</p>
+              <p className="text-[11px] text-slate-400">{b.count} customer{b.count === 1 ? '' : 's'}</p>
             </div>
           ))}
         </div>
       </div>
       <div className="flex-1 overflow-y-auto">
         <table className="w-full text-left border-collapse">
-          <thead className="bg-slate-50 sticky top-0 z-10 text-[9px] font-black text-slate-400 uppercase tracking-widest">
+          <thead className="bg-slate-50 sticky top-0 z-10 text-[11px] font-black text-slate-400 uppercase tracking-widest">
             <tr><th className="px-4 py-2">Customer</th><th className="px-4 py-2 text-right">Balance</th><th className="px-4 py-2 text-right">Overdue</th></tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
@@ -53,7 +53,7 @@ export default function DebtAging({ customers }: { customers: CustomerWithLedger
               <tr key={c.id} className={c.risk === 'overdue' ? 'bg-red-50/50' : c.risk === 'due' ? 'bg-amber-50/40' : ''}>
                 <td className="px-4 py-2">
                   <p className={`text-[11px] font-medium uppercase truncate ${c.risk === 'overdue' ? 'text-red-800' : 'text-slate-700'}`}>{c.name}</p>
-                  <p className="text-[9px] text-slate-400 font-mono">{c.aging.oldestOpenDays ?? 0}d oldest{c.phone ? ` · ${c.phone}` : ''}</p>
+                  <p className="text-[11px] text-slate-400 font-mono">{c.aging.oldestOpenDays ?? 0}d oldest{c.phone ? ` · ${c.phone}` : ''}</p>
                 </td>
                 <td className="px-4 py-2 text-right text-[11px] font-mono text-slate-700">{ksh(c.balance)}</td>
                 <td className={`px-4 py-2 text-right text-[11px] font-mono ${c.aging.overdue ? 'font-bold text-red-600' : c.aging.due ? 'text-amber-600' : 'text-slate-300'}`}>

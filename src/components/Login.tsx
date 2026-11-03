@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { Lock, Mail, Shield, User, ChevronRight, AlertCircle, Factory } from 'lucide-react';
 import { rememberOfflineCredential, verifyOfflineCredential } from '../lib/offlineAuth';
 import { isNetworkError } from '../lib/network';
+import { btn } from '../lib/ui';
 
 interface LoginProps {
   onLogin: (role: 'ADMIN' | 'EMPLOYEE', id: string, offline: boolean) => void;
@@ -89,8 +90,8 @@ export default function Login({ onLogin }: LoginProps) {
           <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl rotate-3 hover:rotate-0 transition-transform duration-500 border border-slate-800">
             <Factory className="text-slate-900" size={40} />
           </div>
-          <h1 className="text-4xl text-white font-light tracking-tighter uppercase mb-2">Sakhai Posho Mill ERP</h1>
-          <p className="text-accent font-black uppercase tracking-[0.2em] text-[10px]">Secure Enterprise Access Hub</p>
+          <h1 className="text-4xl text-white tracking-tighter uppercase mb-2 font-extralight">Sakhai Posho Mill ERP</h1>
+          <p className="text-accent font-black uppercase tracking-[0.2em] text-[11px]">Secure Enterprise Access Hub</p>
         </div>
 
         <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-8 md:p-10 rounded-[2.5rem] shadow-2xl relative overflow-hidden group">
@@ -112,7 +113,7 @@ export default function Login({ onLogin }: LoginProps) {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white font-bold placeholder:text-slate-600 focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/10 transition-all text-base max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-slate-600 focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/10 transition-all"
                   placeholder="admin@mill.com"
                   required
                 />
@@ -129,7 +130,7 @@ export default function Login({ onLogin }: LoginProps) {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white font-bold placeholder:text-slate-600 focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/10 transition-all text-base max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-slate-600 focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/10 transition-all"
                   placeholder="••••••••"
                   required
                 />
@@ -146,10 +147,7 @@ export default function Login({ onLogin }: LoginProps) {
             <button
               type="submit"
               disabled={loading}
-              className={`w-full py-5 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all duration-300 ${loading
-                  ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                  : 'bg-brand hover:bg-blue-900 text-white shadow-xl hover:shadow-brand/20'
-                }`}
+              className={`${btn.primary} w-full shadow-xl`}
             >
               {loading ? (
                 'Syncing Terminal...'
@@ -165,21 +163,21 @@ export default function Login({ onLogin }: LoginProps) {
             <div className="text-center">
               <div className="flex items-center justify-center gap-2 mb-1 text-accent">
                 <Shield size={12} />
-                <span className="text-[10px] font-black uppercase tracking-widest">Master Admin</span>
+                <span className="text-[11px] font-black uppercase tracking-widest">Master Admin</span>
               </div>
-              <p className="text-[9px] font-bold text-slate-600 uppercase">Registry Control</p>
+              <p className="text-[11px] font-bold text-slate-600 uppercase">Registry Control</p>
             </div>
             <div className="text-center">
               <div className="flex items-center justify-center gap-2 mb-1 text-slate-400">
                 <User size={12} className="lucide lucide-user" />
-                <span className="text-[10px] font-black uppercase tracking-widest">Employee</span>
+                <span className="text-[11px] font-black uppercase tracking-widest">Employee</span>
               </div>
-              <p className="text-[9px] font-bold text-slate-600 uppercase">Standard Ops</p>
+              <p className="text-[11px] font-bold text-slate-600 uppercase">Standard Ops</p>
             </div>
           </div>
         </div>
 
-        <p className="text-center mt-8 text-slate-600 font-bold text-[10px] uppercase tracking-widest">
+        <p className="text-center mt-8 text-slate-600 font-bold text-[11px] uppercase tracking-widest">
            v4.3 Industrial ERP · Nairobi Node
         </p>
       </div>

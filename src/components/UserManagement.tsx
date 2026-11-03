@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useDataMutation } from '../hooks/useDataMutation';
+import { btn } from '../lib/ui';
 
 
 
@@ -179,15 +180,15 @@ export default function UserManagement() {
             </h2>
             <form onSubmit={handleCreateUser} className="space-y-6">
               <div className="space-y-4">
-                <input type="text" required placeholder="Full Name / Username" className="mill-input w-full font-black text-sm max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" value={username} onChange={e => setUsername(e.target.value)} />
-                <input type="email" required placeholder="Corporate Email" className="mill-input w-full font-black text-sm max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" value={email} onChange={e => setEmail(e.target.value)} />
-                <input type="password" required placeholder="Temporary Password" className="mill-input w-full font-black text-sm max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" value={password} onChange={e => setPassword(e.target.value)} />
-                <select className="mill-input w-full font-black text-sm max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" value={role} onChange={e => setRole(e.target.value as any)}>
+                <input type="text" required placeholder="Full Name / Username" className="mill-input w-full" value={username} onChange={e => setUsername(e.target.value)} />
+                <input type="email" required placeholder="Corporate Email" className="mill-input w-full" value={email} onChange={e => setEmail(e.target.value)} />
+                <input type="password" required placeholder="Temporary Password" className="mill-input w-full" value={password} onChange={e => setPassword(e.target.value)} />
+                <select className="mill-input w-full" value={role} onChange={e => setRole(e.target.value as any)}>
                   <option value="EMPLOYEE">Mill Employee</option>
                   <option value="ADMIN">System Administrator</option>
                 </select>
               </div>
-              <button disabled={createUserMutation.isPending} className="mill-btn-primary w-full py-4 text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2">
+              <button disabled={createUserMutation.isPending} className={`${btn.primary} w-full`}>
                 {createUserMutation.isPending ? <RotateCcw className="animate-spin" size={16} /> : <UserPlus size={16} />}
                 {createUserMutation.isPending ? 'PROVISIONING...' : 'Create Account'}
               </button>
@@ -199,16 +200,16 @@ export default function UserManagement() {
           <div className="mill-card bg-white border-slate-100 shadow-xl overflow-hidden">
             <div className="p-8 border-b border-slate-50 flex justify-between items-center">
               <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest">Active Staff Registry</h2>
-              <span className="bg-slate-100 px-3 py-1 rounded-full text-[10px] font-black text-slate-500 uppercase">{profiles.length} Accounts</span>
+              <span className="bg-slate-100 px-3 py-1 rounded-full text-[11px] font-black text-slate-500 uppercase">{profiles.length} Accounts</span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead className="bg-slate-50 border-b border-slate-100">
                   <tr>
-                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Staff Identity</th>
-                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Access Role</th>
-                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Created</th>
-                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                    <th className="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">Staff Identity</th>
+                    <th className="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">Access Role</th>
+                    <th className="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">Created</th>
+                    <th className="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -216,22 +217,22 @@ export default function UserManagement() {
                     <tr key={p.id} className="group hover:bg-slate-50/50 transition-colors">
                       <td className="px-8 py-6">
                         {editingId === p.id ? (
-                          <input type="text" className="mill-input py-2 text-xs font-black max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" value={editForm.username} onChange={e => setEditForm({ ...editForm, username: e.target.value })} />
+                          <input type="text" className="mill-input py-2" value={editForm.username} onChange={e => setEditForm({ ...editForm, username: e.target.value })} />
                         ) : (
                           <div>
                             <p className="text-sm font-black text-slate-900">{p.username}</p>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase">{p.email || 'No email set'}</p>
+                            <p className="text-[11px] font-bold text-slate-400 uppercase">{p.email || 'No email set'}</p>
                           </div>
                         )}
                       </td>
                       <td className="px-8 py-6">
                         {editingId === p.id ? (
-                          <select className="mill-input py-2 text-xs font-black max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" value={editForm.role} onChange={e => setEditForm({ ...editForm, role: e.target.value as any })}>
+                          <select className="mill-input py-2" value={editForm.role} onChange={e => setEditForm({ ...editForm, role: e.target.value as any })}>
                             <option value="EMPLOYEE">EMPLOYEE</option>
                             <option value="ADMIN">ADMIN</option>
                           </select>
                         ) : (
-                          <span className={`inline-block px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${p.role === 'ADMIN' ? 'bg-brand-soft text-brand' : 'bg-slate-100 text-slate-600'}`}>
+                          <span className={`inline-block px-3 py-1 rounded-lg text-[11px] font-black uppercase tracking-widest ${p.role === 'ADMIN' ? 'bg-brand-soft text-brand' : 'bg-slate-100 text-slate-600'}`}>
                             {p.role}
                           </span>
                         )}
@@ -242,16 +243,16 @@ export default function UserManagement() {
                         </span>
                       </td>
                       <td className="px-8 py-6 text-right">
-                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center justify-end gap-2">
                           {editingId === p.id ? (
                             <>
-                              <button onClick={handleUpdate} className="p-2 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-colors"><Save size={16} /></button>
-                              <button onClick={() => setEditingId(null)} className="p-2 text-slate-400 hover:bg-slate-50 rounded-lg transition-colors"><X size={16} /></button>
+                              <button onClick={handleUpdate} className={btn.icon} aria-label="Save user"><Save size={16} /></button>
+                              <button onClick={() => setEditingId(null)} className={btn.icon} aria-label="Cancel edit"><X size={16} /></button>
                             </>
                           ) : (
                             <>
-                              <button onClick={() => startEdit(p)} className="p-2 text-slate-400 hover:bg-slate-50 rounded-lg transition-colors"><Pencil size={16} /></button>
-                              <button onClick={() => deleteProfileMutation.mutate({ id: p.id })} className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                              <button onClick={() => startEdit(p)} className={btn.icon} aria-label="Edit user"><Pencil size={16} /></button>
+                              <button onClick={() => deleteProfileMutation.mutate({ id: p.id })} className={btn.iconDanger} aria-label="Delete user"><Trash2 size={16} /></button>
                             </>
                           )}
                         </div>

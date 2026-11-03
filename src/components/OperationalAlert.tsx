@@ -1,4 +1,5 @@
 import { AlertTriangle, Info, X } from 'lucide-react';
+import { btn } from '../lib/ui';
 
 interface OperationalAlertProps {
   message: string;
@@ -20,8 +21,8 @@ export default function OperationalAlert({ message, type = 'warning', onClose, p
       {isInfo ? <Info size={14} className="shrink-0" /> : <AlertTriangle size={14} className="shrink-0" />}
       <p className="text-[11px] font-semibold flex-1 min-w-0">{message}</p>
       {!persistent && onClose && (
-        <button onClick={onClose} aria-label="Dismiss" className="shrink-0 p-1 rounded-md opacity-70 hover:opacity-100">
-          <X size={14} />
+        <button onClick={onClose} aria-label="Dismiss" className={`${btn.icon} shrink-0`}>
+          <X size={16} />
         </button>
       )}
     </div>

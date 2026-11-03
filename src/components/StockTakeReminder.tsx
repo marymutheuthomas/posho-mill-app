@@ -1,4 +1,5 @@
 import { ClipboardCheck, X } from 'lucide-react';
+import { btn } from '../lib/ui';
 
 interface StockTakeReminderProps {
   closedAt: string;
@@ -18,11 +19,11 @@ export default function StockTakeReminder({ closedAt, onStockTake, onDismiss }: 
       <p className="text-[11px] font-semibold flex-1 min-w-0 truncate" title="Operations are not affected.">
         Stock take recommended <span className="font-normal text-amber-700">· late close {closed}</span>
       </p>
-      <button onClick={onStockTake} className="shrink-0 px-3 py-1 rounded-lg bg-amber-600 text-white text-[9px] font-black uppercase tracking-widest hover:bg-amber-700">
+      <button onClick={onStockTake} className={`${btn.primary} shrink-0`}>
         Count now
       </button>
-      <button onClick={onDismiss} aria-label="Dismiss reminder" className="shrink-0 p-1 rounded-md text-amber-700 hover:bg-amber-100">
-        <X size={14} />
+      <button onClick={onDismiss} aria-label="Dismiss reminder" className={`${btn.icon} shrink-0`}>
+        <X size={16} />
       </button>
     </div>
   );
