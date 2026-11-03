@@ -509,3 +509,62 @@ export const generateManagerPDF = async ({
   const end   = endDate.toISOString().split('T')[0];
   doc.save(`Sakhai_Poshomill_Manager_Report_${start}_to_${end}.pdf`);
 };
+
+// ── Customer statement ──────────────────────────────────────────────────────
+export interface CustomerStatementPDF {
+  customer: { name: string; phone?: string | null; location?: string | null; kra_pin?: string | null; credit_limit?: number };
+  statement: {
+    opening: number; closing: number; charges: number; payments: number;
+    lines: { at: string; kind: string; ref?: string; detail?: string; method?: string; amount: number; running: number }[];
+  };
+  from: Date;
+  to: Date;
+}
+
+export const generateCustomerStatementPDF = ({ customer, statement, from, to }: CustomerStatementPDF) => {
+  const doc = new jsPDF('portrait', 'pt', 'a4');
+  const pageW = doc.internal.pageSize.getWidth();
+  const margin = 40;
+
+  doc.setFillColor(30, 58, 138);
+  doc.rect(0, 0, pageW, 10, 'F');
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.setTextColor(15, 23, 42);
+  doc.text('Sakhai Poshomill', margin, 48);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(100, 116, 139);
+  doc.text('Customer Statement', margin, 66);
+
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(30, 58, 138);
+  doc.text(customer.name, margin, 98);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(71, 85, 105);
+  const details = [customer.phone, customer.location, customer.kra_pin ? `KRA PIN ${customer.kra_pin}` : '', customer.credit_limit ? `Credit limit ${fmtKsh(customer.credit_limit)}` : '']
+    .filter(Boolean).join('   ·   ');
+  if (details) doc.text(details, margin, 112);
+  doc.text(`Period: ${fmtDate(from.toISOString())} – ${fmtDate(to.toISOString())}`, pageW - margin, 98, { align: 'right' });
+  doc.text(`Generated: ${new Date().toLocaleString('en-KE', { timeZone: 'Africa/Nairobi' })}`, pageW - margin, 112, { align: 'right' });
+
+  const kindLabel = (l: { kind: string; method?: string }) =>
+    l.kind === 'sale' ? 'Credit sale' : l.kind === 'repayment' ? `Payment (${l.method || 'Cash'})` : 'Opening balance';
+
+  autoTable(doc, {
+    startY: 130,
+    margin: { left: margin, right: margin },
+    head: [['Date', 'Type', 'Reference', 'Details', 'Charges', 'Payments', 'Balance']],
+    body: [
+      [fmtDate(from.toISOString()), 'Opening balance', '', '', '', '', fmtKsh(statement.opening)],
+      ...statement.lines.map(l => [
+        fmtDate(l.at), kindLabel(l), l.ref || '', l.detail || '',
+        l.amount > 0 ? fmtKsh(l.amount) : '', l.amount < 0 ? fmtKsh(-l.amount) : '', fmtKsh(l.running),
+      ]),
+    ],
+    foot: [['', '', '', 'Totals / closing', fmtKsh(statement.charges), fmtKsh(statement.payments), fmtKsh(statement.closing)]],
+    theme: 'grid',
+    headStyles: { fillColor: HEAD_NAVY, textColor: 255, fontStyle: 'bold', fontSize: 8 },
+    footStyles: { fillColor: HEAD_DARK, textColor: 255, fontStyle: 'bold', fontSize: 8 },
+    bodyStyles: { fontSize: 8, textColor: [30, 41, 59] },
+    alternateRowStyles: { fillColor: STRIPE_LIGHT },
+    columnStyles: { 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right', fontStyle: 'bold' } },
+  });
+
+  const safeName = customer.name.replace(/[^A-Za-z0-9]+/g, '_');
+  doc.save(`Statement_${safeName}_${getNairobiDateStr(from.toISOString())}_to_${getNairobiDateStr(to.toISOString())}.pdf`);
+};

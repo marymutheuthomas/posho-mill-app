@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { 
   CheckCircle, AlertTriangle, 
@@ -9,6 +9,8 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMillingSession } from '../hooks/useMillingSession';
 import { useDataMutation } from '../hooks/useDataMutation';
+import { useCustomers } from '../hooks/useCustomers';
+import { creditCheck } from '../lib/customerLedger';
 import ActiveSessionOverlay from './ActiveSessionOverlay';
 
 interface Customer { 
@@ -16,6 +18,7 @@ interface Customer {
   customer_name: string; 
   customer_phone?: string; 
   remaining_balance?: number;
+  credit_limit?: number;
   total_debt?: number;
   total_paid?: number;
 }
@@ -107,62 +110,31 @@ export default function ServicePOS({ role }: ServicePOSProps) {
     return product.current_stock || 0;
   };
 
-  const { data: customers = [] } = useQuery({
-    queryKey: ['customers'],
-    queryFn: async () => {
-      // Aggregate customers from both the official registry (debt_book) and historical sales
-      const [salesRes, dbRes] = await Promise.all([
-        supabase.from('sales_transactions').select('customer_name, amount_debt').not('customer_name', 'is', null),
-        supabase.from('debt_book').select('*')
-      ]);
-
-      if (salesRes.error) {
-        console.error('Customer Fetch Error (Sales):', salesRes.error);
-        throw salesRes.error;
-      }
-      if (dbRes.error) {
-        console.error('Customer Fetch Error (DebtBook):', dbRes.error);
-        throw dbRes.error;
-      }
-
-      const customerMap = new Map<string, Customer>();
-
-      // A. Pull from historical sales (Legacy/Walk-in customers with names)
-      salesRes.data.forEach(tx => {
-        const name = tx.customer_name?.trim();
-        if (!name || name.toLowerCase().includes('walk-in')) return;
-        const key = name.toUpperCase();
-        if (!customerMap.has(key)) {
-          customerMap.set(key, {
-            id: `legacy-${name}`,
-            customer_name: name,
-            remaining_balance: 0
-          });
-        }
-        if (tx.amount_debt) {
-          customerMap.get(key)!.remaining_balance = (customerMap.get(key)!.remaining_balance || 0) + Number(tx.amount_debt);
-        }
-      });
-
-      // B. Pull from Normalized Registry (debt_book) - Override with formal data
-      dbRes.data.forEach(d => {
-        const name = d.customer_name?.trim();
-        if (!name) return;
-        const key = name.toUpperCase();
-        customerMap.set(key, {
-          id: d.id,
-          customer_name: d.customer_name,
-          customer_phone: d.customer_phone,
-          remaining_balance: (Number(d.original_debt) || 0) - (Number(d.amount_paid) || 0)
-        });
-      });
-
-      return Array.from(customerMap.values()).sort((a, b) => a.customer_name.localeCompare(b.customer_name));
-    },
-    staleTime: 1000 * 60 * 5, // 5 mins
-  });
+  // Customers come from the CRM directory; balances are derived from sales and repayments
+  // (including anything still queued offline), never from a stored field.
+  const { customers: crm } = useCustomers();
+  const customers: Customer[] = useMemo(() => crm
+    .filter(c => c.is_active !== false)
+    .map(c => ({ id: c.id, customer_name: c.name, customer_phone: c.phone || undefined, remaining_balance: c.balance, credit_limit: c.credit_limit })), [crm]);
 
   const { activeSession } = useMillingSession();
+
+  // Soft credit-limit check for the debt part of this sale (warns, never blocks)
+  const creditWarning = useMemo(() => {
+    const c = customers.find(x => x.id === formData.customerId);
+    const debt = formData.paymentMethod === 'Debt' ? parseFloat(formData.feeCharged) || 0
+      : formData.paymentMethod === 'Split' ? parseFloat(formData.amountDebt) || 0 : 0;
+    if (!c || debt <= 0) return null;
+    const check = creditCheck(c.remaining_balance || 0, c.credit_limit || 0, debt);
+    if (check.level !== 'near' && check.level !== 'over') return null;
+    const pct = Math.round((check.ratio || 0) * 100);
+    return {
+      level: check.level,
+      text: check.level === 'over'
+        ? `Over credit limit: ${c.customer_name} would owe KSh ${check.projected.toLocaleString()} against a KSh ${(c.credit_limit || 0).toLocaleString()} limit (${pct}%).`
+        : `Near credit limit: this takes ${c.customer_name} to ${pct}% of their KSh ${(c.credit_limit || 0).toLocaleString()} limit.`,
+    };
+  }, [customers, formData.customerId, formData.paymentMethod, formData.feeCharged, formData.amountDebt]);
 
   const { data: salesHistory = [], isLoading: loadingHistory } = useQuery({
     queryKey: ['sales_history'],
@@ -363,6 +335,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
       total_price: totalPrice,
       transaction_type: formData.transactionType,
       session_id: activeSession?.id,
+      customer_id: c?.id || null,
       customer_name: (c?.customer_name || 'Walk-in Customer').toUpperCase().trim(),
       phone_number: c?.customer_phone || null,
       amount_cash: formData.paymentMethod === 'Split' ? (parseFloat(formData.amountCash) || 0) : (formData.paymentMethod === 'Cash' ? totalPrice : 0),
@@ -609,6 +582,12 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                     </div>
                   )}
 
+                {creditWarning && (
+                  <div className={`px-3 py-2 rounded-xl border text-[11px] font-semibold flex items-start gap-2 ${creditWarning.level === 'over' ? 'bg-red-50 border-red-200 text-red-800' : 'bg-amber-50 border-amber-200 text-amber-900'}`}>
+                    <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+                    <span>{creditWarning.text} You can still complete this sale.</span>
+                  </div>
+                )}
                 <div className="flex flex-col space-y-3 pt-4">
                   <button 
                     type="submit" 
@@ -662,6 +641,13 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                     {parseFloat(formData.amountCash) > 0 && <div className="flex justify-between text-[10px]"><span className="text-slate-400">Cash:</span><span>{formData.amountCash}</span></div>}
                     {parseFloat(formData.amountMpesa) > 0 && <div className="flex justify-between text-[10px]"><span className="text-slate-400">M-Pesa:</span><span>{formData.amountMpesa}</span></div>}
                     {parseFloat(formData.amountDebt) > 0 && <div className="flex justify-between text-[10px]"><span className="text-slate-400">Debt:</span><span>{formData.amountDebt}</span></div>}
+                  </div>
+                )}
+
+                {creditWarning && (
+                  <div className={`px-3 py-2 rounded-xl border text-[11px] font-semibold flex items-start gap-2 ${creditWarning.level === 'over' ? 'bg-red-50 border-red-200 text-red-800' : 'bg-amber-50 border-amber-200 text-amber-900'}`}>
+                    <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+                    <span>{creditWarning.text} You can still complete this sale.</span>
                   </div>
                 )}
 

@@ -2,9 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart } from 'recharts';
 import { subDays, startOfMonth, startOfYear, format } from 'date-fns';
-import { Wallet, TrendingUp, Box, Users, Zap, ShieldAlert, Activity, Landmark, FileText, AlertOctagon } from 'lucide-react';
+import { Wallet, TrendingUp, Box, Users, Zap, Activity, Landmark, FileText, AlertOctagon } from 'lucide-react';
 import { generateManagerPDF } from '../lib/pdfGenerator';
 import StockReconciliation from './StockReconciliation';
+import DebtAging from './DebtAging';
+import { useCustomers } from '../hooks/useCustomers';
+import { AGING_OVERDUE_AFTER_DAYS } from '../lib/customerLedger';
 
 const fmt = (v: number) => `KSh ${Number(v || 0).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -30,14 +33,6 @@ function EmptyState({ text }: { text: string }) {
   return <div className="h-full flex items-center justify-center text-[11px] font-bold text-slate-300 uppercase tracking-widest italic">{text}</div>;
 }
 
-/** Returns Tailwind classes for a risk_status badge */
-function riskBadgeClass(status: string) {
-  if (status?.includes('OVERDUE')) return 'bg-red-100 text-red-700 border-red-200';
-  if (status?.includes('AGING'))   return 'bg-amber-100 text-amber-700 border-amber-200';
-  if (status?.includes('ACTIVE') || status?.includes('CLEARED')) return 'bg-emerald-100 text-emerald-700 border-emerald-200';
-  return 'bg-slate-100 text-slate-500 border-slate-200';
-}
-
 export default function MasterDashboard() {
   const today = new Date();
   const [start, setStart] = useState(subDays(today, 29));
@@ -51,12 +46,18 @@ export default function MasterDashboard() {
   const [leakage, setLeakage] = useState<any[]>([]);
   const [intProd, setIntProd] = useState<any[]>([]);
   const [extProd, setExtProd] = useState<any[]>([]);
-  const [debtors, setDebtors] = useState<any[]>([]);
+  const { customers: crm } = useCustomers();
+  // Manager PDF keeps its existing credit-risk table shape, now fed from the customer ledger
+  const creditRisk = crm.filter(c => c.balance > 0.004).sort((x, y) => y.aging.overdue - x.aging.overdue || y.balance - x.balance).map(c => ({
+    customer_name: c.name,
+    outstanding_balance: c.balance,
+    days_overdue: Math.max(0, (c.aging.oldestOpenDays ?? 0) - AGING_OVERDUE_AFTER_DAYS),
+    risk_status: c.risk === 'overdue' ? 'OVERDUE' : c.risk === 'due' ? 'AGING' : 'ACTIVE',
+  }));
 
   // Static fetches — run once
   useEffect(() => {
     supabase.from('dashboard_balance_sheet').select('*').maybeSingle().then(({ data }) => { if (data) setBs(data); });
-    supabase.from('dashboard_credit_risk').select('*').order('outstanding_balance', { ascending: false }).limit(20).then(({ data }) => { if (data) setDebtors(data); });
   }, []);
 
   // Date-filtered fetches
@@ -130,7 +131,7 @@ export default function MasterDashboard() {
         cashFlow,
         production: intProd,
         extProd,
-        creditRisk: debtors,
+        creditRisk,
         startDate: start,
         endDate: end,
       });
@@ -429,52 +430,8 @@ export default function MasterDashboard() {
               </div>
             </div>
 
-            {/* ── High-Risk Debtors (with risk_status badge) ── */}
-            <div className="bg-white rounded-xl border border-slate-100 shadow-sm flex flex-col h-[420px] overflow-hidden">
-              <div className="p-5 border-b border-slate-100 flex items-center justify-between shrink-0">
-                <div>
-                  <h3 className="text-sm font-black text-brand uppercase tracking-tight">High-Risk Debtors</h3>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Lifetime · Not date filtered</p>
-                </div>
-                <ShieldAlert className="text-accent" size={18} />
-              </div>
-              <div className="flex-1 overflow-y-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead className="bg-slate-50 sticky top-0 z-10">
-                    <tr>
-                      <th className="px-4 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Customer</th>
-                      <th className="px-4 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 text-right">Balance</th>
-                      <th className="px-4 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 text-right">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {debtors.length > 0 ? debtors.map((d, i) => {
-                      const isOverdue = d.risk_status?.includes('OVERDUE');
-                      return (
-                        <tr key={i} className={`${isOverdue ? 'bg-red-50/50' : 'hover:bg-slate-50'} transition-colors`}>
-                          <td className="px-4 py-2.5">
-                            <p className={`text-[11px] font-medium uppercase ${isOverdue ? 'text-red-800' : 'text-slate-700'}`}>{d.customer_name}</p>
-                            <p className="text-[9px] text-slate-400 font-mono">{d.days_overdue || 0}d overdue</p>
-                          </td>
-                          <td className="px-4 py-2.5 text-right">
-                            <p className={`text-[11px] font-normal font-mono ${isOverdue ? 'text-red-600' : 'text-slate-600'}`}>
-                              KSh {Number(d.outstanding_balance || 0).toLocaleString()}
-                            </p>
-                          </td>
-                          <td className="px-4 py-2.5 text-right">
-                            <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${riskBadgeClass(d.risk_status)}`}>
-                              {d.risk_status?.replace(/^[🔴🟡🟢]\s/, '') || `${d.days_overdue || 0}d`}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    }) : (
-                      <tr><td colSpan={3} className="px-4 py-12 text-center text-[11px] font-bold text-slate-300 uppercase tracking-widest italic">No Debtors Found</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            {/* ── Debt Aging (ledger-backed; replaces the stored-balance credit-risk view) ── */}
+            <DebtAging customers={crm} />
 
           </div>
         </div>

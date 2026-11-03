@@ -17,7 +17,7 @@ import ServicePOS from './components/ServicePOS';
 // import AuditHub from './components/AuditHub';
 import MasterDashboard from './components/MasterDashboard';
 import SessionControl from './components/SessionControl';
-import DebtLedger from './components/DebtLedger';
+import Customers from './components/Customers';
 import StockTake from './components/StockTake';
 import Settings from './components/Settings';
 import OperationalAlert from './components/OperationalAlert';
@@ -139,7 +139,7 @@ function App() {
     { name: 'Production Hub', icon: Factory },
     { name: 'Point of Sale', icon: ShoppingBag },
     { name: 'Stock Take', icon: ShieldCheck },
-    { name: 'Debt Ledger', icon: BookOpen },
+    { name: 'Customers', icon: BookOpen },
     { name: 'Purchases', icon: ShoppingCart },
     { name: 'Settings', icon: SettingsIcon },
     { name: 'User Management', icon: ShieldCheck, adminOnly: true },
@@ -367,7 +367,7 @@ function App() {
           {activeTab === 'Insights & Audit' && <MasterDashboard />}
           {activeTab === 'Production Hub'   && <ProductionEntry />}
           {activeTab === 'Point of Sale'     && <ServicePOS role={user.role} />}
-          {activeTab === 'Debt Ledger'      && <DebtLedger role={user.role} />}
+          {activeTab === 'Customers'        && <Customers role={user.role} />}
           {activeTab === 'Purchases'        && <Purchases />}
           {activeTab === 'Stock Take'       && <StockTake role={user.role} />}
           {activeTab === 'Settings'         && <Settings role={user.role} />}

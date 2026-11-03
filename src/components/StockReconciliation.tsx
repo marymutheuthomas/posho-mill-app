@@ -2,23 +2,11 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Scale } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { fetchAllRows } from '../lib/fetchAll';
 import {
   reconcileStock, DRIFT_TOLERANCE_KG, VARIANCE_MINOR, VARIANCE_MAJOR,
   type LedgerRow, type PhysicalCount, type ProductRow, type ReconRow, type ReconStatus
 } from '../lib/stockReconciliation';
-
-const PAGE = 1000; // PostgREST max rows per request
-
-// Pages through a table so all-time ledger totals (needed for drift) are complete.
-async function fetchAllRows<T>(page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: any }>) {
-  const rows: T[] = [];
-  for (let from = 0; ; from += PAGE) {
-    const { data, error } = await page(from, from + PAGE - 1);
-    if (error) throw error;
-    rows.push(...(data ?? []));
-    if (!data || data.length < PAGE) return rows;
-  }
-}
 
 const STATUS: Record<ReconStatus, { label: string; badge: string; row: string }> = {
   'drift':          { label: 'Un-ledgered drift', badge: 'bg-red-100 text-red-700 border-red-200',             row: 'bg-red-50/50' },

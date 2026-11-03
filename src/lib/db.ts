@@ -6,6 +6,7 @@ export type TransactionType =
   | 'sale_delete'
   | 'repayment'
   | 'customer_creation'
+  | 'customer_update'
   | 'purchase'
   | 'stock_take'
   | 'user_creation'

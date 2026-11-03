@@ -15,17 +15,37 @@ interface SyncPlan {
   prepare?: (payload: any) => any;
 }
 
+// Only send columns the table has: queued payloads can carry UI-only or legacy fields.
+const pick = (o: any, keys: string[]) =>
+  Object.fromEntries(keys.filter(k => o[k] !== undefined).map(k => [k, o[k]]));
+
+export const CUSTOMER_EDITABLE = ['name', 'phone', 'location', 'kra_pin', 'credit_limit', 'notes', 'is_active'];
+const REPAYMENT_COLUMNS = ['id', 'customer_id', 'amount', 'notes', 'method', 'session_id', 'recorded_by', 'effective_time'];
+
+// Shared by the online path and replay. Also upgrades customers queued by older builds,
+// which used debt_book's customer_name / customer_phone shape.
+export const toCustomerRow = (p: any) => pick({
+  ...p,
+  name: p.name ?? p.customer_name,
+  phone: p.phone ?? p.customer_phone ?? null,
+  created_by: p.created_by ?? p.recorded_by,
+}, ['id', 'created_by', ...CUSTOMER_EDITABLE]);
+
 const SYNC_PLAN: Partial<Record<TransactionType, SyncPlan>> = {
   sale:                   { table: 'sales_transactions', op: 'insert' },
   sale_update:            { table: 'sales_transactions', op: 'update' },
   sale_delete:            { table: 'sales_transactions', op: 'delete' },
   repayment: {
     table: 'repayments', op: 'insert',
-    prepare: (p) => ({ customer_id: p.customer_id, amount: Number(p.amount), notes: p.notes || '' })
+    prepare: (p) => pick({ ...p, amount: Number(p.amount), notes: p.notes || '' }, REPAYMENT_COLUMNS)
   },
   customer_creation: {
-    table: 'debt_book', op: 'insert',
-    prepare: ({ recorded_by, ...rest }) => rest
+    table: 'customers', op: 'insert',
+    prepare: toCustomerRow
+  },
+  customer_update: {
+    table: 'customers', op: 'update',
+    prepare: (p) => pick(p, ['id', ...CUSTOMER_EDITABLE])
   },
   purchase:               { table: 'purchases', op: 'insert' },
   stock_take:             { table: 'stock_take_history', op: 'insert' },

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSessionDrawer } from '../hooks/useSessionDrawer';
 import { useMillingSession, useSessionHistory, type MillingSession, type SessionType } from '../hooks/useMillingSession';
 import {
   Zap, AlertTriangle, Play, 
@@ -43,6 +44,9 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
   // —— Shared session state (same source as POS, Production, Dashboard and the nav locks) ——
   const { activeSession, isLoading: loadingSession, lastEndMeter, stockTakeDue, startSession, closeSession } = useMillingSession();
   const { pastSessions, isLoading: loadingPastSessions, editSession, deleteSession } = useSessionHistory();
+
+  const drawer = useSessionDrawer(activeSession?.id);
+  const kes = (v: number) => `KSh ${v.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const isSyncing = startSession.isPending || closeSession.isPending || editSession.isPending || deleteSession.isPending;
 
@@ -231,6 +235,38 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
             </div>
          </div>
       </div>
+
+      {/* CASH DRAWER (open shift): sales plus debt repayments taken during this session */}
+      {activeSession && drawer && (
+        <div className="mill-card p-4 md:p-6 bg-white border-slate-100 shadow-sm rounded-2xl">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">This shift&apos;s drawer</p>
+            {drawer.pendingCount > 0 && <span className="text-[9px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">{drawer.pendingCount} not synced yet</span>}
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="rounded-xl bg-brand text-white p-3">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-blue-200">Expected cash</p>
+              <p className="text-xl font-mono font-bold">{kes(drawer.expectedCash)}</p>
+              <p className="text-[9px] text-blue-200">{kes(drawer.cashSales)} sales + {kes(drawer.cashRepayments)} repayments</p>
+            </div>
+            <div className="rounded-xl border border-slate-100 bg-canvas p-3">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Expected M-Pesa</p>
+              <p className="text-xl font-mono font-bold text-slate-900">{kes(drawer.expectedMpesa)}</p>
+              <p className="text-[9px] text-slate-400">{kes(drawer.mpesaSales)} sales + {kes(drawer.mpesaRepayments)} repayments</p>
+            </div>
+            <div className="rounded-xl border border-slate-100 bg-canvas p-3">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Credit given</p>
+              <p className="text-xl font-mono font-bold text-amber-600">{kes(drawer.creditGiven)}</p>
+              <p className="text-[9px] text-slate-400">Added to customer balances</p>
+            </div>
+            <div className="rounded-xl border border-slate-100 bg-canvas p-3">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Bank repayments</p>
+              <p className="text-xl font-mono font-bold text-slate-900">{kes(drawer.bankRepayments)}</p>
+              <p className="text-[9px] text-slate-400">Not in the drawer</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* START MODAL */}
       {startModal.open && (
