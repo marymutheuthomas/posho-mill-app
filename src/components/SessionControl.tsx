@@ -144,7 +144,7 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
                         {activeSession ? activeSession.session_type : 'Ready to Start'}
                      </h1>
                      <p className={`text-[10px] md:text-xs font-medium uppercase tracking-widest mt-2 ${activeSession ? 'text-slate-400' : 'text-slate-400'}`}>
-                        {activeSession ? `Operator Terminal · Session: ${activeSession.session_code || '---'}` : 'Initialize Mill Session to enable Point of Sale & Production Logging'}
+                        {activeSession ? `Operator Terminal · Session: ${activeSession.session_code || '---'}` : 'Start a session to log power meter readings. Sales are still recorded without one.'}
                      </p>
                   </div>
                </div>

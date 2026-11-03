@@ -4,7 +4,7 @@ import {
   CheckCircle, AlertTriangle, 
   Calendar, ChevronRight, Clock, User, RotateCcw,
   Search, ChevronDown,
-  Pencil, Trash2, X, Eye
+  Pencil, Trash2, X, Eye, Zap
 } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMillingSession } from '../hooks/useMillingSession';
@@ -12,6 +12,13 @@ import { useDataMutation } from '../hooks/useDataMutation';
 import { useCustomers } from '../hooks/useCustomers';
 import { creditCheck } from '../lib/customerLedger';
 import ActiveSessionOverlay from './ActiveSessionOverlay';
+
+// Counter tablets and phones: every field and primary button is at least 48px tall (h-12),
+// and text-base on phones stops iOS zooming into the field on focus.
+const FIELD = 'mill-input w-full h-12 px-4 rounded-xl font-medium text-base md:text-sm focus:ring-1 focus:ring-slate-900 focus:border-slate-900';
+const FIELD_LABEL = 'block text-[11px] font-semibold text-slate-500 uppercase tracking-widest mb-1.5';
+// Shift type the POS banner starts with one tap; counter sales are mostly customer milling.
+const DEFAULT_SHIFT_TYPE = 'External' as const;
 
 interface Customer { 
   id: string; 
@@ -117,7 +124,18 @@ export default function ServicePOS({ role }: ServicePOSProps) {
     .filter(c => c.is_active !== false)
     .map(c => ({ id: c.id, customer_name: c.name, customer_phone: c.phone || undefined, remaining_balance: c.balance, credit_limit: c.credit_limit })), [crm]);
 
-  const { activeSession } = useMillingSession();
+  const { activeSession, startSession } = useMillingSession();
+  const [shiftError, setShiftError] = useState('');
+
+  const startDefaultShift = () => {
+    setShiftError('');
+    startSession.mutate(DEFAULT_SHIFT_TYPE, {
+      onSuccess: ({ offline }) => setSuccess(offline
+        ? `${DEFAULT_SHIFT_TYPE} shift started offline. It will sync when the connection returns.`
+        : `${DEFAULT_SHIFT_TYPE} shift started.`),
+      onError: (err: Error) => setShiftError(err?.message || 'Could not start a shift.'),
+    });
+  };
 
   // Soft credit-limit check for the debt part of this sale (warns, never blocks)
   const creditWarning = useMemo(() => {
@@ -334,7 +352,8 @@ export default function ServicePOS({ role }: ServicePOSProps) {
       weight_kg: weight,
       total_price: totalPrice,
       transaction_type: formData.transactionType,
-      session_id: activeSession?.id,
+      // No open shift never blocks a sale: it is saved without one (recorded_by is still stamped)
+      session_id: activeSession && !activeSession.is_closed ? activeSession.id : null,
       customer_id: c?.id || null,
       customer_name: (c?.customer_name || 'Walk-in Customer').toUpperCase().trim(),
       phone_number: c?.customer_phone || null,
@@ -343,11 +362,6 @@ export default function ServicePOS({ role }: ServicePOSProps) {
       amount_debt: formData.paymentMethod === 'Split' ? (parseFloat(formData.amountDebt) || 0) : (formData.paymentMethod === 'Debt' ? totalPrice : 0),
       created_at: new Date(formData.backdate + 'T' + new Date().toISOString().split('T')[1]).toISOString()
     };
-
-    if (!activeSession || activeSession.is_closed) {
-      setError('NO ACTIVE SESSION: Please start an Internal or External session first.');
-      return;
-    }
 
     checkoutMutation.mutate(txData);
   };
@@ -416,11 +430,19 @@ export default function ServicePOS({ role }: ServicePOSProps) {
       <ActiveSessionOverlay />
       
       {!activeSession && (
-        <div className="bg-amber-50 border border-amber-200 px-3 py-2 rounded-xl flex items-center gap-2 mb-3">
-          <Clock size={14} className="text-amber-600 shrink-0" />
-          <p className="text-[11px] font-semibold text-amber-900">
-            No active session. Start one in Session Control before selling.
+        <div role="status" className="bg-amber-50 border border-amber-300 px-3 py-2 rounded-xl flex flex-col sm:flex-row sm:items-center gap-2">
+          <p className="flex-1 text-xs font-semibold text-amber-900 leading-snug">
+            ⚠️ No active shift — Sales are being recorded, but please open a shift to log power meter readings.
+            {shiftError && <span className="block text-red-700 mt-1">{shiftError}</span>}
           </p>
+          <button
+            type="button"
+            onClick={startDefaultShift}
+            disabled={startSession.isPending}
+            className="shrink-0 h-11 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-60"
+          >
+            <Zap size={14} /> {startSession.isPending ? 'Starting…' : 'Start Default Shift'}
+          </button>
         </div>
       )}
 
@@ -429,14 +451,14 @@ export default function ServicePOS({ role }: ServicePOSProps) {
           <div className="mill-card p-4 md:p-8 bg-white border-slate-100 shadow-2xl rounded-2xl">
             <form onSubmit={handleInitialSubmit} className="space-y-4 md:space-y-6">
                <div>
-                 <label className="block text-[10px] md:text-[11px] font-semibold text-slate-500 uppercase tracking-widest mb-2 md:mb-3 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Mode</label>
+                 <label className={FIELD_LABEL}>Mode</label>
                   <div className="flex gap-2">
                     {['Service', 'Product'].map(type => (
                       <button 
                         key={type}
                         type="button" 
                         onClick={() => setFormData({...formData, transactionType: type as any})} 
-                        className={`flex-1 py-3 md:py-4 px-4 rounded-xl font-semibold text-xs uppercase border transition-all ${formData.transactionType === type ? 'bg-slate-900 text-white border-slate-900 shadow-md' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100'}`}
+                        className={`flex-1 h-12 px-4 rounded-xl font-semibold text-xs uppercase border transition-all ${formData.transactionType === type ? 'bg-slate-900 text-white border-slate-900 shadow-md' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100'}`}
                       >
                         {type === 'Service' ? 'Milling' : 'Retail'}
                       </button>
@@ -445,11 +467,11 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                </div>
 
                 <div>
-                  <label className="block text-[10px] md:text-[11px] font-semibold text-slate-500 uppercase tracking-widest mb-2 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Product</label>
+                  <label className={FIELD_LABEL}>Product</label>
                   <select 
                     value={formData.productId} 
                     onChange={e => setFormData({...formData, productId: e.target.value})} 
-                    className="mill-input w-full font-medium py-3 md:py-4 px-4 rounded-xl uppercase text-base md:text-xs max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
+                    className={`${FIELD} uppercase`}
                   >
                     <option value="">Select Item...</option>
                     {products
@@ -469,21 +491,21 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] md:text-[11px] font-semibold text-slate-500 uppercase tracking-widest mb-2 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Weight (KG)</label>
+                  <label className={FIELD_LABEL}>Weight (KG)</label>
                   <div className="relative">
-                    <input type="number" step="0.01" value={formData.weightKg} onChange={e => setFormData({...formData, weightKg: e.target.value})} className="mill-input w-full text-base md:text-xs font-medium py-3 md:py-4 px-4 rounded-xl pr-14 bg-slate-50/50 max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" placeholder="0.00" />
+                    <input type="number" step="0.01" value={formData.weightKg} onChange={e => setFormData({...formData, weightKg: e.target.value})} inputMode="decimal" className={`${FIELD} !pr-14 bg-slate-50/50`} placeholder="0.00" />
                     <span className="absolute right-5 top-1/2 -translate-y-1/2 font-semibold text-slate-300 text-xs">KG</span>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[10px] md:text-[11px] font-semibold text-slate-500 uppercase tracking-widest mb-2 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Transaction Date</label>
+                  <label className={FIELD_LABEL}>Transaction Date</label>
                   <div className="relative">
                     <input 
                       type="date" 
                       value={formData.backdate} 
                       onChange={e => setFormData({...formData, backdate: e.target.value})} 
-                      className="mill-input w-full text-base md:text-xs max-md:text-[10px] font-medium py-3 md:py-4 max-md:py-1.5 max-md:px-3 px-4 rounded-xl bg-slate-50/50" 
+                      className={`${FIELD} bg-slate-50/50`}
                     />
                     <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
                   </div>
@@ -492,7 +514,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
 
 
                 <div className="relative">
-                  <label className="block text-[10px] md:text-[11px] font-semibold text-slate-500 uppercase tracking-widest mb-2 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Customer Selection</label>
+                  <label className={FIELD_LABEL}>Customer Selection</label>
                   <div className={`relative rounded-xl transition-all ${formData.paymentMethod === 'Debt' && !formData.customerId ? 'ring-2 ring-red-500 ring-offset-2' : ''}`}>
                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
                       <Search size={14} />
@@ -506,12 +528,12 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                         setSearchTerm(e.target.value);
                         setIsDropdownOpen(true);
                       }}
-                      className="mill-input w-full font-medium py-3 md:py-4 pl-11 pr-10 rounded-xl uppercase text-base md:text-xs max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
+                      className={`${FIELD} !pl-11 !pr-11 uppercase`}
                     />
                     <button 
                       type="button"
                       onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-slate-400"
                     >
                       <ChevronDown size={14} />
                     </button>
@@ -561,23 +583,23 @@ export default function ServicePOS({ role }: ServicePOSProps) {
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
                     {['Cash', 'M-Pesa', 'Debt', 'Split'].map(m => (
-                      <button key={m} type="button" onClick={() => setFormData({...formData, paymentMethod: m as any})} className={`py-3 md:py-4 px-2 md:px-4 rounded-xl font-semibold text-[10px] md:text-xs uppercase border transition-all ${formData.paymentMethod === m ? 'bg-emerald-600 text-white border-emerald-600 shadow-md' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>{m}</button>
+                      <button key={m} type="button" onClick={() => setFormData({...formData, paymentMethod: m as any})} className={`h-12 px-2 md:px-4 rounded-xl font-semibold text-xs uppercase border transition-all ${formData.paymentMethod === m ? 'bg-emerald-600 text-white border-emerald-600 shadow-md' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>{m}</button>
                     ))}
                   </div>
 
                   {formData.paymentMethod === 'Split' && (
                     <div className="grid grid-cols-3 gap-3 mt-4 animate-in slide-in-from-top-2 duration-300">
                       <div>
-                        <label className="block text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Cash</label>
-                        <input type="number" step="0.01" value={formData.amountCash} onChange={e => setFormData({...formData, amountCash: e.target.value})} className="mill-input w-full text-xs py-2 px-3 bg-slate-50 border-slate-200 max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" placeholder="0" />
+                        <label className={FIELD_LABEL}>Cash</label>
+                        <input type="number" step="0.01" value={formData.amountCash} onChange={e => setFormData({...formData, amountCash: e.target.value})} inputMode="decimal" className={`${FIELD} !px-3 bg-slate-50`} placeholder="0" />
                       </div>
                       <div>
-                        <label className="block text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">M-Pesa</label>
-                        <input type="number" step="0.01" value={formData.amountMpesa} onChange={e => setFormData({...formData, amountMpesa: e.target.value})} className="mill-input w-full text-xs py-2 px-3 bg-slate-50 border-slate-200 max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" placeholder="0" />
+                        <label className={FIELD_LABEL}>M-Pesa</label>
+                        <input type="number" step="0.01" value={formData.amountMpesa} onChange={e => setFormData({...formData, amountMpesa: e.target.value})} inputMode="decimal" className={`${FIELD} !px-3 bg-slate-50`} placeholder="0" />
                       </div>
                       <div>
-                        <label className="block text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Debt</label>
-                        <input type="number" step="0.01" value={formData.amountDebt} onChange={e => setFormData({...formData, amountDebt: e.target.value})} className="mill-input w-full text-xs py-2 px-3 bg-slate-50 border-slate-200 max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" placeholder="0" />
+                        <label className={FIELD_LABEL}>Debt</label>
+                        <input type="number" step="0.01" value={formData.amountDebt} onChange={e => setFormData({...formData, amountDebt: e.target.value})} inputMode="decimal" className={`${FIELD} !px-3 bg-slate-50`} placeholder="0" />
                       </div>
                     </div>
                   )}
@@ -591,8 +613,8 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                 <div className="flex flex-col space-y-3 pt-4">
                   <button 
                     type="submit" 
-                    disabled={!activeSession || (formData.paymentMethod === 'Debt' && !formData.customerId)} 
-                    className={`w-full py-4 text-xs font-semibold rounded-xl flex items-center justify-center gap-3 shadow-xl transition-all active:scale-95 ${(!activeSession || (formData.paymentMethod === 'Debt' && !formData.customerId)) ? 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none' : 'bg-slate-900 text-white hover:bg-slate-800'}`}
+                    disabled={formData.paymentMethod === 'Debt' && !formData.customerId}
+                    className={`w-full h-12 text-sm font-semibold rounded-xl flex items-center justify-center gap-3 shadow-xl transition-all active:scale-95 ${(formData.paymentMethod === 'Debt' && !formData.customerId) ? 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none' : 'bg-slate-900 text-white hover:bg-slate-800'}`}
                   >
                      <ChevronRight size={18} /> CHECKOUT & SYNC
                   </button>
@@ -1029,7 +1051,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                   step="0.01" 
                   value={editForm.weightKg} 
                   onChange={e => setEditForm({...editForm, weightKg: e.target.value})} 
-                  className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" 
+                  className="w-full px-4 h-12 rounded-xl border border-slate-200 text-base font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all" 
                 />
               </div>
               <div className="space-y-1.5">
@@ -1040,7 +1062,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                   step="0.01" 
                   value={editForm.totalPrice} 
                   disabled 
-                  className="w-full px-4 h-12 rounded-xl border border-slate-200 bg-slate-50 text-base font-semibold text-slate-500 cursor-not-allowed max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" 
+                  className="w-full px-4 h-12 rounded-xl border border-slate-200 bg-slate-50 text-base font-semibold text-slate-500 cursor-not-allowed" 
                 />
               </div>
 
@@ -1084,7 +1106,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                       placeholder="0.00"
                       value={editForm.amountCash}
                       onChange={e => setEditForm({ ...editForm, amountCash: e.target.value })}
-                      className="w-full px-2 h-12 rounded-xl border border-slate-200 text-base font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all placeholder-slate-300 text-center max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
+                      className="w-full px-2 h-12 rounded-xl border border-slate-200 text-base font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all placeholder-slate-300 text-center"
                     />
                   </div>
                   <div className="space-y-1">
@@ -1095,7 +1117,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                       placeholder="0.00"
                       value={editForm.amountMpesa}
                       onChange={e => setEditForm({ ...editForm, amountMpesa: e.target.value })}
-                      className="w-full px-2 h-12 rounded-xl border border-slate-200 text-base font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all placeholder-slate-300 text-center max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
+                      className="w-full px-2 h-12 rounded-xl border border-slate-200 text-base font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all placeholder-slate-300 text-center"
                     />
                   </div>
                   <div className="space-y-1">
@@ -1106,7 +1128,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                       placeholder="0.00"
                       value={editForm.amountDebt}
                       onChange={e => setEditForm({ ...editForm, amountDebt: e.target.value })}
-                      className="w-full px-2 h-12 rounded-xl border border-slate-200 text-base font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all placeholder-slate-300 text-center max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900"
+                      className="w-full px-2 h-12 rounded-xl border border-slate-200 text-base font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all placeholder-slate-300 text-center"
                     />
                   </div>
                 </div>

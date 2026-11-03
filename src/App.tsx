@@ -293,10 +293,10 @@ function App() {
                 <button
                   onClick={() => setActiveTab('Dashboard')}
                   title="Records that failed to sync. Review them on the Dashboard."
-                  className="flex items-center gap-1.5 px-2 md:px-3 py-0.5 md:py-1 rounded-full border border-red-200 bg-red-50 text-red-700 shadow-sm hover:bg-red-100 transition-all"
+                  className="flex items-center gap-1 px-2 py-1 rounded-full bg-red-600 text-white shadow-sm hover:bg-red-700 transition-all"
                 >
-                  <AlertTriangle size={12} />
-                  <span className="text-[8px] md:text-[10px] font-semibold uppercase tracking-widest">{deadLetterCount} FAILED</span>
+                  <AlertTriangle size={12} className="shrink-0" />
+                  <span className="text-xs font-bold uppercase tracking-wide whitespace-nowrap">{deadLetterCount} FAILED</span>
                 </button>
               )}
               <div className={`p-1 rounded-md ${isOnline ? 'bg-emerald-50' : 'bg-red-50'}`}>
