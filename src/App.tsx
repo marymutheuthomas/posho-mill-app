@@ -26,6 +26,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import UserManagement from './components/UserManagement';
 import Login from './components/Login';
 import { btn, navItem, SHELL_X } from './lib/ui';
+import { usePendingExceptions } from './hooks/useAuditExceptions';
 
 // Log out is the one red item in the menu: red text, red tint on hover, same size as the nav items
 const LOGOUT = 'w-full flex items-center gap-3 min-h-11 px-3 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors';
@@ -147,6 +148,13 @@ function App() {
   const showMorningRecovery = false;
   const showOfflineSignIn = !!user?.offline && isOnline;
   const showStockTakeReminder = !!stockTakeDueSince && stockTakeDueSince !== dismissedReminderFor && activeTab !== 'Stock Take';
+
+  // Staff can't open Insights & Audit, so they hear about exceptions they triggered here.
+  // Soft and dismissible; it comes back only if the number of flags changes.
+  const isStaff = !!user && user.role !== 'ADMIN';
+  const { data: myFlags = [] } = usePendingExceptions(false, isStaff && isOnline);
+  const [dismissedFlagCount, setDismissedFlagCount] = useState(0);
+  const showMyFlags = isStaff && myFlags.length > 0 && myFlags.length !== dismissedFlagCount;
 
   const menuItems = [
     { name: 'Dashboard', icon: LayoutDashboard },
@@ -300,8 +308,22 @@ function App() {
 
         {/* OPERATIONAL ALERT LAYER */}
         {/* Only takes space when something is showing; each banner is a single slim row */}
-        {(showOfflineSignIn || showStockTakeReminder || showMorningRecovery || notification) && (
+        {(showOfflineSignIn || showStockTakeReminder || showMyFlags || showMorningRecovery || notification) && (
         <div className={`${SHELL_X} pt-3 space-y-2`}>
+          {showMyFlags && (
+            <div role="status" className="pl-3 pr-1 py-1 rounded-xl border border-amber-200 bg-amber-50 text-amber-900 flex items-center gap-2">
+              <AlertTriangle size={16} className="shrink-0" aria-hidden="true" />
+              <p className="text-xs font-semibold flex-1 min-w-0">
+                <span className="font-mono">{myFlags.length}</span> of your entries {myFlags.length === 1 ? 'is' : 'are'} flagged for admin review
+                {myFlags[0]?.description && <span className="font-normal">: {myFlags[0].description}{myFlags.length > 1 ? ' and more' : ''}</span>}.
+                {' '}Keep working as normal.
+              </p>
+              <button onClick={() => setDismissedFlagCount(myFlags.length)} className={btn.icon} aria-label="Dismiss flagged entries notice">
+                <X size={16} />
+              </button>
+            </div>
+          )}
+
           {showOfflineSignIn && (
             <div className="px-3 py-1.5 rounded-xl border border-amber-200 bg-amber-50 text-amber-900 flex items-center gap-2">
               <p className="text-xs font-semibold flex-1 min-w-0">
