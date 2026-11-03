@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
-import { Scale, AlertTriangle, CheckCircle, Save, Activity, Calendar, ArrowUpRight, ArrowDownRight, RotateCcw } from 'lucide-react';
+import { Scale, AlertTriangle, CheckCircle, Save, Calendar, ArrowUpRight, ArrowDownRight, RotateCcw, Zap } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useDataMutation } from '../hooks/useDataMutation';
 import { useMillingSession } from '../hooks/useMillingSession';
@@ -50,7 +50,19 @@ export default function ProductionEntry() {
     }
   });
 
-  const { activeSession } = useMillingSession();
+  const { activeSession, startSession } = useMillingSession();
+  const [shiftError, setShiftError] = useState('');
+
+  // Milling own stock is an Internal session; one tap from the banner, without leaving the hub
+  const startDefaultShift = () => {
+    setShiftError('');
+    startSession.mutate('Internal', {
+      onSuccess: ({ offline }) => setSuccessMsg(offline
+        ? 'Internal shift started offline. It will sync when the connection returns.'
+        : 'Internal shift started.'),
+      onError: (err: Error) => setShiftError(err?.message || 'Could not start a shift.'),
+    });
+  };
 
   const { data: logs = [], isLoading: loadingLogs } = useQuery({
     queryKey: ['production-logs'],
@@ -127,14 +139,6 @@ export default function ProductionEntry() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(''); setSuccessMsg('');
-    if (!activeSession) { 
-      setError('NO ACTIVE SESSION: Please open a session in "Session Control" first.'); 
-      return; 
-    }
-    if (activeSession.is_closed) {
-      setError('SESSION IS CLOSED: This session has already been finalized.');
-      return;
-    }
     const inputProduct = allProducts.find(p => p.product_code === PRODUCT_CODES.INPUT);
     if (!inputProduct) { setError('SYSTEM ERROR: Maize Bulk (101) not found in registry.'); return; }
     if (!mainProductId) { setError('Please select an Output Product (e.g., Grade 1).'); return; }
@@ -150,7 +154,8 @@ export default function ProductionEntry() {
     dateObj.setHours(new Date().getHours(), new Date().getMinutes(), new Date().getSeconds());
 
     const payload = {
-      session_id: activeSession.id,
+      // No open shift never blocks logging: saved without one (recorded_by is still stamped)
+      session_id: activeSession && !activeSession.is_closed ? activeSession.id : null,
       input_product_id: inputProduct.id || null,
       input_kg: inputVal,
       output_product_id: mainProductId === "" ? null : mainProductId,
@@ -193,13 +198,23 @@ export default function ProductionEntry() {
       {/* ACTIVE SESSION SMART HEADER */}
       <ActiveSessionOverlay />
 
-      {!activeSession ? (
-        <div className="mill-card p-8 md:p-16 text-center max-w-lg mx-auto border-dashed rounded-2xl">
-          <Activity className="mx-auto mb-6 md:mb-8 text-slate-200 w-12 h-12 md:w-16 md:h-16" />
-          <h2 className="text-xl md:text-2xl font-semibold text-slate-900 uppercase mb-3">Mill is Idle</h2>
-          <p className="text-sm text-slate-500 mb-8 md:mb-10 leading-relaxed uppercase font-medium tracking-tight">Initialize an **Internal Production** session to enable logging.</p>
+      {!activeSession && (
+        <div role="status" className="bg-amber-50 border border-amber-300 px-3 py-2 rounded-xl flex flex-col sm:flex-row sm:items-center gap-2">
+          <p className="flex-1 text-xs font-semibold text-amber-900 leading-snug">
+            ⚠️ No active shift — Production is being recorded, but please open a shift to log power meter readings.
+            {shiftError && <span className="block text-red-700 mt-1">{shiftError}</span>}
+          </p>
+          <button
+            type="button"
+            onClick={startDefaultShift}
+            disabled={startSession.isPending}
+            className="shrink-0 h-11 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-60"
+          >
+            <Zap size={14} /> {startSession.isPending ? 'Starting…' : 'Start Default Shift'}
+          </button>
         </div>
-      ) : (
+      )}
+
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 md:gap-10">
           <div className="lg:col-span-3">
             {/* Entry Form */}
@@ -224,7 +239,7 @@ export default function ProductionEntry() {
                         />
                       </div>
                       <div className="relative group">
-                        <input type="number" step="0.01" required value={inputKg} onChange={e => setInputKg(e.target.value)} placeholder="0.00" className="mill-input w-full text-2xl md:text-4xl font-semibold pr-16 md:pr-20 py-4 md:py-6 border-slate-200 focus:border-brand text-base md:text-4xl max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
+                        <input type="number" step="0.01" required value={inputKg} onChange={e => setInputKg(e.target.value)} placeholder="0.00" className="mill-input w-full text-2xl md:text-4xl font-semibold pr-16 md:pr-20 py-4 md:py-6 border-slate-200 focus:border-brand text-base md:text-4xl" />
                         <span className="absolute right-6 top-1/2 -translate-y-1/2 font-semibold text-slate-300 uppercase text-lg group-focus-within:text-brand transition-colors">KG</span>
                       </div>
                       <div className="mt-3 flex justify-between px-2">
@@ -240,12 +255,12 @@ export default function ProductionEntry() {
 
                     <div>
                       <label className="block text-[10px] md:text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-3 md:mb-4 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Phase 2: Main Flour Output</label>
-                      <select required value={mainProductId} onChange={e => setMainProductId(e.target.value)} className="mill-input w-full font-semibold mb-4 py-3 md:py-4 text-base md:text-sm uppercase tracking-tight max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900">
+                      <select required value={mainProductId} onChange={e => setMainProductId(e.target.value)} className="mill-input w-full font-semibold mb-4 py-3 md:py-4 text-base md:text-sm uppercase tracking-tight">
                         <option value="">Select Grade...</option>
                         {mainOutputProducts.map(p => <option key={p.id} value={p.id}>{p.product_code} · {p.name}</option>)}
                       </select>
                       <div className="relative group">
-                        <input type="number" step="0.01" required value={mainOutputKg} onChange={e => setMainOutputKg(e.target.value)} placeholder="0.00" className="mill-input w-full text-2xl md:text-4xl font-semibold pr-16 md:pr-20 py-4 md:py-6 text-base md:text-4xl max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
+                        <input type="number" step="0.01" required value={mainOutputKg} onChange={e => setMainOutputKg(e.target.value)} placeholder="0.00" className="mill-input w-full text-2xl md:text-4xl font-semibold pr-16 md:pr-20 py-4 md:py-6 text-base md:text-4xl" />
                         <span className="absolute right-6 top-1/2 -translate-y-1/2 font-semibold text-slate-300 uppercase text-lg">KG</span>
                       </div>
                     </div>
@@ -254,12 +269,12 @@ export default function ProductionEntry() {
                   <div className="space-y-6 md:space-y-8">
                     <div>
                       <label className="block text-[10px] md:text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-3 md:mb-4 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Phase 3: By-Products</label>
-                      <select value={byProductId} onChange={e => setByProductId(e.target.value)} className="mill-input w-full font-semibold mb-4 py-3 md:py-4 text-base md:text-sm uppercase tracking-tight bg-slate-50 max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900">
+                      <select value={byProductId} onChange={e => setByProductId(e.target.value)} className="mill-input w-full font-semibold mb-4 py-3 md:py-4 text-base md:text-sm uppercase tracking-tight bg-slate-50">
                         <option value="">None (Optional)</option>
                         {byProductOptions.map(p => <option key={p.id} value={p.id}>{p.product_code} · {p.name}</option>)}
                       </select>
                       <div className="relative">
-                        <input type="number" step="0.01" value={byProductKg} onChange={e => setByProductKg(e.target.value)} placeholder="0.00" disabled={!byProductId} className="mill-input w-full text-2xl md:text-4xl font-semibold pr-16 md:pr-20 py-4 md:py-6 disabled:bg-slate-50 disabled:text-slate-300 text-base md:text-4xl max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
+                        <input type="number" step="0.01" value={byProductKg} onChange={e => setByProductKg(e.target.value)} placeholder="0.00" disabled={!byProductId} className="mill-input w-full text-2xl md:text-4xl font-semibold pr-16 md:pr-20 py-4 md:py-6 disabled:bg-slate-50 disabled:text-slate-300 text-base md:text-4xl" />
                         <span className="absolute right-6 top-1/2 -translate-y-1/2 font-semibold text-slate-300 uppercase text-lg">KG</span>
                       </div>
                     </div>
@@ -271,7 +286,7 @@ export default function ProductionEntry() {
                       </div>
                       <div className="mill-card p-4 md:p-6 bg-slate-50 border-slate-200 flex flex-col justify-center rounded-xl">
                         <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Processing Loss</p>
-                        <input type="number" step="0.01" value={manualWasteKg} onChange={e => setManualWasteKg(e.target.value)} placeholder="0.01" className="mill-input w-full text-lg md:text-2xl font-semibold text-center max-md:text-base max-md:h-8 max-md:py-1 max-md:px-2 max-md:font-normal max-md:text-slate-800 max-md:border max-md:border-slate-200 max-md:rounded max-md:focus:ring-1 max-md:focus:ring-slate-900 max-md:focus:border-slate-900" />
+                        <input type="number" step="0.01" value={manualWasteKg} onChange={e => setManualWasteKg(e.target.value)} placeholder="0.01" className="mill-input w-full text-lg md:text-2xl font-semibold text-center" />
                       </div>
                     </div>
                   </div>
@@ -319,7 +334,6 @@ export default function ProductionEntry() {
             </div>
           </div>
         </div>
-      )}
 
       {/* Monthly History Table */}
       <div className="mill-card p-0 overflow-hidden bg-white border-slate-100 shadow-xl rounded-2xl">
