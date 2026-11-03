@@ -16,6 +16,8 @@ interface SyncPlan {
 }
 
 // Only send columns the table has: queued payloads can carry UI-only or legacy fields.
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const pick = (o: any, keys: string[]) =>
   Object.fromEntries(keys.filter(k => o[k] !== undefined).map(k => [k, o[k]]));
 
@@ -48,7 +50,13 @@ const SYNC_PLAN: Partial<Record<TransactionType, SyncPlan>> = {
     prepare: (p) => pick(p, ['id', ...CUSTOMER_EDITABLE])
   },
   purchase:               { table: 'purchases', op: 'insert' },
-  stock_take:             { table: 'stock_take_history', op: 'insert' },
+  stock_take: {
+    table: 'stock_take_history', op: 'insert',
+    // Builds before the operator-id fix queued a role label ("ADMIN") here; the column is a
+    // profile id now, so send null for those rather than failing the whole count.
+    prepare: (p) => (Array.isArray(p) ? p : [p]).map((r: Record<string, unknown>) =>
+      typeof r.recorded_by === 'string' && !UUID.test(r.recorded_by) ? { ...r, recorded_by: null } : r)
+  },
   production_log:         { table: 'production_logs', op: 'insert' },
   milling_session:        { table: 'milling_sessions', op: 'upsert' },
   milling_session_update: { table: 'milling_sessions', op: 'update' },

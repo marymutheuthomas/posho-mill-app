@@ -9,9 +9,6 @@ import { useMillingSession } from '../hooks/useMillingSession';
 import { useDataMutation } from '../hooks/useDataMutation';
 import { btn, chip } from '../lib/ui';
 
-interface StockTakeProps {
-  role: 'ADMIN' | 'EMPLOYEE' | null;
-}
 
 interface Product { 
   id: string; 
@@ -31,7 +28,7 @@ interface StockLog {
   recorded_by: string;
 }
 
-export default function StockTake({ role }: StockTakeProps) {
+export default function StockTake() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'Entry' | 'History'>('Entry');
   const [searchTerm, setSearchTerm] = useState('');
@@ -195,7 +192,8 @@ export default function StockTake({ role }: StockTakeProps) {
           physical_stock: physicalStock,
           system_stock: systemStock,
           discrepancy: Number((physicalStock - systemStock).toFixed(2)),
-          recorded_by: role || 'Staff',
+          // recorded_by is left out on purpose: useDataMutation stamps the active operator's
+          // profile id (as for sales), so every count is tied to the person who made it
           created_at: dateObj.toISOString()
         };
       });

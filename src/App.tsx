@@ -15,7 +15,7 @@ import ProductionEntry from './components/ProductionEntry';
 import Purchases from './components/Purchases';
 import ServicePOS from './components/ServicePOS';
 // import AuditHub from './components/AuditHub';
-import MasterDashboard from './components/MasterDashboard';
+import InsightsAudit from './components/InsightsAudit';
 import SessionControl from './components/SessionControl';
 import Customers from './components/Customers';
 import StockTake from './components/StockTake';
@@ -345,12 +345,12 @@ function App() {
           <ErrorBoundary resetKey={activeTab} label={activeTab}>
           {activeTab === 'Dashboard'        && <Dashboard onNavigate={setActiveTab} role={user.role} isOnline={isOnline} pendingCount={pendingCount} />}
           {activeTab === 'Session Control'  && <SessionControl onNavigate={setActiveTab} role={user.role} isOnline={isOnline} pendingCount={pendingCount} />}
-          {activeTab === 'Insights & Audit' && <MasterDashboard />}
+          {activeTab === 'Insights & Audit' && <InsightsAudit role={user.role} />}
           {activeTab === 'Production Hub'   && <ProductionEntry />}
           {activeTab === 'Point of Sale'     && <ServicePOS role={user.role} />}
           {activeTab === 'Customers'        && <Customers role={user.role} />}
           {activeTab === 'Purchases'        && <Purchases />}
-          {activeTab === 'Stock Take'       && <StockTake role={user.role} />}
+          {activeTab === 'Stock Take'       && <StockTake />}
           {activeTab === 'Settings'         && <Settings role={user.role} />}
           {activeTab === 'User Management'  && <UserManagement />}
           </ErrorBoundary>
