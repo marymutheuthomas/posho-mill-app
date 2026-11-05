@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import React, { useState } from 'react';
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart } from 'recharts';
 import { subDays, startOfMonth, startOfYear, format } from 'date-fns';
 import { Wallet, TrendingUp, Box, Users, Zap, Activity, Landmark, FileText, AlertOctagon } from 'lucide-react';
@@ -9,10 +8,9 @@ import DebtAging from './DebtAging';
 import { useCustomers } from '../hooks/useCustomers';
 import { AGING_OVERDUE_AFTER_DAYS } from '../lib/customerLedger';
 import { btn, chip } from '../lib/ui';
+import { useFinancials, useFinancialSnapshot, GHOST_MILLING_ALERT } from '../hooks/useFinancials';
 
 const fmt = (v: number) => `KSh ${Number(v || 0).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-const GHOST_MILLING_ALERT = '🚨 CRITICAL: GHOST MILLING (Power used, no KGs logged)';
 
 function KpiCard({ label, value, icon: Icon, accent = false, alert = false }: any) {
   return (
@@ -38,15 +36,16 @@ export default function MasterDashboard() {
   const today = new Date();
   const [start, setStart] = useState(subDays(today, 29));
   const [end, setEnd] = useState(today);
-  const [loading, setLoading] = useState(true);
   const [pdfLoading, setPdfLoading] = useState(false);
 
-  const [bs, setBs] = useState<any>(null);
-  const [pl, setPl] = useState<any[]>([]);
-  const [cashFlow, setCashFlow] = useState<any[]>([]);
-  const [leakage, setLeakage] = useState<any[]>([]);
-  const [intProd, setIntProd] = useState<any[]>([]);
-  const [extProd, setExtProd] = useState<any[]>([]);
+  // Computed from live tables (the old dashboard_* views do not exist in the database)
+  const { data: snapshot } = useFinancialSnapshot();
+  const { data: fin, isFetching: loading } = useFinancials(start, end);
+  const pl = fin?.pl ?? [];
+  const cashFlow = fin?.cashFlow ?? [];
+  const leakage = fin?.leakage ?? [];
+  const intProd = fin?.intProd ?? [];
+  const extProd = fin?.extProd ?? [];
   const { customers: crm } = useCustomers();
   // Manager PDF keeps its existing credit-risk table shape, now fed from the customer ledger
   const creditRisk = crm.filter(c => c.balance > 0.004).sort((x, y) => y.aging.overdue - x.aging.overdue || y.balance - x.balance).map(c => ({
@@ -56,48 +55,12 @@ export default function MasterDashboard() {
     risk_status: c.risk === 'overdue' ? 'OVERDUE' : c.risk === 'due' ? 'AGING' : 'ACTIVE',
   }));
 
-  // Static fetches — run once
-  useEffect(() => {
-    supabase.from('dashboard_balance_sheet').select('*').maybeSingle().then(({ data }) => { if (data) setBs(data); });
-  }, []);
-
-  // Date-filtered fetches
-  useEffect(() => {
-    const s = new Date(start); s.setHours(0, 0, 0, 0);
-    const e = new Date(end); e.setHours(23, 59, 59, 999);
-    const si = s.toISOString(), ei = e.toISOString();
-
-    async function fetchAll() {
-      setLoading(true);
-      await Promise.all([
-        supabase.from('dashboard_monthly_pl').select('*').gte('month_date', si).lte('month_date', ei).order('month_date', { ascending: true })
-          .then(({ data }) => {
-            if (data) setPl(data.map(r => ({
-              ...r,
-              display_month: new Date(r.month_date || r.month).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
-              total_expenses: (Number(r.other_operating_expenses) || 0) + (Number(r.direct_power_costs) || 0),
-              gross_revenue: Number(r.gross_revenue) || 0,
-              net_profit: Number(r.net_profit) || 0,
-            })));
-          }),
-        supabase.from('dashboard_daily_cash_flow').select('*').gte('reconciliation_date', si).lte('reconciliation_date', ei).order('reconciliation_date', { ascending: true }).limit(30)
-          .then(({ data }) => { if (data) setCashFlow(data); }),
-        supabase.from('dashboard_power_leakage_radar').select('*').gte('audit_date', si).lte('audit_date', ei).limit(20)
-          .then(({ data }) => { if (data) setLeakage(data); }),
-        supabase.from('dashboard_internal_production').select('*').gte('production_date', si).lte('production_date', ei).limit(20)
-          .then(({ data }) => { if (data) setIntProd(data); }),
-        supabase.from('dashboard_external_production').select('*').gte('production_date', si).lte('production_date', ei).limit(20)
-          .then(({ data }) => { if (data) setExtProd(data); }),
-      ]);
-      setLoading(false);
-    }
-    fetchAll();
-  }, [start, end]);
-
-  const equity  = bs?.total_business_equity ?? bs?.net_worth ?? 0;
-  const liquid  = bs?.liquid_cash_capital ?? ((Number(bs?.cash_on_hand) || 0) + (Number(bs?.mpesa_balance) || 0));
-  const inv     = bs?.inventory_asset_value ?? bs?.inventory_valuation ?? 0;
-  const ar      = bs?.accounts_receivable ?? bs?.total_debt_receivable ?? 0;
+  // Snapshot (all time). Opening capital and owner withdrawals are not recorded anywhere,
+  // so these are what the records support, not a true balance sheet.
+  const liquid = snapshot?.net_cash_generated ?? 0;
+  const inv    = snapshot?.inventory_asset_value ?? 0;
+  const ar     = crm.reduce((sum, c) => sum + Math.max(0, c.balance), 0);
+  const equity = liquid + inv + ar;
 
   const presets = [
     { label: '7D',    fn: () => { setStart(subDays(today, 6));        setEnd(today); } },
@@ -113,7 +76,7 @@ export default function MasterDashboard() {
   const leakageRowBg = (alert: string) => {
     if (alert === GHOST_MILLING_ALERT) return 'bg-red-50 border-red-300';
     if (alert?.includes('GHOST') || alert?.includes('CRITICAL')) return 'bg-red-50 border-red-200';
-    if (alert?.includes('AGING') || alert?.includes('UNRECORDED')) return 'bg-amber-50 border-amber-200';
+    if (alert?.includes('AGING') || alert?.includes('UNRECORDED') || alert?.includes('HIGH')) return 'bg-amber-50 border-amber-200';
     return 'bg-slate-50 border-slate-100';
   };
 
@@ -219,13 +182,17 @@ export default function MasterDashboard() {
 
         {/* ══ ROW 1: Balance Sheet Snapshot KPIs (Static) ══ */}
         <div>
-          <SectionLabel>Financial Snapshot · Live · Not affected by date range</SectionLabel>
+          <SectionLabel>Financial Snapshot · All time · Not affected by date range</SectionLabel>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <KpiCard label="Total Business Equity"  value={fmt(equity)}  icon={TrendingUp} accent />
-            <KpiCard label="Liquid Cash Capital"    value={fmt(liquid)}  icon={Wallet} />
-            <KpiCard label="Inventory Asset Value"  value={fmt(inv)}     icon={Box} />
-            <KpiCard label="Accounts Receivable"    value={fmt(ar)}      icon={Users} alert />
+            <KpiCard label="Net Position"               value={fmt(equity)}  icon={TrendingUp} accent />
+            <KpiCard label="Net Cash Generated"         value={fmt(liquid)}  icon={Wallet} />
+            <KpiCard label="Stock Value (selling price)" value={fmt(inv)}    icon={Box} />
+            <KpiCard label="Accounts Receivable"        value={fmt(ar)}      icon={Users} alert />
           </div>
+          <p className="mt-2 text-xs text-slate-500">
+            Net cash = cash and M-Pesa received (sales + repayments) minus purchases and expenses. Net position = net cash + stock value + receivables.
+            Opening capital and owner withdrawals are not recorded, so this is not a full balance sheet.
+          </p>
         </div>
 
         {/* ══ ROW 2: P&L + Cash Flow (Date-Filtered) ══ */}
@@ -319,7 +286,7 @@ export default function MasterDashboard() {
                         <span className={`px-1.5 py-0.5 rounded text-[11px] font-black uppercase tracking-widest border shrink-0 ${
                           isGhost ? 'bg-red-100 text-red-700 border-red-300' :
                           a.leakage_alert?.includes('GHOST') ? 'bg-red-50 text-red-600 border-red-200' :
-                          a.leakage_alert?.includes('UNRECORDED') ? 'bg-amber-50 text-amber-600 border-amber-200' :
+                          (a.leakage_alert?.includes('UNRECORDED') || a.leakage_alert?.includes('HIGH')) ? 'bg-amber-50 text-amber-700 border-amber-200' :
                           'bg-emerald-50 text-emerald-600 border-emerald-200'
                         }`}>
                           {isGhost ? '🚨 GHOST MILLING' : a.leakage_alert || 'Normal'}
