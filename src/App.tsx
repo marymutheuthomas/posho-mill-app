@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, Activity, ClipboardCheck, UserCog, Factory,
   ShoppingCart, BookOpen, Settings as SettingsIcon, LogOut,
-  Wifi, WifiOff, X, Menu,
+  Wifi, WifiOff, X, Menu, CircleHelp,
   Zap, ShoppingBag, User, ChevronRight, ChevronUp, AlertTriangle
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
@@ -24,6 +24,7 @@ import OperationalAlert from './components/OperationalAlert';
 import StockTakeReminder from './components/StockTakeReminder';
 import ErrorBoundary from './components/ErrorBoundary';
 import UserManagement from './components/UserManagement';
+import UserGuide from './components/UserGuide';
 import Login from './components/Login';
 import { btn, navItem, SHELL_X } from './lib/ui';
 import { usePendingExceptions } from './hooks/useAuditExceptions';
@@ -166,6 +167,7 @@ function App() {
     { name: 'Customers', icon: BookOpen },
     { name: 'Purchases', icon: ShoppingCart },
     { name: 'Settings', icon: SettingsIcon },
+    { name: 'User Guide', icon: CircleHelp },
     { name: 'User Management', icon: UserCog, adminOnly: true },
   ].filter(item => !item.adminOnly || user?.role === 'ADMIN');
 
@@ -375,6 +377,7 @@ function App() {
           {activeTab === 'Stock Take'       && <StockTake />}
           {activeTab === 'Settings'         && <Settings role={user.role} />}
           {activeTab === 'User Management'  && <UserManagement />}
+          {activeTab === 'User Guide'       && <UserGuide role={user.role} />}
           </ErrorBoundary>
         </div>
 
