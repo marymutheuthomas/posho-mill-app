@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Tag, Database, Shield, RefreshCcw, Save } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { btn } from '../lib/ui';
+import { FIELD, btn } from '../lib/ui';
 
 interface Product {
   id: string;
@@ -14,7 +14,10 @@ interface Product {
   category: string;
 }
 
-export default function Settings({ role: _role }: { role?: 'ADMIN' | 'EMPLOYEE' | string | null }) {
+export default function Settings({ role }: { role?: 'ADMIN' | 'EMPLOYEE' | string | null }) {
+  // Prices are admin-only: staff can see them here but not change them (the database enforces
+  // the same rule with trg_guard_product_prices, migration 20261109)
+  const isAdmin = role === 'ADMIN';
   const queryClient = useQueryClient();
   const [editedProducts, setEditedProducts] = useState<Product[]>([]);
   const [success, setSuccess] = useState('');
@@ -40,6 +43,7 @@ export default function Settings({ role: _role }: { role?: 'ADMIN' | 'EMPLOYEE' 
   // 3. Supabase Mutation
   const saveMutation = useMutation({
     mutationFn: async (updatedList: Product[]) => {
+      if (!isAdmin) throw new Error('Only admins can change prices and milling fees.');
       // For efficiency, we only update products that actually changed
       const changes = updatedList.filter(p => {
         const original = dbProducts?.find(orig => orig.id === p.id);
@@ -124,21 +128,25 @@ export default function Settings({ role: _role }: { role?: 'ADMIN' | 'EMPLOYEE' 
                       </td>
                       <td className="px-8 py-4">
                         <div className="relative max-w-[120px]">
-                          <input 
-                            type="number" 
-                            value={p.milling_fee} 
+                          <input
+                            type="number"
+                            aria-label={`${p.name} milling fee (KES)`}
+                            value={p.milling_fee}
+                            readOnly={!isAdmin}
                             onChange={(e) => handleInputChange(p.id, 'milling_fee', e.target.value)}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-slate-900 focus:border-slate-900 outline-none transition-all"
+                            className={`${FIELD} !px-3 font-mono read-only:bg-slate-100 read-only:text-slate-600`}
                           />
                         </div>
                       </td>
                       <td className="px-8 py-4">
                         <div className="relative max-w-[120px]">
-                          <input 
-                            type="number" 
-                            value={p.selling_price} 
+                          <input
+                            type="number"
+                            aria-label={`${p.name} retail price (KES)`}
+                            value={p.selling_price}
+                            readOnly={!isAdmin}
                             onChange={(e) => handleInputChange(p.id, 'selling_price', e.target.value)}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-slate-900 focus:border-slate-900 outline-none transition-all"
+                            className={`${FIELD} !px-3 font-mono read-only:bg-slate-100 read-only:text-slate-600`}
                           />
                         </div>
                       </td>
@@ -150,14 +158,18 @@ export default function Settings({ role: _role }: { role?: 'ADMIN' | 'EMPLOYEE' 
 
             {/* 2. The Save Mechanism (Sticky Button) */}
             <div className="absolute bottom-0 left-0 right-0 p-6 bg-white/80 backdrop-blur-md border-t border-slate-100 flex justify-end items-center z-10">
-               <button 
-                onClick={() => saveMutation.mutate(editedProducts)}
-                disabled={!hasChanges || saveMutation.isPending}
-                className={`${btn.primary} shadow-xl`}
-               >
-                 <Save size={16} />
-                 {saveMutation.isPending ? 'Syncing...' : 'Save Price Changes'}
-               </button>
+               {isAdmin ? (
+                 <button
+                  onClick={() => saveMutation.mutate(editedProducts)}
+                  disabled={!hasChanges || saveMutation.isPending}
+                  className={`${btn.primary} shadow-xl`}
+                 >
+                   <Save size={16} />
+                   {saveMutation.isPending ? 'Syncing...' : 'Save Price Changes'}
+                 </button>
+               ) : (
+                 <p className="text-sm text-slate-600">Prices can only be changed by an admin.</p>
+               )}
             </div>
           </div>
         </div>

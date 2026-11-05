@@ -88,6 +88,13 @@ export function useFinancials(start: Date, end: Date) {
           .gte('created_at', from).lte('created_at', to).order('created_at').range(f, t)),
         fetchAllRows<Product>((f, t) => supabase.from('products').select('id, selling_price, current_stock').range(f, t)),
       ]);
+      // Till counts from "Log cash drop" (migration 20261109); none yet if that table is missing
+      const audits = await fetchAllRows<{ audit_date: string; actual_cash_collected: number | null }>((f, t) =>
+        supabase.from('daily_audits').select('audit_date, actual_cash_collected')
+          .gte('audit_date', format(start, 'yyyy-MM-dd')).lte('audit_date', format(end, 'yyyy-MM-dd')).range(f, t))
+        .catch(() => []);
+      const counted = new Map<string, number>();
+      audits.forEach(a => counted.set(a.audit_date, (counted.get(a.audit_date) ?? 0) + n(a.actual_cash_collected)));
       const price = new Map(products.map(p => [p.id, n(p.selling_price)]));
       const kwhOf = (s: Session) => (s.end_meter == null ? 0 : Math.max(0, n(s.end_meter) - n(s.start_meter)));
 
@@ -119,7 +126,7 @@ export function useFinancials(start: Date, end: Date) {
         reconciliation_date: key,
         ...v,
         expected_cash: v.revenue + v.debt_collected,
-        actual_cash_collected: null as number | null, // no till counts are recorded in this database
+        actual_cash_collected: counted.has(key) ? counted.get(key)! : null, // null = no cash drop logged that day
       }));
 
       // Per-session work: kg milled and money expected

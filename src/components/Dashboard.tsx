@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { TrendingUp, Activity, Scale, Zap, Wallet, AlertTriangle, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import DeadLetterQueue from './DeadLetterQueue';
+import { useDataMutation } from '../hooks/useDataMutation';
 import {
   useDashboardMetrics, presetRange, KWH_PER_KG_TARGET,
   type RangePreset, type DayRange, type ProductLine,
@@ -228,29 +229,42 @@ function PowerCard({ power }: { power: NonNullable<ReturnType<typeof useDashboar
 
 function CashDropModal({ onClose }: { onClose: () => void }) {
   const [form, setForm] = useState({ cash: '', mpesa: '' });
-  const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    setMessage(null);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const { error } = await supabase.from('daily_audits').insert([{
-        audit_date: format(new Date(), 'yyyy-MM-dd'),
-        actual_cash_collected: (parseFloat(form.cash) || 0) + (parseFloat(form.mpesa) || 0),
-        recorded_by: user?.id || null,
-      }]);
+  // Offline-first like sales: queued on the device when there is no connection, and stamped
+  // with the active operator (recorded_by) by useDataMutation.
+  const cashDrop = useDataMutation({
+    type: 'daily_audit',
+    queryKey: ['financials'],
+    mutationFn: async (row) => {
+      const { error } = await supabase.from('daily_audits').insert([row]);
       if (error) throw error;
-      setMessage({ ok: true, text: 'Cash drop logged.' });
-      setTimeout(onClose, 1200);
-    } catch (err) {
-      setMessage({ ok: false, text: (err as Error).message || 'Could not log the cash drop.' });
-    } finally {
-      setSaving(false);
-    }
+    },
+    onSuccess: (res) => {
+      setMessage({ ok: true, text: res.offline ? 'Cash drop saved on this device. It will sync when back online.' : 'Cash drop logged.' });
+      setTimeout(onClose, 1500);
+    },
+    onError: (err: { code?: string; message?: string }) => setMessage({
+      ok: false,
+      text: err.code === 'PGRST205' || err.code === '42P01'
+        ? 'Cash drops are not set up in the database yet. Ask an admin to run migration 20261109.'
+        : err.message || 'Could not log the cash drop.',
+    }),
+  });
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setMessage(null);
+    const cash = Math.max(0, parseFloat(form.cash) || 0);
+    const mpesa = Math.max(0, parseFloat(form.mpesa) || 0);
+    cashDrop.mutate({
+      audit_date: format(new Date(), 'yyyy-MM-dd'),
+      cash_amount: cash,
+      mpesa_amount: mpesa,
+      actual_cash_collected: cash + mpesa,
+    });
   };
+  const saving = cashDrop.isPending;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="cash-drop-title">

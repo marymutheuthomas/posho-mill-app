@@ -45,7 +45,7 @@ const SECTIONS: Section[] = [
         ['Customers', 'Everyone', 'Customer details, money owed, payments, statements.'],
         ['Purchases', 'Everyone', 'Stock bought and money spent on expenses.'],
         ['Dashboard', 'Everyone', "Today's sales, milling and production figures."],
-        ['Settings', 'Everyone', 'Product prices and milling fees. Only admins should change them.'],
+        ['Settings', 'Everyone', 'Product prices and milling fees. Everyone can see them; only admins can change them.'],
         ['Insights & Audit', 'Admins', 'Flagged problems, stock counts, the stock ledger, financial reports.'],
         ['User Management', 'Admins', 'Adding staff accounts and setting their role.'],
       ]} />
@@ -88,6 +88,7 @@ const SECTIONS: Section[] = [
         <><B>Close the shift</B> with the final meter reading when the mill stops (Session Control).</>,
       ]} />
       <P>Record purchases and customer payments whenever they happen.</P>
+      <P><B>Counting the till.</B> At the end of the day, count the cash and check the M-Pesa total, then on the <B>Dashboard</B> tap <B>Log cash drop</B>, enter both and tap <B>Submit cash drop</B>. It saves offline too. Admins compare it with expected takings under Insights &amp; Audit → Financials.</P>
     </>,
   },
   {
@@ -229,7 +230,8 @@ const SECTIONS: Section[] = [
         ['Credit-limit warning', 'Decide with the customer; the sale can still go through.'],
         ['"Insufficient stock" in the Production Hub', 'Record the maize purchase in Purchases first.'],
         ['Wrong sale entered', 'Tell an admin; only admins can edit or void sales.'],
-        ['Log cash drop on the Dashboard fails', 'Known issue: cash drops cannot be stored yet. Count the till on paper until it is fixed.'],
+        ['Log cash drop says it is not set up', 'An admin needs to run database migration 20261109 once. Count the till on paper until then.'],
+        ['Cannot change prices in Settings', 'Prices and milling fees can only be changed by an admin.'],
         ['Insights & Audit is missing from the menu', 'It is for admins only.'],
       ]} />
       <P>For anything else, note the screen, the time and the exact message, and tell an admin.</P>
