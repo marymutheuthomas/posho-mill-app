@@ -5,6 +5,8 @@ import { ShieldAlert, Lock, AlertTriangle, CheckCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { SECTION_TITLE, btn } from '../lib/ui';
 import { usePendingExceptions, type ExceptionType } from '../hooks/useAuditExceptions';
+import { usePagination } from '../hooks/usePagination';
+import Pagination from './Pagination';
 
 const TYPE_LABEL: Record<ExceptionType, string> = {
   INVENTORY_DRIFT: 'Inventory drift',
@@ -17,6 +19,7 @@ export default function AnomalyQueue({ isAdmin }: { isAdmin: boolean }) {
   const [flash, setFlash] = useState<{ ok: boolean; text: string } | null>(null);
 
   const { data = [], isLoading, error } = usePendingExceptions(isAdmin);
+  const { pageItems, pager } = usePagination(data, { initialPageSize: 10 });
 
   const approve = useMutation({
     mutationFn: async (id: string) => {
@@ -74,7 +77,7 @@ export default function AnomalyQueue({ isAdmin }: { isAdmin: boolean }) {
         <p className="p-4 rounded-xl bg-slate-50 text-sm text-slate-500 text-center">No exceptions waiting for review.</p>
       ) : (
         <ul className="space-y-2">
-          {data.map(ex => {
+          {pageItems.map(ex => {
             const when = ex.effective_time || ex.created_at;
             const recorder = Array.isArray(ex.recorder) ? ex.recorder[0]?.username : ex.recorder?.username;
             const isCritical = ex.severity === 'CRITICAL';
@@ -106,6 +109,7 @@ export default function AnomalyQueue({ isAdmin }: { isAdmin: boolean }) {
           })}
         </ul>
       )}
+      <Pagination pager={pager} noun="exceptions" />
     </section>
   );
 }

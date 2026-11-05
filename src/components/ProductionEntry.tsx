@@ -1,4 +1,6 @@
 import { useState, useMemo } from 'react';
+import { usePagination } from '../hooks/usePagination';
+import Pagination from './Pagination';
 import { supabase } from '../lib/supabase';
 import { Scale, AlertTriangle, CheckCircle, Save, Calendar, ArrowUpRight, ArrowDownRight, RotateCcw, Zap } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -189,6 +191,8 @@ export default function ProductionEntry() {
     productionMutation.mutate(payload);
   };
 
+  const { pageItems, pager } = usePagination(logs);
+
   if (loadingLogs && logs.length === 0) return <div className="p-20 text-center font-semibold text-slate-300 uppercase tracking-widest animate-pulse">Synchronizing...</div>;
 
   return (
@@ -369,7 +373,7 @@ export default function ProductionEntry() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
-              {logs.map((log, index) => (
+              {pageItems.map((log, index) => (
                 <tr key={log.id || index} className="hover:bg-slate-50/50 transition-colors group text-xs text-slate-650 max-md:text-[11px] max-md:font-normal">
                   <td className="px-2 py-1.5 md:px-3 md:py-1.5 max-md:text-[11px] whitespace-nowrap">
                     <p className="font-medium max-md:font-normal text-slate-800 max-md:text-[11px]">{new Date(log.created_at).toLocaleDateString()}</p>
@@ -406,6 +410,7 @@ export default function ProductionEntry() {
             </tbody>
           </table>
         </div>
+        <Pagination pager={pager} noun="production runs" className="px-3 pb-3" />
       </div>
     </div>
   );

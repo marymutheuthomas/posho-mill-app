@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { ScrollText, Search } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { FIELD, FIELD_LABEL, SECTION_TITLE, btn } from '../lib/ui';
+import { FIELD, FIELD_LABEL, SECTION_TITLE } from '../lib/ui';
 import { rangeBounds, type DayRange } from '../hooks/useDashboardMetrics';
 import { useProductNames } from '../hooks/useLookups';
+import { DEFAULT_PAGE_SIZE, pagerFor } from '../hooks/usePagination';
+import Pagination from './Pagination';
 
 interface LedgerEntry {
   id: number | string;
@@ -17,7 +19,6 @@ interface LedgerEntry {
   effective_time: string;
 }
 
-const PAGE = 100;
 const SOURCES: { value: string; label: string }[] = [
   { value: '', label: 'All sources' },
   { value: 'sales_transactions', label: 'Sales' },
@@ -33,27 +34,35 @@ export default function LedgerStream({ range }: { range: DayRange }) {
   const [productId, setProductId] = useState('');
   const [source, setSource] = useState('');
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const { from, to } = rangeBounds(range);
+  // Any filter change starts again at page 1 (adjusted during render, no extra effect pass)
+  const filterKey = `${from}|${to}|${productId}|${source}`;
+  const [lastFilterKey, setLastFilterKey] = useState(filterKey);
+  if (lastFilterKey !== filterKey) { setLastFilterKey(filterKey); setPage(1); }
 
-  const query = useInfiniteQuery({
-    queryKey: ['audit-desk', 'ledger', from, to, productId, source],
-    initialPageParam: 0,
-    queryFn: async ({ pageParam }) => {
+  // Paged in the database: only one page of rows is ever fetched or drawn
+  const query = useQuery({
+    queryKey: ['audit-desk', 'ledger', from, to, productId, source, page, pageSize],
+    placeholderData: keepPreviousData, // keep the current page on screen while the next loads
+    queryFn: async () => {
       let q = supabase.from('inventory_ledger')
-        .select('id, product_id, change_kg, transaction_type, source_table, reference_id, effective_time')
+        .select('id, product_id, change_kg, transaction_type, source_table, reference_id, effective_time', { count: 'exact' })
         .gte('effective_time', from).lte('effective_time', to);
       if (productId) q = q.eq('product_id', productId);
       if (source) q = q.eq('source_table', source);
-      const { data, error } = await q
+      const start = (page - 1) * pageSize;
+      const { data, error, count } = await q
         .order('effective_time', { ascending: false }).order('id', { ascending: false })
-        .range(pageParam, pageParam + PAGE - 1);
+        .range(start, start + pageSize - 1);
       if (error) throw error;
-      return (data ?? []) as LedgerEntry[];
+      return { rows: (data ?? []) as LedgerEntry[], total: count ?? 0 };
     },
-    getNextPageParam: (last, pages) => (last.length === PAGE ? pages.length * PAGE : undefined),
   });
 
-  const loaded = useMemo(() => query.data?.pages.flat() ?? [], [query.data]);
+  const pager = pagerFor(page, pageSize, query.data?.total ?? 0, setPage, size => { setPageSize(size); setPage(1); });
+  const loaded = query.data?.rows ?? [];
   const term = search.trim().toLowerCase();
   const rows = term
     ? loaded.filter(r => [productNames.get(r.product_id), r.transaction_type, r.source_table, r.reference_id]
@@ -85,7 +94,7 @@ export default function LedgerStream({ range }: { range: DayRange }) {
           </select>
         </div>
         <div>
-          <label htmlFor="ledger-search" className={FIELD_LABEL}>Search loaded entries</label>
+          <label htmlFor="ledger-search" className={FIELD_LABEL}>Search this page</label>
           <div className="relative">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true" />
             <input id="ledger-search" type="search" className={`${FIELD} !pl-9`} placeholder="Reference, type…"
@@ -99,7 +108,7 @@ export default function LedgerStream({ range }: { range: DayRange }) {
       ) : query.error ? (
         <p role="alert" className="p-3 rounded-xl border border-red-200 bg-red-50 text-sm text-red-800">Could not load the ledger: {(query.error as Error).message}</p>
       ) : rows.length === 0 ? (
-        <p className="p-4 rounded-xl bg-slate-50 text-sm text-slate-500 text-center">{term ? 'No loaded entries match the search.' : 'No stock movements in this period.'}</p>
+        <p className="p-4 rounded-xl bg-slate-50 text-sm text-slate-500 text-center">{term ? 'Nothing on this page matches the search. Try another page or use the filters.' : 'No stock movements in this period.'}</p>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-slate-200">
           <table className="w-full min-w-[760px] text-left text-sm">
@@ -134,16 +143,11 @@ export default function LedgerStream({ range }: { range: DayRange }) {
         </div>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-slate-500">
-          Showing <span className="font-mono">{rows.length}</span>{term && <> of <span className="font-mono">{loaded.length}</span> loaded</>} entr{rows.length === 1 ? 'y' : 'ies'}
-        </p>
-        {query.hasNextPage && (
-          <button type="button" className={btn.secondary} onClick={() => query.fetchNextPage()} disabled={query.isFetchingNextPage}>
-            {query.isFetchingNextPage ? 'Loading…' : `Load ${PAGE} more`}
-          </button>
-        )}
-      </div>
+      {term && rows.length > 0 && (
+        <p className="text-xs text-slate-500"><span className="font-mono">{rows.length}</span> of <span className="font-mono">{loaded.length}</span> entries on this page match.</p>
+      )}
+      <Pagination pager={pager} noun="movements" />
+      {query.isPlaceholderData && <p className="text-xs text-slate-400" aria-live="polite">Loading page…</p>}
     </section>
   );
 }

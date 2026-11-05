@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { usePagination } from '../hooks/usePagination';
+import Pagination from './Pagination';
 import { supabase } from '../lib/supabase';
 import { withRetry } from '../lib/network';
 import { Package, User as UserIcon, RotateCcw, History, CheckCircle, AlertCircle, Pencil, Trash2, X, DollarSign } from 'lucide-react';
@@ -212,6 +214,8 @@ export default function Purchases() {
 
   const totalPreview = (parseFloat(formData.qtyReceived || '1') * parseFloat(formData.unitPrice || '0')).toFixed(2);
 
+  const { pageItems, pager } = usePagination(history);
+
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-20">
       <div className="flex items-center justify-end">
@@ -351,7 +355,7 @@ export default function Purchases() {
                   <td colSpan={7} className="p-20 text-center text-slate-300 font-semibold uppercase tracking-widest italic text-xs max-md:text-[11px]">No records found</td>
                 </tr>
               )}
-              {history.map(p => (
+              {pageItems.map(p => (
                 <tr key={p.id} className="hover:bg-slate-50/50 transition-colors group text-xs text-slate-650 max-md:text-[11px]">
                   <td className="px-2 py-1.5 md:px-3 md:py-1.5 max-md:text-[11px] whitespace-nowrap">
                     <p className="font-medium max-md:font-normal text-slate-800 max-md:text-[11px]">{new Date(p.created_at).toLocaleDateString()}</p>
@@ -384,6 +388,7 @@ export default function Purchases() {
             </tbody>
           </table>
         </div>
+        <Pagination pager={pager} noun="records" className="px-3 pb-3" />
       </div>
       {/* EDIT MODAL */}
       {editModal.open && (

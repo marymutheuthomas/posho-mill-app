@@ -7,6 +7,8 @@ import { fetchAllRows } from '../lib/fetchAll';
 import { SECTION_TITLE, chip } from '../lib/ui';
 import { rangeBounds, type DayRange } from '../hooks/useDashboardMetrics';
 import { useProductNames, useProfileNames, describeRecorder } from '../hooks/useLookups';
+import { usePagination } from '../hooks/usePagination';
+import Pagination from './Pagination';
 
 interface CountRow {
   id: string;
@@ -40,6 +42,7 @@ export default function StockDiscrepancyMatrix({ range }: { range: DayRange }) {
   });
 
   const rows = missingOnly ? data.filter(r => n(r.discrepancy) < 0) : data;
+  const { pageItems, pager } = usePagination(rows, { resetKey: `${from}|${to}|${missingOnly}` });
   const missing = data.filter(r => n(r.discrepancy) < 0);
   const missingKg = missing.reduce((a, r) => a + n(r.discrepancy), 0);
 
@@ -85,7 +88,7 @@ export default function StockDiscrepancyMatrix({ range }: { range: DayRange }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {rows.map(r => {
+              {pageItems.map(r => {
                 const d = n(r.discrepancy);
                 return (
                   <tr key={r.id} className={d < 0 ? 'bg-red-50/40' : undefined}>
@@ -107,6 +110,7 @@ export default function StockDiscrepancyMatrix({ range }: { range: DayRange }) {
           </table>
         </div>
       )}
+      <Pagination pager={pager} noun="counts" />
     </section>
   );
 }

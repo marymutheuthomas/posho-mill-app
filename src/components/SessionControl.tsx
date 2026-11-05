@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { usePagination } from '../hooks/usePagination';
+import Pagination from './Pagination';
 import { useSessionDrawer } from '../hooks/useSessionDrawer';
 import { FIELD, FIELD_NUM, FIELD_LABEL, SECTION_TITLE, btn } from '../lib/ui';
 import { useMillingSession, useSessionHistory, type MillingSession, type SessionType } from '../hooks/useMillingSession';
@@ -108,6 +110,8 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
       onError: (err: any) => setError(err.message),
     });
   };
+
+  const { pageItems, pager } = usePagination(pastSessions);
 
   if (loadingSession || loadingPastSessions) {
     return (
@@ -382,7 +386,7 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
                   <td colSpan={7} className="p-20 text-center text-slate-300 font-semibold uppercase tracking-widest italic text-xs max-md:text-[11px]">No closed sessions found</td>
                 </tr>
               )}
-              {pastSessions.map(s => {
+              {pageItems.map(s => {
                 const consumed = (s.end_meter !== null ? s.end_meter - s.start_meter : 0).toFixed(2);
                 return (
                   <tr key={s.id} className="hover:bg-slate-50/50 transition-colors group text-xs text-slate-650 max-md:text-[11px]">
@@ -426,6 +430,7 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
             </tbody>
           </table>
         </div>
+        <Pagination pager={pager} noun="sessions" className="px-3 pb-3" />
       </div>
 
       {/* EDIT SESSION MODAL */}

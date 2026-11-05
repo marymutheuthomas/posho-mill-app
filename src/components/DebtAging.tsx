@@ -1,6 +1,8 @@
 import { ShieldAlert } from 'lucide-react';
 import type { CustomerWithLedger } from '../hooks/useCustomers';
 import { AGING_DUE_AFTER_DAYS, AGING_OVERDUE_AFTER_DAYS } from '../lib/customerLedger';
+import { usePagination } from '../hooks/usePagination';
+import Pagination from './Pagination';
 
 const ksh = (n: number) => `KSh ${Math.round(n).toLocaleString('en-KE')}`;
 
@@ -17,9 +19,10 @@ export default function DebtAging({ customers }: { customers: CustomerWithLedger
     { label: `Overdue ${AGING_OVERDUE_AFTER_DAYS}d+`, value: sum('overdue'), count: owing.filter(c => c.risk === 'overdue').length, tone: 'text-red-600', bar: 'bg-red-500' },
   ];
   const total = buckets.reduce((s, b) => s + b.value, 0);
+  const { pageItems, pager } = usePagination(owing, { initialPageSize: 10 });
 
   return (
-    <div className="bg-white rounded-xl border border-slate-100 shadow-sm flex flex-col h-[420px] overflow-hidden">
+    <div className="bg-white rounded-xl border border-slate-100 shadow-sm flex flex-col min-h-[420px] overflow-hidden">
       <div className="p-4 border-b border-slate-100 shrink-0">
         <div className="flex items-center justify-between mb-3">
           <div>
@@ -49,7 +52,7 @@ export default function DebtAging({ customers }: { customers: CustomerWithLedger
             <tr><th className="px-4 py-2">Customer</th><th className="px-4 py-2 text-right">Balance</th><th className="px-4 py-2 text-right">Overdue</th></tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
-            {owing.length ? owing.map(c => (
+            {owing.length ? pageItems.map(c => (
               <tr key={c.id} className={c.risk === 'overdue' ? 'bg-red-50/50' : c.risk === 'due' ? 'bg-amber-50/40' : ''}>
                 <td className="px-4 py-2">
                   <p className={`text-[11px] font-medium uppercase truncate ${c.risk === 'overdue' ? 'text-red-800' : 'text-slate-700'}`}>{c.name}</p>
@@ -66,6 +69,7 @@ export default function DebtAging({ customers }: { customers: CustomerWithLedger
           </tbody>
         </table>
       </div>
+      <Pagination pager={pager} noun="customers" className="px-4 pb-3" />
     </div>
   );
 }

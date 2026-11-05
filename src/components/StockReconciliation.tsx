@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { Scale } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { fetchAllRows } from '../lib/fetchAll';
+import { usePagination } from '../hooks/usePagination';
+import Pagination from './Pagination';
 import {
   reconcileStock, DRIFT_TOLERANCE_KG, VARIANCE_MINOR, VARIANCE_MAJOR,
   type LedgerRow, type PhysicalCount, type ProductRow, type ReconRow, type ReconStatus
@@ -51,6 +53,7 @@ export default function StockReconciliation({ start, end }: { start: Date; end: 
   }, [rows]);
 
   const visible = issuesOnly ? rows.filter(r => r.status !== 'clean' && r.status !== 'no-count') : rows;
+  const { pageItems, pager } = usePagination(visible, { resetKey: `${start.getTime()}|${end.getTime()}|${issuesOnly}` });
   const showOther = rows.some(r => r.other !== 0);
 
   const num = (n: number, tone = 'text-slate-600') => <td className={`px-3 py-2.5 text-right text-[11px] font-mono whitespace-nowrap ${n === 0 ? 'text-slate-300' : tone}`}>{kg(n)}</td>;
@@ -106,7 +109,7 @@ export default function StockReconciliation({ start, end }: { start: Date; end: 
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {visible.map((r: ReconRow) => (
+              {pageItems.map((r: ReconRow) => (
                 <tr key={r.productId} className={`${STATUS[r.status].row} hover:bg-slate-50 transition-colors`}>
                   <td className="px-3 py-2.5">
                     <p className="text-[11px] font-bold text-slate-800 uppercase whitespace-nowrap">{r.name}</p>
@@ -147,6 +150,7 @@ export default function StockReconciliation({ start, end }: { start: Date; end: 
           </table>
         </div>
       )}
+      <Pagination pager={pager} noun="products" className="px-5" />
 
       <p className="px-5 py-3 border-t border-slate-100 text-[11px] font-semibold text-slate-400 leading-relaxed">
         Expected = opening + purchases + production out − production in − sales ± adjustments (kg, by ledger effective time).

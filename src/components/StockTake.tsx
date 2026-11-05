@@ -8,6 +8,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useMillingSession } from '../hooks/useMillingSession';
 import { useDataMutation } from '../hooks/useDataMutation';
 import { btn, chip } from '../lib/ui';
+import { usePagination } from '../hooks/usePagination';
+import Pagination from './Pagination';
 
 
 interface Product { 
@@ -251,6 +253,8 @@ export default function StockTake() {
     p.product_code.includes(searchTerm)
   );
 
+  const { pageItems, pager } = usePagination(history);
+
   if ((loadingProducts || loadingHistory) && products.length === 0) return <div className="p-20 text-center font-semibold text-slate-400 uppercase tracking-widest animate-pulse text-sm md:text-base">Syncing Audit Registry...</div>;
 
   return (
@@ -443,7 +447,7 @@ export default function StockTake() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {history.map(log => (
+                  {pageItems.map(log => (
                     <tr key={log.id} className="hover:bg-slate-50/50 transition-colors group text-xs text-slate-650 max-md:text-[11px] max-md:font-normal">
                       <td className="px-2 py-1.5 md:px-3 md:py-1.5 max-md:text-[11px] whitespace-nowrap">
                         <p className="font-medium max-md:font-normal text-slate-800 max-md:text-[11px]">{new Date(log.created_at).toLocaleDateString()}</p>
@@ -473,6 +477,7 @@ export default function StockTake() {
                 </tbody>
               </table>
             </div>
+            <Pagination pager={pager} noun="counts" className="px-3 pb-3" />
 
         </div>
       )}

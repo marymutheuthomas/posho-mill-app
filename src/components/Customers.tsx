@@ -5,6 +5,8 @@ import { useMillingSession } from '../hooks/useMillingSession';
 import { buildStatement, creditCheck, type Risk } from '../lib/customerLedger';
 import { generateCustomerStatementPDF } from '../lib/pdfGenerator';
 import { btn, chip } from '../lib/ui';
+import { usePagination } from '../hooks/usePagination';
+import Pagination from './Pagination';
 
 const ksh = (n: number) => `KSh ${n.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const dateOnly = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
@@ -114,6 +116,9 @@ export default function Customers({ role }: { role: 'ADMIN' | 'EMPLOYEE' }) {
     return { from, to, ...buildStatement(selected.entries, from, to) };
   }, [selected, range]);
 
+  const { pageItems: customerPage, pager: customerPager } = usePagination(visible, { resetKey: `${search}|${filter}` });
+  const { pageItems: statementPage, pager: statementPager } = usePagination(statement?.lines ?? [], { resetKey: `${selectedId}|${range.from}|${range.to}` });
+
   const inputClass = 'mill-input w-full text-sm';
   const label = 'block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1';
 
@@ -192,7 +197,7 @@ export default function Customers({ role }: { role: 'ADMIN' | 'EMPLOYEE' }) {
             <p className="p-10 text-center text-[11px] font-bold text-slate-300 uppercase tracking-widest">{customers.length ? 'No customers match' : 'No customers yet'}</p>
           ) : (
             <div className="divide-y divide-slate-50 max-h-[70vh] overflow-y-auto">
-              {visible.map(c => {
+              {customerPage.map(c => {
                 const credit = creditCheck(c.balance, c.credit_limit);
                 return (
                   <button key={c.id} onClick={() => { setSelectedId(c.id); setEditing(false); }}
@@ -217,6 +222,7 @@ export default function Customers({ role }: { role: 'ADMIN' | 'EMPLOYEE' }) {
               })}
             </div>
           )}
+          <Pagination pager={customerPager} noun="customers" className="px-3 pb-3" />
         </div>
 
         {/* Detail */}
@@ -305,8 +311,10 @@ export default function Customers({ role }: { role: 'ADMIN' | 'EMPLOYEE' }) {
                     <tr><th className="px-3 py-2">Date</th><th className="px-3 py-2">Item</th><th className="px-3 py-2 text-right">Charge</th><th className="px-3 py-2 text-right">Payment</th><th className="px-3 py-2 text-right">Balance</th></tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50 text-[11px]">
-                    <tr className="bg-canvas"><td className="px-3 py-2 text-slate-500">{new Date(statement.from).toLocaleDateString()}</td><td className="px-3 py-2 font-semibold text-slate-600">Opening balance</td><td /><td /><td className="px-3 py-2 text-right font-mono font-bold">{ksh(statement.opening)}</td></tr>
-                    {statement.lines.map(l => (
+                    {statementPager.page === 1 && (
+                      <tr className="bg-canvas"><td className="px-3 py-2 text-slate-500">{new Date(statement.from).toLocaleDateString()}</td><td className="px-3 py-2 font-semibold text-slate-600">Opening balance</td><td /><td /><td className="px-3 py-2 text-right font-mono font-bold">{ksh(statement.opening)}</td></tr>
+                    )}
+                    {statementPage.map(l => (
                       <tr key={l.kind + l.id}>
                         <td className="px-3 py-2 text-slate-500 whitespace-nowrap">{new Date(l.at).toLocaleDateString()}</td>
                         <td className="px-3 py-2">
@@ -326,6 +334,7 @@ export default function Customers({ role }: { role: 'ADMIN' | 'EMPLOYEE' }) {
                   </tfoot>
                 </table>
               </div>
+              <Pagination pager={statementPager} noun="statement lines" className="px-3 pb-3" />
             </div>
           </div>
         )}

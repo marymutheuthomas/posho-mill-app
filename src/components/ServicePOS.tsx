@@ -14,6 +14,8 @@ import { creditCheck } from '../lib/customerLedger';
 import ActiveSessionOverlay from './ActiveSessionOverlay';
 
 import { FIELD, FIELD_LABEL, btn, chip } from '../lib/ui';
+import { usePagination } from '../hooks/usePagination';
+import Pagination from './Pagination';
 
 // Shift type the POS banner starts with one tap; counter sales are mostly customer milling.
 const DEFAULT_SHIFT_TYPE = 'External' as const;
@@ -62,7 +64,6 @@ export default function ServicePOS({ role }: ServicePOSProps) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showReceipt, setShowReceipt] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -163,6 +164,9 @@ export default function ServicePOS({ role }: ServicePOSProps) {
       return data as TransactionLog[];
     },
   });
+
+  // Sales history shows one page at a time (shared pagination control)
+  const { pageItems: salesPage, pager: salesPager } = usePagination(salesHistory, { initialPageSize: 10 });
 
   // 2. Optimized Mutations (Centralized Offline-First)
   const checkoutMutation = useDataMutation({
@@ -745,7 +749,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
           <button 
             onClick={() => {
               queryClient.invalidateQueries({ queryKey: ['sales_history'] });
-              setCurrentPage(1);
+              salesPager.setPage(1);
             }} 
             aria-label="Refresh" className={`${btn.icon} border border-slate-200 bg-white`}
             title="Refresh History"
@@ -770,11 +774,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
                 {(() => {
-                  const itemsPerPage = 10;
-                  const totalPages = Math.ceil(salesHistory.length / itemsPerPage) || 1;
-                  const validCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
-                  const startIndex = (validCurrentPage - 1) * itemsPerPage;
-                  const paginatedSales = salesHistory.slice(startIndex, startIndex + itemsPerPage);
+                  const paginatedSales = salesPage;
 
                   return (
                     <>
@@ -895,11 +895,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
           {/* Mobile Card View */}
           <div className="md:hidden space-y-3">
             {(() => {
-              const itemsPerPage = 10;
-              const totalPages = Math.ceil(salesHistory.length / itemsPerPage) || 1;
-              const validCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
-              const startIndex = (validCurrentPage - 1) * itemsPerPage;
-              const paginatedSales = salesHistory.slice(startIndex, startIndex + itemsPerPage);
+              const paginatedSales = salesPage;
 
               return (
                 <>
@@ -989,44 +985,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
           </div>
         </div>
 
-        {/* Pagination Control Matrix */}
-        {salesHistory.length > 0 && (
-          <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-4 shrink-0">
-            {(() => {
-              const itemsPerPage = 10;
-              const totalPages = Math.ceil(salesHistory.length / itemsPerPage) || 1;
-              const validCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
-              const startIndex = (validCurrentPage - 1) * itemsPerPage;
-
-              return (
-                <>
-                  <span className="text-[11px] text-slate-500 font-medium">
-                    Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, salesHistory.length)} of {salesHistory.length} sales
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      disabled={validCurrentPage === 1}
-                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                      className={btn.secondary}
-                    >
-                      Previous
-                    </button>
-                    <span className="text-[11px] text-slate-500 font-semibold px-1">
-                      Page {validCurrentPage} of {totalPages}
-                    </span>
-                    <button
-                      disabled={validCurrentPage === totalPages}
-                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                      className={btn.secondary}
-                    >
-                      Next
-                    </button>
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-        )}
+        <Pagination pager={salesPager} noun="sales" className="px-4 pb-3 border-t border-slate-100" />
       </div>
 
       {/* EDIT SALE MODAL */}
