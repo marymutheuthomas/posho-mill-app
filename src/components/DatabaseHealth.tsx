@@ -1,131 +1,94 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { supabase, supabaseUrl, supabaseKey } from '../lib/supabase';
-import { Database, RefreshCw } from 'lucide-react';
+import { Database, RefreshCw, X } from 'lucide-react';
 import { btn } from '../lib/ui';
 
 interface DatabaseHealthProps {
   children: React.ReactNode;
 }
 
+const PING_TIMEOUT_MS = 5000;
+
+type Problem = { kind: 'unreachable' | 'rejected'; message: string; detail?: string };
+
+/**
+ * Startup connection check that never holds up the till.
+ *
+ * The app opens straight away and works offline as designed; the database is pinged in the
+ * background (5 s limit) and a small notice appears only if it cannot be reached or refuses the
+ * app's key. Only a build with no database URL/key at all is blocked, since nothing could work.
+ */
 export default function DatabaseHealth({ children }: DatabaseHealthProps) {
-  const [status, setStatus] = useState<'checking' | 'healthy' | 'error'>('checking');
-  const [errorDetails, setErrorDetails] = useState<{ type: string; message: string; details?: string } | null>(null);
+  const misconfigured = !supabaseUrl?.trim() || !supabaseKey?.trim();
+  const [problem, setProblem] = useState<Problem | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+
+  const checkHealth = useCallback(async () => {
+    if (misconfigured || !navigator.onLine) return; // offline: the top bar already says so
+    setChecking(true);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), PING_TIMEOUT_MS);
+    try {
+      // products is the one table readable before sign-in
+      const { error } = await supabase.from('products').select('id').limit(1).abortSignal(controller.signal);
+      if (!error) { setProblem(null); return; }
+      const aborted = controller.signal.aborted || /abort|fetch|network/i.test(error.message);
+      console.error('[DatabaseHealth]', error);
+      setProblem(aborted
+        ? { kind: 'unreachable', message: "Can't reach the database. Keep working: your records are saved on this device and will sync later." }
+        : { kind: 'rejected', message: 'The database refused the connection. Tell an admin.', detail: `${error.code || ''} ${error.message}`.trim() });
+    } catch (err) {
+      console.error('[DatabaseHealth] network error:', err);
+      setProblem({ kind: 'unreachable', message: "Can't reach the database. Keep working: your records are saved on this device and will sync later." });
+    } finally {
+      clearTimeout(timer);
+      setChecking(false);
+      setDismissed(false);
+    }
+  }, [misconfigured]);
 
   useEffect(() => {
-    checkHealth();
-  }, []);
+    const first = setTimeout(checkHealth, 0); // after first paint, never before it
+    window.addEventListener('online', checkHealth);
+    return () => { clearTimeout(first); window.removeEventListener('online', checkHealth); };
+  }, [checkHealth]);
 
-  const checkHealth = async () => {
-    setStatus('checking');
-    setErrorDetails(null);
-
-    // 1. Check for missing config
-    if (!supabaseUrl || supabaseUrl.trim() === '') {
-      setErrorDetails({
-        type: 'Configuration Error',
-        message: 'Supabase URL is missing.',
-        details: 'Please check your environment variables or supabase.ts configuration.'
-      });
-      setStatus('error');
-      return;
-    }
-
-    if (!supabaseKey || supabaseKey.trim() === '') {
-      setErrorDetails({
-        type: 'Configuration Error',
-        message: 'Supabase Key is missing.',
-        details: 'Please check your environment variables or supabase.ts configuration.'
-      });
-      setStatus('error');
-      return;
-    }
-
-    // 2. Ping connection and check schema/auth
-    try {
-      // A simple ping: query a known table with limit 1
-      const { error } = await supabase.from('products').select('id').limit(1);
-
-      if (error) {
-        // Evaluate error
-        let errorType = 'Unknown Error';
-        let errorMessage = error.message;
-
-        // Check for common Auth Errors
-        if (error.code === 'PGRST301' || error.message.toLowerCase().includes('jw') || error.message.toLowerCase().includes('auth')) {
-          errorType = 'Auth Error';
-        }
-        // Check for Schema Errors
-        else if (error.code === '42P01' || error.code === 'PGRST116' || error.message.toLowerCase().includes('does not exist')) {
-          errorType = 'Schema Error';
-        }
-        
-        console.error(`[DatabaseHealth] ${errorType}:`, error);
-
-        setErrorDetails({
-          type: errorType,
-          message: errorMessage,
-          details: `Error Code: ${error.code || 'N/A'}`
-        });
-        setStatus('error');
-      } else {
-        // Healthy!
-        setStatus('healthy');
-      }
-    } catch (err: any) {
-      // 3. Network Errors (fetch failed)
-      console.error('[DatabaseHealth] Network Error:', err);
-      setErrorDetails({
-        type: 'Network Error',
-        message: 'Failed to reach Supabase. Please check your internet connection or URL.',
-        details: err.message || 'Fetch failed'
-      });
-      setStatus('error');
-    }
-  };
-
-  if (status === 'checking') {
+  // A build without the database settings cannot do anything useful: this is the one hard stop.
+  if (misconfigured) {
     return (
-      <div className="flex items-center justify-center h-screen bg-slate-50">
-        <div className="flex flex-col items-center gap-4">
-          <RefreshCw className="animate-spin text-slate-800" size={48} />
-          <h2 className="text-xl font-black text-slate-800 uppercase tracking-widest">Verifying Connection...</h2>
+      <div className="flex items-center justify-center min-h-screen bg-canvas p-6">
+        <div role="alert" className="bg-white p-6 rounded-2xl max-w-md w-full shadow-lg border border-red-200">
+          <div className="flex items-center gap-3 mb-3">
+            <Database size={24} className="text-red-600" />
+            <h1 className="text-lg font-bold text-slate-900">App not configured</h1>
+          </div>
+          <p className="text-sm text-slate-700">The database address or key is missing from this build. Check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.</p>
         </div>
       </div>
     );
   }
 
-  if (status === 'error' && errorDetails) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-slate-900 p-6">
-        <div className="bg-white p-8 rounded-3xl max-w-lg w-full shadow-2xl border-t-4 border-red-500">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-14 h-14 bg-red-100 text-red-600 flex items-center justify-center rounded-2xl shrink-0">
-              <Database size={28} />
-            </div>
-            <div>
-              <h2 className="text-xl font-black text-slate-900 uppercase tracking-widest">Database Offline</h2>
-              <p className="text-sm font-bold text-red-600">{errorDetails.type}</p>
-            </div>
+  return (
+    <>
+      {children}
+      {problem && !dismissed && (
+        <div role="status"
+          className={`fixed z-[65] left-4 right-4 bottom-16 md:bottom-4 md:left-auto md:max-w-sm rounded-xl border shadow-lg p-3 flex items-start gap-2 ${
+            problem.kind === 'rejected' ? 'bg-red-50 border-red-200 text-red-900' : 'bg-amber-50 border-amber-200 text-amber-900'}`}>
+          <Database size={18} className="shrink-0 mt-0.5" aria-hidden="true" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium">{problem.message}</p>
+            {problem.detail && <p className="mt-1 text-xs font-mono break-words opacity-80">{problem.detail}</p>}
+            <button type="button" onClick={checkHealth} disabled={checking} className={`${btn.secondary} mt-2 !h-11`}>
+              <RefreshCw size={16} className={checking ? 'animate-spin' : ''} /> {checking ? 'Checking…' : 'Retry'}
+            </button>
           </div>
-          
-          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-6">
-            <p className="text-slate-700 font-medium mb-2">{errorDetails.message}</p>
-            {errorDetails.details && (
-              <p className="text-xs text-slate-500 font-mono bg-slate-200 p-2 rounded">{errorDetails.details}</p>
-            )}
-          </div>
-
-          <button 
-            onClick={checkHealth}
-            className={`${btn.primary} w-full`}
-          >
-            <RefreshCw size={20} />
-            Retry Connection
+          <button type="button" onClick={() => setDismissed(true)} className={btn.icon} aria-label="Hide connection notice">
+            <X size={16} />
           </button>
         </div>
-      </div>
-    );
-  }
-
-  return <>{children}</>;
+      )}
+    </>
+  );
 }
