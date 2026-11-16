@@ -1,19 +1,45 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Lock, Mail, Shield, User, ChevronRight, AlertCircle, Factory } from 'lucide-react';
+import { Zap, Eye, EyeOff, AlertCircle, WifiOff } from 'lucide-react';
 import { rememberOfflineCredential, verifyOfflineCredential } from '../lib/offlineAuth';
 import { isNetworkError } from '../lib/network';
-import { btn } from '../lib/ui';
+import { FIELD, FIELD_LABEL, btn } from '../lib/ui';
 
 interface LoginProps {
   onLogin: (role: 'ADMIN' | 'EMPLOYEE', id: string, offline: boolean) => void;
 }
 
+// A server that cannot be reached must not leave the cashier staring at a spinner:
+// after this long we fall back to offline sign-in, the same as with no internet at all.
+const SIGN_IN_TIMEOUT_MS = 8000;
+const PROFILE_TIMEOUT_MS = 5000;
+
+class TimeoutError extends Error {}
+const withTimeout = <T,>(p: PromiseLike<T>, ms: number) =>
+  Promise.race([Promise.resolve(p), new Promise<never>((_, reject) => setTimeout(() => reject(new TimeoutError('timeout')), ms))]);
+
+// Supabase's messages, said the way a cashier would understand them
+function friendly(message: string) {
+  const m = message.toLowerCase();
+  if (m.includes('invalid login credentials')) return 'Wrong email or password.';
+  if (m.includes('email not confirmed')) return "This account's email has not been confirmed yet. Ask an admin.";
+  if (m.includes('too many') || m.includes('rate limit')) return 'Too many attempts. Wait a minute, then try again.';
+  return message;
+}
+
 export default function Login({ onLogin }: LoginProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const offlineNow = !navigator.onLine;
+
+  const signInOffline = async (why: string) => {
+    const result = await verifyOfflineCredential(email, password);
+    if (!result.ok) throw new Error(`${why} ${result.reason}`);
+    onLogin(result.credential.role, result.credential.userId, true);
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,166 +47,141 @@ export default function Login({ onLogin }: LoginProps) {
     setLoading(true);
 
     try {
-      // 0. Check Offline Mode: verify against the hash cached at this operator's last online login
+      // No internet: check against the protected copy saved at this person's last online sign-in
       if (!navigator.onLine) {
-        const result = await verifyOfflineCredential(email, password);
-        if (!result.ok) throw new Error(`OFFLINE MODE: ${result.reason}`);
-        onLogin(result.credential.role, result.credential.userId, true);
+        await signInOffline('No internet.');
         return;
       }
 
-      // 1. Authenticate with Supabase
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (authError) {
-        console.error("SUPABASE_AUTH_DEBUG:", authError.message);
-        // Flaky link: navigator says online but Supabase is unreachable
-        if (authError.name === 'AuthRetryableFetchError' || isNetworkError(authError)) {
-          const result = await verifyOfflineCredential(email, password);
-          if (!result.ok) throw new Error(`OFFLINE MODE: ${result.reason}`);
-          onLogin(result.credential.role, result.credential.userId, true);
-          return;
-        }
-        throw authError;
+      let authData, authError;
+      try {
+        ({ data: authData, error: authError } = await withTimeout(
+          supabase.auth.signInWithPassword({ email, password }), SIGN_IN_TIMEOUT_MS));
+      } catch (err) {
+        if (err instanceof TimeoutError) { await signInOffline("Can't reach the server."); return; }
+        throw err;
       }
 
-      if (authData.user) {
-        // 2. Fetch Detailed Profile to Cache for Offline Mode
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', authData.user.id)
-          .single();
+      if (authError) {
+        // Online on paper but the server cannot be reached: same fallback as offline
+        if (authError.name === 'AuthRetryableFetchError' || isNetworkError(authError)) {
+          await signInOffline("Can't reach the server.");
+          return;
+        }
+        throw new Error(friendly(authError.message));
+      }
 
-        const role = profile?.role || authData.user.user_metadata?.role || 'EMPLOYEE';
-        
-        // 3. CACHE A SALTED HASH FOR OFFLINE ACCESS (never the password)
+      if (authData?.user) {
+        // Role comes from profiles; if that lookup is slow, fall back so sign-in still completes
+        let profile: { role?: string; username?: string } | null = null;
+        try {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), PROFILE_TIMEOUT_MS);
+          const { data } = await supabase.from('profiles').select('role, username')
+            .eq('id', authData.user.id).abortSignal(controller.signal).single();
+          clearTimeout(timer);
+          profile = data;
+        } catch { /* keep the fallback role below */ }
+
+        const role = (profile?.role || authData.user.user_metadata?.role || 'EMPLOYEE') as 'ADMIN' | 'EMPLOYEE';
+
+        // Save a salted hash (never the password) so this person can sign in here offline later
         try {
           await rememberOfflineCredential({
             userId: authData.user.id,
             username: profile?.username || email.split('@')[0],
             email,
-            role: role as any,
+            role,
           }, password);
         } catch (cacheErr) {
-          console.warn('Offline login could not be enabled on this terminal:', cacheErr);
+          console.warn('Offline sign-in could not be enabled on this device:', cacheErr);
         }
 
-        console.log("Logged in as:", role);
-        onLogin(role as any, authData.user.id, false);
+        onLogin(role, authData.user.id, false);
       }
-    } catch (err: any) {
-      setError(`[AUTH-FAILURE]: ${err.message}`);
+    } catch (err) {
+      setError((err as Error).message || 'Could not sign in.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 relative overflow-hidden">
-      {/* Background Decorations */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-brand/10 rounded-full blur-[120px]" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-accent/5 rounded-full blur-[120px]" />
-
-      <div className="w-full max-w-md relative z-10">
-        <div className="text-center mb-10">
-          <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl rotate-3 hover:rotate-0 transition-transform duration-500 border border-slate-800">
-            <Factory className="text-slate-900" size={40} />
+    <main className="min-h-screen bg-canvas flex items-center justify-center p-4">
+      <div className="w-full max-w-sm">
+        <div className="flex flex-col items-center text-center mb-6">
+          <div className="w-14 h-14 bg-brand rounded-2xl flex items-center justify-center mb-3 shadow-sm">
+            <Zap className="text-white" size={28} aria-hidden="true" />
           </div>
-          <h1 className="text-4xl text-white tracking-tighter uppercase mb-2 font-extralight">Sakhai Posho Mill ERP</h1>
-          <p className="text-accent font-black uppercase tracking-[0.2em] text-[11px]">Secure Enterprise Access Hub</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Sakhai Posho Mill</h1>
+          <p className="text-sm text-slate-600 mt-1">Sign in to start your shift</p>
         </div>
 
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-8 md:p-10 rounded-[2.5rem] shadow-2xl relative overflow-hidden group">
-          {/* Progress bar for loading state */}
-          {loading && (
-            <div className="absolute top-0 left-0 right-0 h-1 bg-slate-800 overflow-hidden">
-              <div className="h-full bg-accent animate-pulse w-full" />
-            </div>
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 md:p-6">
+          {offlineNow && (
+            <p role="status" className="mb-4 flex items-start gap-2 p-3 rounded-xl border border-amber-200 bg-amber-50 text-sm text-amber-900">
+              <WifiOff size={16} className="shrink-0 mt-0.5" aria-hidden="true" />
+              No internet. You can still sign in if you have signed in on this device before.
+            </p>
           )}
 
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div className="space-y-2">
-              <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Corporate Email</label>
-              <div className="relative group/input">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within/input:text-accent transition-colors">
-                  <Mail size={18} />
-                </div>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-slate-600 focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/10 transition-all"
-                  placeholder="admin@mill.com"
-                  required
-                />
-              </div>
+          <form onSubmit={handleLogin} className="space-y-4" noValidate={false}>
+            <div>
+              <label htmlFor="login-email" className={FIELD_LABEL}>Email</label>
+              <input
+                id="login-email"
+                type="email"
+                inputMode="email"
+                autoComplete="username"
+                autoCapitalize="none"
+                autoFocus
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={FIELD}
+                placeholder="you@example.com"
+              />
             </div>
 
-            <div className="space-y-2">
-              <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1 max-md:text-[11px] max-md:font-medium max-md:text-slate-500 max-md:mb-1 max-md:block">Secure Key</label>
-              <div className="relative group/input">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within/input:text-accent transition-colors">
-                  <Lock size={18} />
-                </div>
+            <div>
+              <label htmlFor="login-password" className={FIELD_LABEL}>Password</label>
+              <div className="relative">
                 <input
-                  type="password"
+                  id="login-password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-slate-600 focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/10 transition-all"
-                  placeholder="••••••••"
-                  required
+                  className={`${FIELD} !pr-12`}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(s => !s)}
+                  className={`${btn.icon} absolute right-0.5 top-1/2 -translate-y-1/2`}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
             </div>
 
             {error && (
-              <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-2xl flex items-center gap-3 animate-in fade-in zoom-in-95">
-                <AlertCircle size={20} className="shrink-0" />
-                <p className="text-xs font-black uppercase tracking-tight">{error}</p>
-              </div>
+              <p role="alert" className="flex items-start gap-2 p-3 rounded-xl border border-red-200 bg-red-50 text-sm text-red-800">
+                <AlertCircle size={16} className="shrink-0 mt-0.5" aria-hidden="true" />
+                {error}
+              </p>
             )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className={`${btn.primary} w-full shadow-xl`}
-            >
-              {loading ? (
-                'Syncing Terminal...'
-              ) : (
-                <>
-                  Establish Connection <ChevronRight size={20} />
-                </>
-              )}
+            <button type="submit" disabled={loading} className={`${btn.primary} w-full`}>
+              {loading ? 'Signing in…' : 'Sign in'}
             </button>
           </form>
-
-          <div className="mt-8 pt-8 border-t border-white/5 grid grid-cols-2 gap-4">
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-2 mb-1 text-accent">
-                <Shield size={12} />
-                <span className="text-[11px] font-black uppercase tracking-widest">Master Admin</span>
-              </div>
-              <p className="text-[11px] font-bold text-slate-600 uppercase">Registry Control</p>
-            </div>
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-2 mb-1 text-slate-400">
-                <User size={12} className="lucide lucide-user" />
-                <span className="text-[11px] font-black uppercase tracking-widest">Employee</span>
-              </div>
-              <p className="text-[11px] font-bold text-slate-600 uppercase">Standard Ops</p>
-            </div>
-          </div>
         </div>
 
-        <p className="text-center mt-8 text-slate-600 font-bold text-[11px] uppercase tracking-widest">
-           v4.3 Industrial ERP · Nairobi Node
-        </p>
+        <p className="text-center mt-4 text-xs text-slate-500">Forgot your password? Ask an admin to reset it.</p>
       </div>
-    </div>
+    </main>
   );
 }
