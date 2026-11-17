@@ -335,7 +335,7 @@ export default function MasterDashboard() {
                 <div>
                   <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2 mb-2">Internal Sessions</p>
                   {intProd.length > 0 ? (
-                    <table className="w-full text-left border-collapse">
+                    <table className="w-full text-left border-collapse mobile-cards">
                       <thead>
                         <tr>
                           {['Session', 'KG', 'kWh', 'Cost', 'Eff%'].map(h => (
@@ -364,7 +364,7 @@ export default function MasterDashboard() {
                 <div>
                   <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2 mb-2">External Sessions</p>
                   {extProd.length > 0 ? (
-                    <table className="w-full text-left border-collapse">
+                    <table className="w-full text-left border-collapse mobile-cards">
                       <thead>
                         <tr>
                           {['Session', 'KG', 'kWh', 'Cost', 'Eff%'].map(h => (
@@ -409,7 +409,7 @@ export default function MasterDashboard() {
             <SectionLabel>Income Statement Ledger · Date Filtered</SectionLabel>
             <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+                <table className="w-full text-left border-collapse mobile-cards">
                   <thead className="bg-slate-50">
                     <tr>
                       {['Month', 'Revenue', 'COGS', 'Expenses', 'Power', 'Net Profit'].map((h, i) => (

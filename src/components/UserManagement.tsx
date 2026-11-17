@@ -203,7 +203,7 @@ export default function UserManagement() {
               <span className="bg-slate-100 px-3 py-1 rounded-full text-[11px] font-black text-slate-500 uppercase">{profiles.length} Accounts</span>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-left">
+              <table className="w-full text-left mobile-cards">
                 <thead className="bg-slate-50 border-b border-slate-100">
                   <tr>
                     <th className="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">Staff Identity</th>

@@ -306,7 +306,7 @@ export default function Customers({ role }: { role: 'ADMIN' | 'EMPLOYEE' }) {
                 </button>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+                <table className="w-full text-left border-collapse mobile-cards">
                   <thead className="bg-slate-50 text-[11px] font-black text-slate-400 uppercase tracking-widest">
                     <tr><th className="px-3 py-2">Date</th><th className="px-3 py-2">Item</th><th className="px-3 py-2 text-right">Charge</th><th className="px-3 py-2 text-right">Payment</th><th className="px-3 py-2 text-right">Balance</th></tr>
                   </thead>
@@ -342,8 +342,8 @@ export default function Customers({ role }: { role: 'ADMIN' | 'EMPLOYEE' }) {
 
       {/* Add customer */}
       {adding && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
-          <form onSubmit={submitNew} className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className="modal-overlay z-50 bg-slate-950/60 backdrop-blur-sm">
+          <form onSubmit={submitNew} className="modal-panel bg-white w-full max-w-lg shadow-2xl p-5 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-black text-brand uppercase tracking-widest">Add customer</h3>
               <button type="button" onClick={() => setAdding(false)} className={btn.icon} aria-label="Close"><X size={16} /></button>

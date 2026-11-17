@@ -154,3 +154,79 @@
     margin-right: auto;
   }
 }
+
+/*
+  Phone layouts for tables and pop-up windows. Deliberately outside Tailwind's layers: these
+  rules must beat the utility classes (min-w-[720px], rounded-3xl, overflow-hidden...) that the
+  same elements carry for larger screens.
+*/
+
+/* Tables with class "mobile-cards": below 768px each row becomes a card, each cell a
+   "label ... value" line. Labels come from the column headings (MobileTableLabels.tsx). */
+@media (max-width: 767px) {
+  table.mobile-cards { min-width: 0 !important; width: 100%; border-collapse: separate; }
+  table.mobile-cards thead { display: none; }
+  table.mobile-cards tbody,
+  table.mobile-cards tfoot,
+  table.mobile-cards tr { display: block; width: 100%; }
+  table.mobile-cards tr {
+    background: #FFFFFF;
+    border: 1px solid var(--color-mill-border);
+    border-radius: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+  table.mobile-cards tfoot tr { background: var(--color-ink); color: #FFFFFF; }
+  table.mobile-cards td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+    max-width: none !important;
+    padding: 0.375rem 0 !important;
+    text-align: right !important;
+    border: 0 !important;
+    white-space: normal !important;
+  }
+  table.mobile-cards td + td { border-top: 1px solid #F1F5F9 !important; }
+  table.mobile-cards td::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    max-width: 45%;
+    text-align: left;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748B;
+  }
+  table.mobile-cards tfoot td::before { color: #CBD5E1; }
+  /* Cells with no heading (empty-state rows, spanning cells) show their content only */
+  table.mobile-cards td[data-label=""] { justify-content: center; text-align: center !important; }
+  table.mobile-cards td[data-label=""]::before { display: none; }
+  table.mobile-cards td:empty { display: none; }
+}
+
+/* Pop-up windows: a bottom sheet on phones (full width, never taller than the screen, scrolls
+   inside), a centred card from 640px up. Overlay = .modal-overlay, the window = .modal-panel. */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+}
+.modal-panel {
+  width: 100%;
+  max-height: 92dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: 1rem 1rem 0 0;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+@media (min-width: 640px) {
+  .modal-overlay { align-items: center; padding: 1rem; }
+  .modal-panel { max-height: 90dvh; border-radius: 1rem; padding-bottom: 0; }
+}

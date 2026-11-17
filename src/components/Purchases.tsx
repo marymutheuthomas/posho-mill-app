@@ -14,6 +14,7 @@ interface Product {
   id: string;
   name: string;
   product_code: string;
+  is_active?: boolean; // false = hidden in Settings
 }
 
 interface PurchaseRecord { 
@@ -56,7 +57,7 @@ export default function Purchases() {
   const { data: allProducts = [] } = useQuery({
     queryKey: ['products'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('products').select('id, name, product_code').order('name');
+      const { data, error } = await supabase.from('products').select('*').order('name'); // '*' includes is_active once it exists
       if (error) throw error;
       return data as Product[];
     }
@@ -246,7 +247,7 @@ export default function Purchases() {
                 <select required value={formData.product_id} onChange={e => setFormData({...formData, product_id: e.target.value})}
                   className="mill-input w-full bg-white">
                   <option value="">Select product...</option>
-                  {allProducts.map(p => <option key={p.id} value={p.id}>{p.name} ({p.product_code})</option>)}
+                  {allProducts.filter(p => p.is_active !== false).map(p => <option key={p.id} value={p.id}>{p.name} ({p.product_code})</option>)}
                 </select>
               </div>
             ) : (
@@ -337,7 +338,7 @@ export default function Purchases() {
         </div>
 
         <div className="w-full overflow-auto max-h-[500px] border-t border-slate-100 p-3 max-md:p-2 scrollbar-thin">
-          <table className="w-full text-left border-collapse min-w-[650px]">
+          <table className="w-full text-left border-collapse min-w-[650px] mobile-cards">
             <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-200">
               <tr className="text-xs font-semibold text-slate-500 uppercase tracking-wider max-md:text-[11px] max-md:font-medium max-md:tracking-tight bg-slate-50">
                 <th className="px-2 py-1.5 md:px-3 md:py-2 max-md:font-medium">Date</th>
@@ -392,8 +393,8 @@ export default function Purchases() {
       </div>
       {/* EDIT MODAL */}
       {editModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="modal-overlay z-50 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="modal-panel bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-8 bg-slate-900 text-white flex justify-between items-center">
               <div>
                 <h3 className="text-xl font-black uppercase tracking-tighter">Edit Purchase</h3>
@@ -471,8 +472,8 @@ export default function Purchases() {
 
       {/* DELETE MODAL */}
       {deleteModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="modal-overlay z-50 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="modal-panel bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-8 bg-red-600 text-white text-center">
               <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Trash2 size={32} />

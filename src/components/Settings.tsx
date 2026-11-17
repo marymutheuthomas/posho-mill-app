@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Tag, Database, Shield, RefreshCcw, Save } from 'lucide-react';
+import { Tag, Database, Shield, RefreshCcw, Save, Trash2, RotateCcw } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FIELD, btn } from '../lib/ui';
+import { FIELD, btn, chip } from '../lib/ui';
+import ProductRemovalDialog from './ProductRemovalDialog';
 
 interface Product {
   id: string;
@@ -12,6 +13,7 @@ interface Product {
   selling_price: number;
   current_stock: number;
   category: string;
+  is_active?: boolean; // false = hidden (migration 20261110); missing before that migration
 }
 
 export default function Settings({ role }: { role?: 'ADMIN' | 'EMPLOYEE' | string | null }) {
@@ -22,6 +24,23 @@ export default function Settings({ role }: { role?: 'ADMIN' | 'EMPLOYEE' | strin
   const [editedProducts, setEditedProducts] = useState<Product[]>([]);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
+  // Product removal (admins): rows ticked for removal, the confirm dialog, hidden rows on/off
+  const [selected, setSelected] = useState<string[]>([]);
+  const [removing, setRemoving] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
+  const toggleSelected = (id: string) => setSelected(s => (s.includes(id) ? s.filter(x => x !== id) : [...s, id]));
+  const flashSuccess = (text: string) => { setSuccess(text); setTimeout(() => setSuccess(''), 4000); };
+  const refreshProductLists = () => {
+    queryClient.invalidateQueries({ queryKey: ['products'] });
+    queryClient.invalidateQueries({ queryKey: ['lookup'] });
+  };
+
+  const restoreProduct = async (p: Product) => {
+    const { error: err } = await supabase.from('products').update({ is_active: true }).eq('id', p.id);
+    if (err) { setError(`Could not restore ${p.name}: ${err.message}`); setTimeout(() => setError(''), 5000); return; }
+    flashSuccess(`${p.name} is back in the product lists.`);
+    refreshProductLists();
+  };
 
   // 1. Database Binding (Fetch Actual Values)
   const { data: dbProducts, isLoading, refetch } = useQuery({
@@ -81,6 +100,8 @@ export default function Settings({ role }: { role?: 'ADMIN' | 'EMPLOYEE' | strin
   };
 
   const hasChanges = JSON.stringify(dbProducts) !== JSON.stringify(editedProducts);
+  const hiddenCount = editedProducts.filter(p => p.is_active === false).length;
+  const visibleProducts = showHidden ? editedProducts : editedProducts.filter(p => p.is_active !== false);
 
   if (isLoading) return <div className="p-20 text-center font-black text-slate-400 uppercase tracking-widest animate-pulse">Synchronizing Pricing Ledger...</div>;
 
@@ -110,21 +131,59 @@ export default function Settings({ role }: { role?: 'ADMIN' | 'EMPLOYEE' | strin
               </button>
             </div>
 
+            {isAdmin && (
+              <div className="px-4 md:px-8 py-3 border-b border-slate-100 flex flex-wrap items-center gap-2">
+                {hiddenCount > 0 && (
+                  <button type="button" onClick={() => setShowHidden(v => !v)} className={chip(showHidden)} aria-pressed={showHidden}>
+                    Show hidden (<span className="font-mono">{hiddenCount}</span>)
+                  </button>
+                )}
+                {selected.length > 0 ? (
+                  <>
+                    <span className="text-sm text-slate-700 ml-auto"><span className="font-mono font-semibold">{selected.length}</span> selected</span>
+                    <button type="button" onClick={() => setSelected([])} className={btn.secondary}>Clear</button>
+                    <button type="button" onClick={() => setRemoving(true)} className={btn.danger}>
+                      <Trash2 size={16} /> Remove selected
+                    </button>
+                  </>
+                ) : (
+                  <p className="text-xs text-slate-500 ml-auto">Tick products to remove wrong ones.</p>
+                )}
+              </div>
+            )}
+
             <div className="overflow-x-auto pb-24">
-              <table className="w-full text-left border-collapse">
+              <table className="w-full text-left border-collapse mobile-cards">
                 <thead>
                   <tr className="bg-slate-50/50">
+                    {isAdmin && <th className="pl-4 md:pl-8 py-4 text-[11px] font-semibold text-slate-500 uppercase tracking-widest border-b w-12">Select</th>}
                     <th className="px-8 py-4 text-[11px] font-semibold text-slate-500 uppercase tracking-widest border-b">Product Name</th>
                     <th className="px-8 py-4 text-[11px] font-semibold text-slate-500 uppercase tracking-widest border-b">Milling Fee (KES)</th>
                     <th className="px-8 py-4 text-[11px] font-semibold text-slate-500 uppercase tracking-widest border-b">Retail Price (KES)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {editedProducts.map(p => (
-                    <tr key={p.id} className="hover:bg-slate-50/50 transition-colors">
+                  {visibleProducts.map(p => (
+                    <tr key={p.id} className={`hover:bg-slate-50/50 transition-colors ${p.is_active === false ? 'opacity-70' : ''}`}>
+                      {isAdmin && (
+                        <td className="pl-4 md:pl-8 py-4">
+                          <label className="inline-flex items-center justify-center min-w-11 min-h-11 cursor-pointer">
+                            <input type="checkbox" className="w-5 h-5 accent-brand" checked={selected.includes(p.id)}
+                              onChange={() => toggleSelected(p.id)} aria-label={`Select ${p.name}`} />
+                          </label>
+                        </td>
+                      )}
                       <td className="px-8 py-4 font-semibold text-slate-900 uppercase text-xs">
-                        {p.name}
+                        <span className="inline-flex flex-wrap items-center gap-2 justify-end md:justify-start">
+                          {p.name}
+                          {p.is_active === false && <span className="px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 text-[11px] normal-case font-semibold">Hidden</span>}
+                        </span>
                         <p className="text-[11px] text-slate-400 font-medium tracking-widest">{p.product_code}</p>
+                        {isAdmin && p.is_active === false && (
+                          <button type="button" onClick={() => restoreProduct(p)} className={`${btn.secondary} !h-11 mt-2 normal-case`}>
+                            <RotateCcw size={16} /> Restore
+                          </button>
+                        )}
                       </td>
                       <td className="px-8 py-4">
                         <div className="relative max-w-[120px]">
@@ -173,6 +232,19 @@ export default function Settings({ role }: { role?: 'ADMIN' | 'EMPLOYEE' | strin
             </div>
           </div>
         </div>
+
+        {removing && (
+          <ProductRemovalDialog
+            products={editedProducts.filter(p => selected.includes(p.id))}
+            onClose={() => setRemoving(false)}
+            onDone={(message) => {
+              setRemoving(false);
+              setSelected([]);
+              flashSuccess(`Products removed: ${message}`);
+              refreshProductLists();
+            }}
+          />
+        )}
 
         {/* SYSTEM INFO & SECURITY */}
         <div className="space-y-8">

@@ -16,8 +16,9 @@ interface Product {
   id: string; 
   product_code: string; 
   name: string; 
-  current_stock: number; 
+  current_stock: number;
   category: string;
+  is_active?: boolean; // false = hidden in Settings
 }
 
 interface StockLog {
@@ -248,10 +249,10 @@ export default function StockTake() {
     }
   };
 
-  const filteredProducts = products.filter(p => 
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+  const filteredProducts = products.filter(p => p.is_active !== false && (
+    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.product_code.includes(searchTerm)
-  );
+  ));
 
   const { pageItems, pager } = usePagination(history);
 
@@ -324,7 +325,7 @@ export default function StockTake() {
                  </div>
               </div>
               <div className="hidden md:block overflow-x-auto whitespace-nowrap">
-                <table className="w-full text-left border-collapse">
+                <table className="w-full text-left border-collapse mobile-cards">
                   <thead>
                     <tr className="bg-slate-50/50 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">
                       <th className="px-3 py-2">Product / Grade</th>
@@ -435,7 +436,7 @@ export default function StockTake() {
               </div>
            </div>
             <div className="w-full overflow-x-auto whitespace-nowrap scrollbar-thin">
-              <table className="w-full text-left border-collapse">
+              <table className="w-full text-left border-collapse mobile-cards">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider max-md:text-[11px] max-md:font-medium max-md:tracking-tight bg-slate-50">
                     <th className="px-2 py-1.5 md:px-3 md:py-2 max-md:font-medium">Date / Time</th>
@@ -484,8 +485,8 @@ export default function StockTake() {
 
       {/* EDIT MODAL */}
       {editModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="modal-overlay z-50 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="modal-panel bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-8 bg-slate-900 text-white flex justify-between items-center">
               <div>
                 <h3 className="text-xl font-black uppercase tracking-tighter">Edit Audit Entry</h3>
@@ -516,8 +517,8 @@ export default function StockTake() {
 
       {/* DELETE MODAL */}
       {deleteModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="modal-overlay z-50 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="modal-panel bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-8 bg-red-600 text-white text-center">
               <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Trash2 size={32} />

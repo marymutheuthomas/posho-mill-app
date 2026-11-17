@@ -35,8 +35,9 @@ interface Product {
   name: string; 
   current_stock: number; 
   product_code: string; 
-  selling_price?: number; 
-  milling_fee?: number; 
+  selling_price?: number;
+  milling_fee?: number;
+  is_active?: boolean; // false = hidden in Settings
 }
 interface TransactionLog { 
   id: string; 
@@ -478,6 +479,7 @@ export default function ServicePOS({ role }: ServicePOSProps) {
                     <option value="">Select Item...</option>
                     {products
                       .filter(p => {
+                        if (p.is_active === false) return false; // hidden in Settings
                         if (formData.transactionType === 'Product') {
                           return (p.selling_price || 0) > 0;
                         } else {
@@ -627,12 +629,12 @@ export default function ServicePOS({ role }: ServicePOSProps) {
 
         {/* RIGHT COLUMN — receipt sidebar on desktop, modal on mobile */}
         <div 
-          className={`md:col-span-2 ${showReceipt ? 'fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 md:relative md:inset-auto md:z-0 md:bg-transparent md:backdrop-blur-none md:p-0 md:block' : 'hidden md:block'} space-y-6`}
+          className={`md:col-span-2 ${showReceipt ? 'fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 md:relative md:inset-auto md:z-0 md:bg-transparent md:backdrop-blur-none md:p-0 md:block' : 'hidden md:block'} space-y-6`}
           onClick={() => showReceipt && window.innerWidth < 768 && setShowReceipt(false)}
         >
           {showReceipt ? (
             <div 
-              className="mill-card p-6 md:p-10 bg-slate-900 text-white border-none space-y-6 md:space-y-8 shadow-2xl w-full max-w-lg md:max-w-none animate-in zoom-in-95 duration-200 rounded-3xl"
+              className="mill-card p-5 md:p-10 bg-slate-900 text-white border-none space-y-5 md:space-y-8 shadow-2xl w-full max-w-lg md:max-w-none animate-in zoom-in-95 duration-200 rounded-t-2xl sm:rounded-3xl max-h-[92dvh] overflow-y-auto overscroll-contain md:max-h-none md:overflow-visible"
               onClick={e => e.stopPropagation()}
             >
               <div className="border-b border-slate-800 pb-6 text-center">
@@ -990,8 +992,8 @@ export default function ServicePOS({ role }: ServicePOSProps) {
 
       {/* EDIT SALE MODAL */}
       {editingSale && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-100">
+        <div className="modal-overlay z-[60] bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="modal-panel bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-100">
             <div className="p-6 bg-slate-900 text-white flex justify-between items-center">
               <div>
                 <h3 className="text-lg font-medium uppercase tracking-tight">Edit Transaction</h3>
@@ -1124,8 +1126,8 @@ export default function ServicePOS({ role }: ServicePOSProps) {
 
       {/* DELETE SALE MODAL */}
       {deletingSale && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="modal-overlay z-[60] bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="modal-panel bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-8 bg-red-600 text-white text-center">
               <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Trash2 size={32} />

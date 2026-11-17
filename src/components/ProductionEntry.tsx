@@ -16,7 +16,7 @@ const PRODUCT_CODES = {
   KUKU_FEED: '108'
 };
 
-interface Product { id: string; product_code: string; name: string; current_stock: number; minimum_level?: number; category?: string; }
+interface Product { id: string; product_code: string; name: string; current_stock: number; minimum_level?: number; category?: string; is_active?: boolean; }
 
 interface ProductionLog {
   id: string;
@@ -47,7 +47,8 @@ export default function ProductionEntry() {
   const { data: allProducts = [] } = useQuery({
     queryKey: ['products'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('products').select('id, product_code, name, category, current_stock, minimum_level').order('product_code', { ascending: true });
+      // '*' so is_active is included once migration 20261110 adds it (absent before = all shown)
+      const { data, error } = await supabase.from('products').select('*').order('product_code', { ascending: true });
       if (error) throw error;
       return data as Product[];
     }
@@ -125,8 +126,8 @@ export default function ProductionEntry() {
 
 
   const inputProduct = useMemo(() => allProducts.find(p => p.product_code === PRODUCT_CODES.INPUT), [allProducts]);
-  const mainOutputProducts = useMemo(() => allProducts.filter(p => PRODUCT_CODES.MAIN_OUTPUTS.includes(p.product_code)), [allProducts]);
-  const byProductOptions = useMemo(() => allProducts.filter(p => PRODUCT_CODES.BY_PRODUCTS.includes(p.product_code)), [allProducts]);
+  const mainOutputProducts = useMemo(() => allProducts.filter(p => p.is_active !== false && PRODUCT_CODES.MAIN_OUTPUTS.includes(p.product_code)), [allProducts]);
+  const byProductOptions = useMemo(() => allProducts.filter(p => p.is_active !== false && PRODUCT_CODES.BY_PRODUCTS.includes(p.product_code)), [allProducts]);
 
   // All weights rounded to 2dp so they match the numeric(10,2) columns and chk_production_mass_balance
   const round2 = (n: number) => Number(n.toFixed(2));
@@ -322,7 +323,7 @@ export default function ProductionEntry() {
                 <Scale size={16} className="text-brand" /> Stock Monitor
               </h3>
               <div className="space-y-4">
-                {allProducts.filter(p => (p.category || '').toLowerCase() !== 'service' && (p.category || '').toLowerCase() !== 'milling').map(p => {
+                {allProducts.filter(p => p.is_active !== false && (p.category || '').toLowerCase() !== 'service' && (p.category || '').toLowerCase() !== 'milling').map(p => {
                   const isLow = p.minimum_level && p.current_stock < p.minimum_level;
                   return (
                     <div key={p.id} className="flex flex-col gap-1 border-b border-slate-50 pb-3 last:border-0">
@@ -363,7 +364,7 @@ export default function ProductionEntry() {
             </div>
           </div>
         </div>        <div className="w-full overflow-x-auto overflow-y-auto max-h-[500px] scrollbar-thin p-3 max-md:p-2">
-          <table className="w-full text-left border-collapse min-w-[500px]">
+          <table className="w-full text-left border-collapse min-w-[500px] mobile-cards">
             <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-200">
               <tr className="text-xs font-semibold text-slate-500 uppercase tracking-wider max-md:text-[11px] max-md:font-medium max-md:tracking-tight bg-slate-50">
                 <th className="px-2 py-1.5 md:px-3 md:py-2 max-md:font-medium">Date / Time</th>

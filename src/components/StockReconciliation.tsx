@@ -89,7 +89,7 @@ export default function StockReconciliation({ start, end }: { start: Date; end: 
         <p className="p-12 text-center text-[11px] font-bold text-slate-300 uppercase tracking-widest animate-pulse">Reconciling ledger…</p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse mobile-cards">
             <thead className="bg-slate-50">
               <tr className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
                 <th className="px-3 py-3 border-b border-slate-100">Product</th>

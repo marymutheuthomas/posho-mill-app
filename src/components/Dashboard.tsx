@@ -267,8 +267,8 @@ function CashDropModal({ onClose }: { onClose: () => void }) {
   const saving = cashDrop.isPending;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="cash-drop-title">
-      <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden">
+    <div className="modal-overlay z-50 bg-slate-900/60 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="cash-drop-title">
+      <div className="modal-panel bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden">
         <div className="p-5 bg-brand text-white flex items-center justify-between">
           <h3 id="cash-drop-title" className={`${SECTION_TITLE} text-white flex items-center gap-2`}><Wallet size={20} /> Log cash drop</h3>
           <button type="button" onClick={onClose} aria-label="Close" className={btn.iconOnDark}><X size={20} /></button>

@@ -275,8 +275,8 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
 
       {/* START MODAL */}
       {startModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="bg-white w-full max-w-md rounded-2xl md:rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+        <div className="modal-overlay z-50 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="modal-panel bg-white w-full max-w-md rounded-2xl md:rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
             <div className="p-8 md:p-10 bg-slate-900 text-white relative">
               <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-10 -mt-10 blur-2xl" />
               <div className="relative z-10 flex justify-between items-center">
@@ -309,8 +309,8 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
 
       {/* END MODAL */}
       {endModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="bg-white w-full max-w-md rounded-2xl md:rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+        <div className="modal-overlay z-50 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="modal-panel bg-white w-full max-w-md rounded-2xl md:rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
             <div className="p-8 md:p-10 bg-slate-900 text-white relative">
               <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-10 -mt-10 blur-2xl" />
               <div className="relative z-10 flex justify-between items-center">
@@ -368,7 +368,7 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
         </div>
 
         <div className="w-full overflow-auto max-h-[500px] border-t border-slate-100 p-3 max-md:p-2 scrollbar-thin">
-          <table className="w-full text-left border-collapse min-w-[650px]">
+          <table className="w-full text-left border-collapse min-w-[650px] mobile-cards">
             <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-200">
               <tr className="text-xs font-semibold text-slate-500 uppercase tracking-wider max-md:text-[11px] max-md:font-medium max-md:tracking-tight bg-slate-50">
                 <th className="px-2 py-1.5 md:px-3 md:py-2 max-md:font-medium">Session Code</th>
@@ -435,8 +435,8 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
 
       {/* EDIT SESSION MODAL */}
       {editSessionModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="modal-overlay z-50 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="modal-panel bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-8 bg-slate-900 text-white flex justify-between items-center">
               <div>
                 <h3 className={`${SECTION_TITLE} text-white`}>Edit Session</h3>
@@ -473,8 +473,8 @@ export default function SessionControl({ role, onNavigate }: SessionControlProps
 
       {/* DELETE SESSION MODAL */}
       {deleteSessionModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="modal-overlay z-50 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="modal-panel bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-8 bg-red-600 text-white text-center">
               <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Trash2 size={32} />
