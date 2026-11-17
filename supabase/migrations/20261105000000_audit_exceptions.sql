@@ -8,10 +8,16 @@
 --   delete   admins only
 --   anon     no access
 --
--- Requires public.fn_is_admin() from 20261104000000_customer_crm_ledger.sql.
 -- Safe to re-run. Run in the Supabase SQL editor.
 
 begin;
+
+-- Admin check used by the rules below. Also defined in 20261104; repeated here (identical)
+-- so this file works on its own on databases where 20261104 was not fully applied.
+create or replace function public.fn_is_admin() returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.profiles where id = auth.uid() and role = 'ADMIN');
+$$;
 
 create table if not exists public.audit_exceptions (
   id              uuid not null default gen_random_uuid(),
@@ -35,6 +41,11 @@ create table if not exists public.audit_exceptions (
   constraint audit_exceptions_approval_check
     check (status <> 'APPROVED' or (approved_by is not null and approved_at is not null))
 );
+
+-- If audit_exceptions already existed (created by hand before this migration), the statement
+-- above changed nothing: add the approval columns the app's "Approve & Lock" writes.
+alter table public.audit_exceptions add column if not exists approved_by uuid references public.profiles(id) on delete set null;
+alter table public.audit_exceptions add column if not exists approved_at timestamp with time zone;
 
 create index if not exists idx_audit_exceptions_status on public.audit_exceptions (status);
 create index if not exists idx_audit_exceptions_time   on public.audit_exceptions (effective_time);

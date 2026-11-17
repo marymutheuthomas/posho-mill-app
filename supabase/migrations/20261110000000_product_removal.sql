@@ -7,9 +7,15 @@
 -- database refuses a delete.
 --
 -- Also extends the 20261109 guard: only admins may delete products or hide/restore them.
--- Requires public.fn_is_admin() (20261104). Safe to re-run.
 
 begin;
+
+-- Admin check used by the rules below. Also defined in 20261104; repeated here (identical)
+-- so this file works on its own on databases where 20261104 was not fully applied.
+create or replace function public.fn_is_admin() returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.profiles where id = auth.uid() and role = 'ADMIN');
+$$;
 
 alter table public.products add column if not exists is_active boolean not null default true;
 
